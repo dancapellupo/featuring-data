@@ -1,6 +1,6 @@
 
-from initial_eda_functions import count_null_values, sort_numeric_nonnumeric_columns
-from initial_eda_functions import count_numeric_unique_values, count_nonnumeric_unique_values
+from ._initial_eda_functions import count_null_values, sort_numeric_nonnumeric_columns
+from ._initial_eda_functions import count_numeric_unique_values, count_nonnumeric_unique_values
 
 
 class FeaturesEDA:
