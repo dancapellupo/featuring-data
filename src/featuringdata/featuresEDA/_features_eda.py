@@ -1,4 +1,11 @@
 
+from ._create_pdf_report import (
+    initialize_pdf_doc,
+    section_on_null_columns,
+    section_on_unique_values,
+    save_pdf_doc
+)
+
 from ._initial_eda_functions import count_null_values, sort_numeric_nonnumeric_columns
 from ._initial_eda_functions import count_numeric_unique_values, count_nonnumeric_unique_values
 
@@ -30,4 +37,15 @@ class FeaturesEDA:
 
         self.non_numeric_uniq_vals_df = count_nonnumeric_unique_values(data_df, self.non_numeric_cols,
                                                                        uniq_vals_thresh=self.nonnumeric_uniq_vals_thresh)
+
+        # ---
+
+        self.pdf = initialize_pdf_doc()
+
+        self.pdf = section_on_null_columns(self.pdf, data_df.shape[1], self.null_cols_df)
+
+        self.pdf = section_on_unique_values(self.pdf, self.numeric_cols, self.non_numeric_cols,
+                                            self.numeric_uniq_vals_df, self.non_numeric_uniq_vals_df)
+
+        save_pdf_doc(self.pdf)
 
