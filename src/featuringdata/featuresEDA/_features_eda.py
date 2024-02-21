@@ -6,8 +6,14 @@ from ._create_pdf_report import (
     save_pdf_doc
 )
 
-from ._initial_eda_functions import count_null_values, sort_numeric_nonnumeric_columns
-from ._initial_eda_functions import count_numeric_unique_values, count_nonnumeric_unique_values
+from ._initial_eda_functions import (
+    count_null_values,
+    sort_numeric_nonnumeric_columns,
+    count_numeric_unique_values,
+    count_nonnumeric_unique_values
+)
+
+from ._correlation import calc_numeric_features_target_corr
 
 
 class FeaturesEDA:
@@ -39,6 +45,12 @@ class FeaturesEDA:
                                                                        uniq_vals_thresh=self.nonnumeric_uniq_vals_thresh)
 
         # ---
+        # TODO: Add feature correlations
+
+        self.numeric_df = calc_numeric_features_target_corr(data_df, self.numeric_cols, self.target_col,
+                                                            rf_n_estimators=10)
+
+        # ---
 
         self.pdf = initialize_pdf_doc()
 
@@ -47,5 +59,9 @@ class FeaturesEDA:
         self.pdf = section_on_unique_values(self.pdf, self.numeric_cols, self.non_numeric_cols,
                                             self.numeric_uniq_vals_df, self.non_numeric_uniq_vals_df)
 
+        # ---
+        # TODO: Add plots
+
         save_pdf_doc(self.pdf)
+
 
