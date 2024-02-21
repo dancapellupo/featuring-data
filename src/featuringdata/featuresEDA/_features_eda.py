@@ -3,6 +3,7 @@ from ._create_pdf_report import (
     initialize_pdf_doc,
     section_on_null_columns,
     section_on_unique_values,
+    section_on_feature_corr,
     save_pdf_doc
 )
 
@@ -13,7 +14,11 @@ from ._initial_eda_functions import (
     count_nonnumeric_unique_values
 )
 
-from ._correlation import calc_numeric_features_target_corr
+from ._correlation import (
+    calc_numeric_features_target_corr,
+    calc_corr_numeric_features,
+    calc_nonnumeric_features_target_corr
+)
 
 
 class FeaturesEDA:
@@ -31,6 +36,9 @@ class FeaturesEDA:
         self.non_numeric_cols = None
         self.numeric_uniq_vals_df = None
         self.non_numeric_uniq_vals_df = None
+        self.numeric_df = None
+        self.numeric_collinear_df = None
+        self.non_numeric_df = None
 
     def run_full_eda(self, data_df):
 
@@ -50,18 +58,27 @@ class FeaturesEDA:
         self.numeric_df = calc_numeric_features_target_corr(data_df, self.numeric_cols, self.target_col,
                                                             rf_n_estimators=10)
 
-        # ---
+        self.numeric_collinear_df = calc_corr_numeric_features(data_df, self.numeric_cols)
 
+        self.non_numeric_df = calc_nonnumeric_features_target_corr(data_df, self.non_numeric_cols)
+
+        # ---
+        # Generating PDF Document
         self.pdf = initialize_pdf_doc()
 
+        # PDF Page 1: Summary of Null values information and unique values for numeric and non-numeric feature columns
         self.pdf = section_on_null_columns(self.pdf, data_df.shape[1], self.null_cols_df)
 
         self.pdf = section_on_unique_values(self.pdf, self.numeric_cols, self.non_numeric_cols,
                                             self.numeric_uniq_vals_df, self.non_numeric_uniq_vals_df)
 
+        # PDF Pages 2-3: Summary of numeric and non-numeric feature correlations
+        self.pdf = section_on_feature_corr(self.pdf, self.numeric_df, self.numeric_collinear_df, self.non_numeric_df)
+
         # ---
         # TODO: Add plots
 
+        # Save PDF document to current working directory
         save_pdf_doc(self.pdf)
 
 
