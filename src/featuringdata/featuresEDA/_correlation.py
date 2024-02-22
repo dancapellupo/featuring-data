@@ -37,8 +37,29 @@ def calc_corr_numeric_features(data_df, numeric_cols):
 
     numeric_collinear_df = pd.DataFrame(columns=["Feature1", "Feature2", "Count not-Null", "Pearson", "Random Forest"])
 
-    jj = 0
-    for pair in it.combinations(numeric_cols, 2):
+    # jj = 0
+    # for pair in it.combinations(numeric_cols, 2):
+    #     col1, col2 = pair[0], pair[1]
+    #
+    #     train_col_notnull = data_df[[col1, col2]].dropna()
+    #
+    #     pcorr = pearsonr(train_col_notnull[col1].values, train_col_notnull[col2].values)[0]
+    #
+    #     rf_reg = RandomForestRegressor(n_estimators=10)
+    #     rf_reg.fit(train_col_notnull[col1].values.reshape(-1, 1), train_col_notnull[col2].values)
+    #     rfscore1 = rf_reg.score(train_col_notnull[col1].values.reshape(-1, 1), train_col_notnull[col2])
+    #
+    #     rf_reg = RandomForestRegressor(n_estimators=10)
+    #     rf_reg.fit(train_col_notnull[col2].values.reshape(-1, 1), train_col_notnull[col1].values)
+    #     rfscore2 = rf_reg.score(train_col_notnull[col2].values.reshape(-1, 1), train_col_notnull[col1])
+    #
+    #     numeric_collinear_df.loc[jj] = col1, col2, len(train_col_notnull), round(pcorr, 2), round((rfscore1+rfscore2)/2, 2)
+    #
+    #     jj += 1
+    #
+    # numeric_collinear_df = numeric_collinear_df.sort_values(by=["Random Forest"], ascending=False)
+
+    for jj, pair in enumerate(it.permutations(numeric_cols, 2)):
         col1, col2 = pair[0], pair[1]
 
         train_col_notnull = data_df[[col1, col2]].dropna()
@@ -47,19 +68,23 @@ def calc_corr_numeric_features(data_df, numeric_cols):
 
         rf_reg = RandomForestRegressor(n_estimators=10)
         rf_reg.fit(train_col_notnull[col1].values.reshape(-1, 1), train_col_notnull[col2].values)
-        rfscore1 = rf_reg.score(train_col_notnull[col1].values.reshape(-1, 1), train_col_notnull[col2])
+        rfscore = rf_reg.score(train_col_notnull[col1].values.reshape(-1, 1), train_col_notnull[col2])
 
-        rf_reg = RandomForestRegressor(n_estimators=10)
-        rf_reg.fit(train_col_notnull[col2].values.reshape(-1, 1), train_col_notnull[col1].values)
-        rfscore2 = rf_reg.score(train_col_notnull[col2].values.reshape(-1, 1), train_col_notnull[col1])
+        numeric_collinear_df.loc[jj] = col1, col2, len(train_col_notnull), round(pcorr, 2), round(rfscore, 2)
 
-        numeric_collinear_df.loc[jj] = col1, col2, len(train_col_notnull), round(pcorr, 2), round((rfscore1+rfscore2)/2, 2)
+    numeric_collinear_summary_df = pd.DataFrame(
+        columns=["Avg Pearson Corr", "Avg RF Corr", "Max Corr Feature", "Max RF Corr"])
 
-        jj += 1
+    for col in numeric_cols:
+        numeric_collinear_df_col = numeric_collinear_df.loc[numeric_collinear_df["Feature1"] == col]
 
-    numeric_collinear_df = numeric_collinear_df.sort_values(by=["Random Forest"], ascending=False)
+        rf_xx = np.argmax(numeric_collinear_df_col["Random Forest"].values)
 
-    return numeric_collinear_df
+        numeric_collinear_summary_df.loc[col] = (
+            numeric_collinear_df_col["Pearson"].mean(), numeric_collinear_df_col["Random Forest"].mean(),
+            numeric_collinear_df_col["Feature2"].iloc[rf_xx], numeric_collinear_df_col["Random Forest"].iloc[rf_xx])
+
+    return numeric_collinear_df, numeric_collinear_summary_df
 
 
 def calc_max_rfscore(num=2):

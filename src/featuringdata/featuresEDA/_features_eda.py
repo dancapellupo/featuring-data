@@ -38,6 +38,7 @@ class FeaturesEDA:
         self.non_numeric_uniq_vals_df = None
         self.numeric_df = None
         self.numeric_collinear_df = None
+        self.numeric_collinear_summary_df = None
         self.non_numeric_df = None
 
     def run_full_eda(self, data_df):
@@ -58,7 +59,8 @@ class FeaturesEDA:
         self.numeric_df = calc_numeric_features_target_corr(data_df, self.numeric_cols, self.target_col,
                                                             rf_n_estimators=10)
 
-        self.numeric_collinear_df = calc_corr_numeric_features(data_df, self.numeric_cols)
+        self.numeric_collinear_df, self.numeric_collinear_summary_df = calc_corr_numeric_features(data_df,
+                                                                                                  self.numeric_cols)
 
         self.non_numeric_df = calc_nonnumeric_features_target_corr(data_df, self.non_numeric_cols)
 
@@ -80,5 +82,4 @@ class FeaturesEDA:
 
         # Save PDF document to current working directory
         save_pdf_doc(self.pdf)
-
 
