@@ -13,8 +13,8 @@ def initialize_pdf_doc():
     return pdf
 
 
-def save_pdf_doc(pdf, custom_filename=None):
-    pdf.output(f'./FeatureSelectionEDA_Report.pdf', 'F')
+def save_pdf_doc(pdf, custom_filename='FeatureSelection', timestamp=''):
+    pdf.output('./{}_EDA_Report_{}.pdf'.format(custom_filename, timestamp), 'F')
 
 
 def section_on_null_columns(pdf, num_features, null_cols_df):

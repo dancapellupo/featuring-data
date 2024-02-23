@@ -1,4 +1,7 @@
 
+from datetime import datetime
+from pathlib import Path
+
 from ._create_pdf_report import (
     initialize_pdf_doc,
     section_on_null_columns,
@@ -20,12 +23,15 @@ from ._correlation import (
     calc_nonnumeric_features_target_corr
 )
 
+from ._generate_plots import plot_feature_values
+
 
 class FeaturesEDA:
 
-    def __init__(self, target_col=None,
+    def __init__(self, report_prefix='FeatureSelection', target_col=None,
                  numeric_uniq_vals_thresh=10, nonnumeric_uniq_vals_thresh=5):
 
+        self.report_prefix = report_prefix
         self.target_col = target_col
         self.numeric_uniq_vals_thresh = numeric_uniq_vals_thresh
         self.nonnumeric_uniq_vals_thresh = nonnumeric_uniq_vals_thresh
@@ -42,6 +48,10 @@ class FeaturesEDA:
         self.non_numeric_df = None
 
     def run_full_eda(self, data_df):
+
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        plots_folder = './{}_EDA_plots_{}'.format(self.report_prefix, timestamp)
+        Path(plots_folder).mkdir()
 
         self.null_cols_df = count_null_values(data_df)
 
@@ -80,6 +90,9 @@ class FeaturesEDA:
         # ---
         # TODO: Add plots
 
+        plot_feature_values(data_df, self.numeric_cols, self.numeric_df, target_col=self.target_col, numeric=True,
+                            plots_folder=plots_folder)
+
         # Save PDF document to current working directory
-        save_pdf_doc(self.pdf)
+        save_pdf_doc(self.pdf, custom_filename=self.report_prefix, timestamp=timestamp)
 
