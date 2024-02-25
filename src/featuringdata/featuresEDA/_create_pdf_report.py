@@ -198,7 +198,7 @@ def section_on_feature_corr(pdf, numeric_df, numeric_collinear_df, non_numeric_d
     return pdf
 
 
-def section_of_plots(pdf, columns_list, target_col, numeric=True):
+def section_of_plots(pdf, columns_list, target_col, numeric=True, plots_folder='./plots'):
 
     pdf.add_page()
     pdf.set_font('Arial', 'B', 13)
@@ -215,8 +215,8 @@ def section_of_plots(pdf, columns_list, target_col, numeric=True):
             pdf.ln(4)
 
         # TODO: Double-check that file exists
-        pdf.image('plots/{}_vs_{}.png'.format(column, target_col), x=10, y=None, w=180, h=0, type='PNG')
+        pdf.image('{}/{}_vs_{}.png'.format(plots_folder, column, target_col),
+                  x=10, y=None, w=180, h=0, type='PNG')
 
     return pdf
-
 

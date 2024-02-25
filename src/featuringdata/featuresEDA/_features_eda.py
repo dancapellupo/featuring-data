@@ -7,6 +7,7 @@ from ._create_pdf_report import (
     section_on_null_columns,
     section_on_unique_values,
     section_on_feature_corr,
+    section_of_plots,
     save_pdf_doc
 )
 
@@ -92,6 +93,16 @@ class FeaturesEDA:
 
         plot_feature_values(data_df, self.numeric_cols, self.numeric_df, target_col=self.target_col, numeric=True,
                             plots_folder=plots_folder)
+
+        self.pdf = section_of_plots(self.pdf, self.numeric_cols, target_col=self.target_col, numeric=True,
+                                    plots_folder=plots_folder)
+
+
+        plot_feature_values(data_df, self.non_numeric_cols, self.non_numeric_df, target_col=self.target_col,
+                            numeric=False, plots_folder=plots_folder)
+
+        self.pdf = section_of_plots(self.pdf, self.non_numeric_cols, target_col=self.target_col, numeric=False,
+                                    plots_folder=plots_folder)
 
         # Save PDF document to current working directory
         save_pdf_doc(self.pdf, custom_filename=self.report_prefix, timestamp=timestamp)
