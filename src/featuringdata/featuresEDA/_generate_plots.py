@@ -7,7 +7,8 @@ from matplotlib.offsetbox import AnchoredText
 import seaborn as sns
 
 
-def plot_feature_values(data_df, columns_list, correlation_df, target_col, numeric=True, plots_folder='./plots'):
+def plot_feature_values(data_df, columns_list, correlation_df, target_col, numeric=True, catplot_style='swarm',
+                        plots_folder='./plots'):
 
     backend_ = mpl.get_backend()
     print('*** {} ***'.format(backend_))
@@ -29,8 +30,10 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
             )
 
             # Add in points to show each observation
-            # sns.stripplot(train_data_mod, x="OverallQual", y=target_col, size=2, color=".3")
-            sns.swarmplot(data_df, x=column, y=target_col, size=2, color=".3")
+            if catplot_style == 'swarm':
+                sns.swarmplot(data_df, x=column, y=target_col, size=2, color=".3")
+            else:
+                sns.stripplot(data_df, x=column, y=target_col, jitter=0.25, size=2, color=".3")
 
         else:
             med = data_df[column].median()
