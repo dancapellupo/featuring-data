@@ -26,7 +26,7 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
             # Plot the orbital period with horizontal boxes
             sns.boxplot(
                 data_df, x=column, y=target_col,  # hue="method",
-                whis=[0, 100], width=.6, # palette="vlag"
+                whis=[0, 100], width=.6,  # palette="vlag"
             )
 
             # Add in points to show each observation
@@ -34,6 +34,9 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
                 sns.swarmplot(data_df, x=column, y=target_col, size=2, color=".3")
             else:
                 sns.stripplot(data_df, x=column, y=target_col, jitter=0.25, size=2, color=".3")
+
+            if (not numeric) and data_df[column].nunique() >= 10:
+                plt.xticks(rotation=45)
 
         else:
             med = data_df[column].median()

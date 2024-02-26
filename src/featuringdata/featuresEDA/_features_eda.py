@@ -91,17 +91,21 @@ class FeaturesEDA:
         # ---
         # TODO: Add plots
 
-        plot_feature_values(data_df, self.numeric_cols, self.numeric_df, target_col=self.target_col, numeric=True,
+        columns_list_ordered = self.numeric_df.index
+
+        plot_feature_values(data_df, columns_list_ordered, self.numeric_df, target_col=self.target_col, numeric=True,
                             plots_folder=plots_folder)
 
-        self.pdf = section_of_plots(self.pdf, self.numeric_cols, target_col=self.target_col, numeric=True,
+        self.pdf = section_of_plots(self.pdf, columns_list_ordered, target_col=self.target_col, numeric=True,
                                     plots_folder=plots_folder)
 
 
-        plot_feature_values(data_df, self.non_numeric_cols, self.non_numeric_df, target_col=self.target_col,
+        columns_list_ordered = self.non_numeric_df.index
+
+        plot_feature_values(data_df, columns_list_ordered, self.non_numeric_df, target_col=self.target_col,
                             numeric=False, plots_folder=plots_folder)
 
-        self.pdf = section_of_plots(self.pdf, self.non_numeric_cols, target_col=self.target_col, numeric=False,
+        self.pdf = section_of_plots(self.pdf, columns_list_ordered, target_col=self.target_col, numeric=False,
                                     plots_folder=plots_folder)
 
         # Save PDF document to current working directory
