@@ -23,15 +23,22 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
 
         # TODO: Use already calculated DF of unique values:
         if (not numeric) or (np.unique(data_df[column]).size <= 10):
-            # Plot the orbital period with horizontal boxes
-            sns.boxplot(
-                data_df, x=column, y=target_col,  # hue="method",
-                whis=[0, 100], width=.6,  # palette="vlag"
-            )
+
+            if not numeric:
+                # Standard Box Plot with X-axis ordered by median value in each category
+                data_df_col_notnull = data_df[[column, target_col]].dropna()
+                xaxis_order = data_df_col_notnull.groupby(
+                    by=[column]).median().sort_values(by=[target_col]).index.tolist()
+
+                sns.boxplot(data_df_col_notnull, x=column, y=target_col, order=xaxis_order, whis=[0, 100], width=0.6)
+
+            else:
+                # Standard Box Plot
+                sns.boxplot(data_df, x=column, y=target_col, whis=[0, 100], width=0.6,)  # hue="method", palette="vlag"
 
             # Add in points to show each observation
             if catplot_style == 'swarm':
-                sns.swarmplot(data_df, x=column, y=target_col, size=2, color=".3")
+                sns.swarmplot(data_df, x=column, y=target_col, size=2, color=".3", warn_thresh=0.4)
             else:
                 sns.stripplot(data_df, x=column, y=target_col, jitter=0.25, size=2, color=".3")
 
@@ -61,7 +68,6 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
                 target_col, column, correlation_df.loc[column, "Random Forest"],
                 correlation_df.loc[column, "RF_norm"]))
 
-        # TODO: Create directory based on time-stamp
         plt.savefig('{}/{}_vs_{}.png'.format(plots_folder, column, target_col), bbox_inches='tight')
 
     mpl.use(backend_)  # Reset backend

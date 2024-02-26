@@ -15,16 +15,16 @@ def calc_numeric_features_target_corr(data_df, numeric_cols, target_col, rf_n_es
     numeric_df = pd.DataFrame(columns=["Count not-Null", "Pearson", "Mutual Info", "Random Forest"])
 
     for col in numeric_cols:
-        train_col_notnull = data_df[[col, target_col]].dropna()
+        data_df_col_notnull = data_df[[col, target_col]].dropna()
 
-        pcorr = pearsonr(train_col_notnull[col].values, train_col_notnull[target_col].values)[0]
-        minfo = mutual_info_regression(train_col_notnull[col].values.reshape(-1, 1), train_col_notnull[target_col].values)[0]
+        pcorr = pearsonr(data_df_col_notnull[col].values, data_df_col_notnull[target_col].values)[0]
+        minfo = mutual_info_regression(data_df_col_notnull[col].values.reshape(-1, 1), data_df_col_notnull[target_col].values)[0]
 
         rf_reg = RandomForestRegressor(n_estimators=10)
-        rf_reg.fit(train_col_notnull[col].values.reshape(-1, 1), train_col_notnull["SalePrice"].values)
-        rfscore = rf_reg.score(train_col_notnull[col].values.reshape(-1, 1), train_col_notnull["SalePrice"])
+        rf_reg.fit(data_df_col_notnull[col].values.reshape(-1, 1), data_df_col_notnull["SalePrice"].values)
+        rfscore = rf_reg.score(data_df_col_notnull[col].values.reshape(-1, 1), data_df_col_notnull["SalePrice"])
 
-        numeric_df.loc[col] = len(train_col_notnull), round(pcorr, 2), round(minfo, 2), round(rfscore, 2)
+        numeric_df.loc[col] = len(data_df_col_notnull), round(pcorr, 2), round(minfo, 2), round(rfscore, 2)
 
     numeric_df["Count not-Null"] = numeric_df["Count not-Null"].astype(int)
 
@@ -41,19 +41,19 @@ def calc_corr_numeric_features(data_df, numeric_cols):
     # for pair in it.combinations(numeric_cols, 2):
     #     col1, col2 = pair[0], pair[1]
     #
-    #     train_col_notnull = data_df[[col1, col2]].dropna()
+    #     data_df_cols_notnull = data_df[[col1, col2]].dropna()
     #
-    #     pcorr = pearsonr(train_col_notnull[col1].values, train_col_notnull[col2].values)[0]
-    #
-    #     rf_reg = RandomForestRegressor(n_estimators=10)
-    #     rf_reg.fit(train_col_notnull[col1].values.reshape(-1, 1), train_col_notnull[col2].values)
-    #     rfscore1 = rf_reg.score(train_col_notnull[col1].values.reshape(-1, 1), train_col_notnull[col2])
+    #     pcorr = pearsonr(data_df_cols_notnull[col1].values, data_df_cols_notnull[col2].values)[0]
     #
     #     rf_reg = RandomForestRegressor(n_estimators=10)
-    #     rf_reg.fit(train_col_notnull[col2].values.reshape(-1, 1), train_col_notnull[col1].values)
-    #     rfscore2 = rf_reg.score(train_col_notnull[col2].values.reshape(-1, 1), train_col_notnull[col1])
+    #     rf_reg.fit(data_df_cols_notnull[col1].values.reshape(-1, 1), data_df_cols_notnull[col2].values)
+    #     rfscore1 = rf_reg.score(data_df_cols_notnull[col1].values.reshape(-1, 1), data_df_cols_notnull[col2])
     #
-    #     numeric_collinear_df.loc[jj] = col1, col2, len(train_col_notnull), round(pcorr, 2), round((rfscore1+rfscore2)/2, 2)
+    #     rf_reg = RandomForestRegressor(n_estimators=10)
+    #     rf_reg.fit(data_df_cols_notnull[col2].values.reshape(-1, 1), data_df_cols_notnull[col1].values)
+    #     rfscore2 = rf_reg.score(data_df_cols_notnull[col2].values.reshape(-1, 1), data_df_cols_notnull[col1])
+    #
+    #     numeric_collinear_df.loc[jj] = col1, col2, len(data_df_cols_notnull), round(pcorr, 2), round((rfscore1+rfscore2)/2, 2)
     #
     #     jj += 1
     #
@@ -62,15 +62,15 @@ def calc_corr_numeric_features(data_df, numeric_cols):
     for jj, pair in enumerate(it.permutations(numeric_cols, 2)):
         col1, col2 = pair[0], pair[1]
 
-        train_col_notnull = data_df[[col1, col2]].dropna()
+        data_df_cols_notnull = data_df[[col1, col2]].dropna()
 
-        pcorr = pearsonr(train_col_notnull[col1].values, train_col_notnull[col2].values)[0]
+        pcorr = pearsonr(data_df_cols_notnull[col1].values, data_df_cols_notnull[col2].values)[0]
 
         rf_reg = RandomForestRegressor(n_estimators=10)
-        rf_reg.fit(train_col_notnull[col1].values.reshape(-1, 1), train_col_notnull[col2].values)
-        rfscore = rf_reg.score(train_col_notnull[col1].values.reshape(-1, 1), train_col_notnull[col2])
+        rf_reg.fit(data_df_cols_notnull[col1].values.reshape(-1, 1), data_df_cols_notnull[col2].values)
+        rfscore = rf_reg.score(data_df_cols_notnull[col1].values.reshape(-1, 1), data_df_cols_notnull[col2])
 
-        numeric_collinear_df.loc[jj] = col1, col2, len(train_col_notnull), round(pcorr, 2), round(rfscore, 2)
+        numeric_collinear_df.loc[jj] = col1, col2, len(data_df_cols_notnull), round(pcorr, 2), round(rfscore, 2)
 
     numeric_collinear_summary_df = pd.DataFrame(
         columns=["Avg Pearson Corr", "Avg RF Corr", "Max Corr Feature", "Max RF Corr"])
