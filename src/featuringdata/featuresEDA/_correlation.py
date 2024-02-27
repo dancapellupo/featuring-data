@@ -20,9 +20,9 @@ def calc_numeric_features_target_corr(data_df, numeric_cols, target_col, rf_n_es
         pcorr = pearsonr(data_df_col_notnull[col].values, data_df_col_notnull[target_col].values)[0]
         minfo = mutual_info_regression(data_df_col_notnull[col].values.reshape(-1, 1), data_df_col_notnull[target_col].values)[0]
 
-        rf_reg = RandomForestRegressor(n_estimators=10)
-        rf_reg.fit(data_df_col_notnull[col].values.reshape(-1, 1), data_df_col_notnull["SalePrice"].values)
-        rfscore = rf_reg.score(data_df_col_notnull[col].values.reshape(-1, 1), data_df_col_notnull["SalePrice"])
+        rf_reg = RandomForestRegressor(n_estimators=rf_n_estimators)
+        rf_reg.fit(data_df_col_notnull[col].values.reshape(-1, 1), data_df_col_notnull[target_col].values)
+        rfscore = rf_reg.score(data_df_col_notnull[col].values.reshape(-1, 1), data_df_col_notnull[target_col])
 
         numeric_df.loc[col] = len(data_df_col_notnull), round(pcorr, 2), round(minfo, 2), round(rfscore, 2)
 
@@ -105,18 +105,18 @@ def calc_max_rfscore(num=2):
     return r2
 
 
-def calc_nonnumeric_features_target_corr(data_df, non_numeric_cols):
+def calc_nonnumeric_features_target_corr(data_df, non_numeric_cols, target_col):
 
     non_numeric_df = pd.DataFrame(columns=["Count not-Null", "Num Unique", "Random Forest", "RF_norm"])
 
     for col in non_numeric_cols:
-        train_col_notnull = data_df[[col, "SalePrice"]].dropna()
+        train_col_notnull = data_df[[col, target_col]].dropna()
 
         X_col = pd.get_dummies(train_col_notnull[col], dtype=int)
 
         rf_reg = RandomForestRegressor(n_estimators=10)
-        rf_reg.fit(X_col, train_col_notnull["SalePrice"].values)
-        rfscore = rf_reg.score(X_col, train_col_notnull["SalePrice"])
+        rf_reg.fit(X_col, train_col_notnull[target_col].values)
+        rfscore = rf_reg.score(X_col, train_col_notnull[target_col])
 
         num_uniq = train_col_notnull[col].nunique()
         rfscore_norm = rfscore * (1 / calc_max_rfscore(num_uniq))

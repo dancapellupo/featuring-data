@@ -48,6 +48,9 @@ class FeaturesEDA:
         self.numeric_collinear_summary_df = None
         self.non_numeric_df = None
 
+    # TODO Create function for running initial EDA only
+    # TODO For full EDA, make collinear correlation optional
+
     def run_full_eda(self, data_df):
 
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -73,7 +76,7 @@ class FeaturesEDA:
         self.numeric_collinear_df, self.numeric_collinear_summary_df = calc_corr_numeric_features(data_df,
                                                                                                   self.numeric_cols)
 
-        self.non_numeric_df = calc_nonnumeric_features_target_corr(data_df, self.non_numeric_cols)
+        self.non_numeric_df = calc_nonnumeric_features_target_corr(data_df, self.non_numeric_cols, self.target_col)
 
         # ---
         # Generating PDF Document
