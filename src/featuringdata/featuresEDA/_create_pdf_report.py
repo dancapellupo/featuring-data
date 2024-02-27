@@ -23,10 +23,13 @@ def section_on_null_columns(pdf, num_features, null_cols_df):
 
     pdf.set_font('Arial', '', 12)
     pdf.cell(w=0, h=10,
-             txt="Out of {} total feature columns, there are {} columns with at least 1 null value.".format(num_features, len(null_cols_df)),
-             ln=1)
+             txt="Out of {} total feature columns, there are {} columns with at least 1 null value.".format(
+                 num_features, len(null_cols_df)), ln=1)
 
     pdf.ln(2)
+
+    if len(null_cols_df) == 0:
+        return pdf
 
     # Table Header
     pdf.set_font('Arial', 'B', 12)
@@ -44,7 +47,9 @@ def section_on_null_columns(pdf, num_features, null_cols_df):
     return pdf
 
 
-def section_on_unique_values(pdf, numeric_cols, non_numeric_cols, numeric_uniq_vals_df, non_numeric_uniq_vals_df):
+def section_on_unique_values(pdf, numeric_cols, non_numeric_cols, numeric_uniq_vals_df, non_numeric_uniq_vals_df,
+                             single_value_cols_numeric_df=None, numeric_cols_to_cat_df=None,
+                             single_value_cols_nonnumeric_df=None, nonnumeric_uniq_vals_thresh=5):
     pdf.ln(5)
     pdf.set_font('Arial', 'B', 13)
     pdf.cell(w=0, h=10, txt="Numeric vs Non-Numeric Features", ln=1)
@@ -57,46 +62,76 @@ def section_on_unique_values(pdf, numeric_cols, non_numeric_cols, numeric_uniq_v
 
     pdf.ln(3)
 
-    # Table Header
-    pdf.set_font('Arial', 'B', 12)
-    pdf.cell(w=60, h=10, txt='Numeric Feature', border=1, ln=0, align='C')
-    pdf.cell(w=42, h=10, txt=numeric_uniq_vals_df.columns[1], border=1, ln=1, align='C')
+    if ((single_value_cols_numeric_df is not None and len(single_value_cols_numeric_df) > 0) or
+            (numeric_cols_to_cat_df is not None and len(numeric_cols_to_cat_df) > 0)):
 
-    # Table Contents
-    pdf.set_font('Arial', '', 12)
-    for ii in range(0, min(5, len(numeric_uniq_vals_df))):
-        pdf.cell(w=60, h=10,
-                 txt=numeric_uniq_vals_df["Feature"].iloc[ii],
-                 border=1, ln=0, align='L')
-        pdf.cell(w=42, h=10,
-                 txt=numeric_uniq_vals_df["Num Unique Values"].iloc[ii].astype(str),
-                 border=1, ln=1, align='R')
+        if single_value_cols_numeric_df is not None and len(single_value_cols_numeric_df) > 0:
+            pdf.set_font('Arial', 'B', 12)
+            pdf.cell(w=0, h=10,
+                     txt="There are {} numeric columns with just a single value and will be removed.".format(
+                         len(single_value_cols_numeric_df)), ln=1)
+            pdf.ln(4)
 
-    if len(numeric_uniq_vals_df) > 5:
-        pdf.cell(w=0, h=10,
-                 txt="There are an additional {} numeric feature columns with 10 or fewer unique values.".format(
-                     len(numeric_uniq_vals_df) - 5),
-                 ln=1)
+        if numeric_cols_to_cat_df is not None and len(numeric_cols_to_cat_df) > 0:
+            pdf.set_font('Arial', 'B', 12)
+            pdf.cell(w=0, h=10,
+                     txt='There are {} numeric columns that will be switched to categorical.'.format(
+                         len(numeric_cols_to_cat_df)), ln=1)
+            pdf.ln(4)
+
+    else:
+        # Table Header
+        pdf.set_font('Arial', 'B', 12)
+        pdf.cell(w=60, h=10, txt='Numeric Feature', border=1, ln=0, align='C')
+        pdf.cell(w=42, h=10, txt=numeric_uniq_vals_df.columns[1], border=1, ln=1, align='C')
+
+        # Table Contents
+        pdf.set_font('Arial', '', 12)
+        for ii in range(0, min(5, len(numeric_uniq_vals_df))):
+            pdf.cell(w=60, h=10,
+                     txt=numeric_uniq_vals_df["Feature"].iloc[ii],
+                     border=1, ln=0, align='L')
+            pdf.cell(w=42, h=10,
+                     txt=numeric_uniq_vals_df["Num Unique Values"].iloc[ii].astype(str),
+                     border=1, ln=1, align='R')
+
+        if len(numeric_uniq_vals_df) > 5:
+            pdf.cell(w=0, h=10,
+                     txt="There are an additional {} numeric feature columns with 10 or fewer unique values.".format(
+                         len(numeric_uniq_vals_df) - 5),
+                     ln=1)
 
     pdf.ln(4)
 
+    if single_value_cols_nonnumeric_df is not None and len(single_value_cols_nonnumeric_df) > 0:
+        pdf.set_font('Arial', 'B', 12)
+        pdf.cell(w=0, h=10,
+                 txt="There are {} non-numeric columns with just a single value and will be removed.".format(
+                     len(single_value_cols_nonnumeric_df)), ln=1)
+        pdf.ln(4)
+
     # Table Header
+    non_numeric_uniq_vals_df_tmp = non_numeric_uniq_vals_df.loc[
+        non_numeric_uniq_vals_df["Num Unique Values"] >= nonnumeric_uniq_vals_thresh]
+
     pdf.set_font('Arial', 'B', 12)
     pdf.cell(w=60, h=10, txt='Non-Numeric Feature', border=1, ln=0, align='C')
-    pdf.cell(w=42, h=10, txt=non_numeric_uniq_vals_df.columns[1], border=1, ln=1, align='C')
+    pdf.cell(w=42, h=10, txt=non_numeric_uniq_vals_df_tmp.columns[1], border=1, ln=1, align='C')
 
     # Table contents
     pdf.set_font('Arial', '', 12)
-    for ii in range(0, min(5, len(non_numeric_uniq_vals_df))):
+    for ii in range(0, min(5, len(non_numeric_uniq_vals_df_tmp))):
         pdf.cell(w=60, h=10,
-                 txt=non_numeric_uniq_vals_df["Feature"].iloc[ii],
+                 txt=non_numeric_uniq_vals_df_tmp["Feature"].iloc[ii],
                  border=1, ln=0, align='L')
         pdf.cell(w=42, h=10,
-                 txt=non_numeric_uniq_vals_df["Num Unique Values"].iloc[ii].astype(str),
+                 txt=non_numeric_uniq_vals_df_tmp["Num Unique Values"].iloc[ii].astype(str),
                  border=1, ln=1, align='R')
 
-    if len(numeric_uniq_vals_df) > 5:
-        pdf.cell(w=0, h=10, txt="There are an additional {} non-numeric feature columns with more than 5 unique values.".format(len(non_numeric_uniq_vals_df) - 5), ln=1)
+    if len(non_numeric_uniq_vals_df_tmp) > 5:
+        pdf.cell(w=0, h=10,
+                 txt="There are an additional {} non-numeric feature columns with more than {} unique values.".format(
+                     len(non_numeric_uniq_vals_df_tmp) - 5, nonnumeric_uniq_vals_thresh), ln=1)
 
     return pdf
 

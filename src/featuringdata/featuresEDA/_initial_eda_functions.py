@@ -59,9 +59,9 @@ def count_nonnumeric_unique_values(data_df, non_numeric_cols, uniq_vals_thresh=5
     for col in non_numeric_cols:
         num_uniq = data_df[col].nunique()
 
-        if num_uniq > uniq_vals_thresh:
-            non_numeric_uniq_vals_df.loc[jj] = col, num_uniq
-            jj += 1
+        # if num_uniq > uniq_vals_thresh:
+        non_numeric_uniq_vals_df.loc[jj] = col, num_uniq
+        jj += 1
 
     non_numeric_uniq_vals_df = non_numeric_uniq_vals_df.sort_values(by=["Num Unique Values"], ascending=False)
 
