@@ -22,6 +22,7 @@ def section_on_null_columns(pdf, num_features, null_cols_df):
     pdf.cell(w=0, h=10, txt="Null Columns", ln=1)
 
     pdf.set_font('Arial', '', 12)
+    # TODO: Indicate also if target_col has nulls
     pdf.cell(w=0, h=10,
              txt="Out of {} total feature columns, there are {} columns with at least 1 null value.".format(
                  num_features, len(null_cols_df)), ln=1)
@@ -132,6 +133,18 @@ def section_on_unique_values(pdf, numeric_cols, non_numeric_cols, numeric_uniq_v
         pdf.cell(w=0, h=10,
                  txt="There are an additional {} non-numeric feature columns with more than {} unique values.".format(
                      len(non_numeric_uniq_vals_df_tmp) - 5, nonnumeric_uniq_vals_thresh), ln=1)
+
+    return pdf
+
+
+def section_on_unique_values_p2(pdf, numeric_cols, non_numeric_cols):
+
+    pdf.ln(3)
+    pdf.set_font('Arial', '', 12)
+    pdf.cell(w=0, h=8,
+             txt="After the above adjustments, there are now {} feature columns, with {} numeric columns".format(
+                 len(numeric_cols)+len(non_numeric_cols), len(numeric_cols)), ln=1)
+    pdf.cell(w=0, h=8, txt="and {} non-numeric/categorical columns.".format(len(non_numeric_cols)), ln=1)
 
     return pdf
 

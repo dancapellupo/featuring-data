@@ -6,6 +6,7 @@ from ._create_pdf_report import (
     initialize_pdf_doc,
     section_on_null_columns,
     section_on_unique_values,
+    section_on_unique_values_p2,
     section_on_feature_corr,
     section_of_plots,
     save_pdf_doc
@@ -29,11 +30,12 @@ from ._generate_plots import plot_feature_values
 
 class FeaturesEDA:
 
-    def __init__(self, report_prefix='FeatureSelection', target_col=None,
+    def __init__(self, report_prefix='FeatureSelection', target_col=None, cols_to_drop=None,
                  numeric_uniq_vals_thresh=10, nonnumeric_uniq_vals_thresh=5):
 
         self.report_prefix = report_prefix
         self.target_col = target_col
+        self.cols_to_drop = cols_to_drop
         self.numeric_uniq_vals_thresh = numeric_uniq_vals_thresh
         self.nonnumeric_uniq_vals_thresh = nonnumeric_uniq_vals_thresh
 
@@ -54,6 +56,10 @@ class FeaturesEDA:
     def run_initial_eda(self, data_df, output=True):
 
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+
+        # TODO: Add a check for columns with words like "ID" to suggest dropping them
+        if self.cols_to_drop is not None:
+            data_df = data_df.drop(columns=self.cols_to_drop)
 
         self.null_cols_df = count_null_values(data_df)
 
@@ -92,6 +98,24 @@ class FeaturesEDA:
                                             single_value_cols_nonnumeric_df=single_value_cols_nonnumeric_df,
                                             numeric_cols_to_cat_df=numeric_cols_to_cat_df)
 
+        if ((len(single_value_cols_numeric_df) > 0) or (len(single_value_cols_nonnumeric_df) > 0) or
+                (len(numeric_cols_to_cat_df) > 0)):
+
+            if len(single_value_cols_numeric_df) > 0:
+                for col in single_value_cols_numeric_df["Feature"].values:
+                    self.numeric_cols.remove(col)
+
+            if len(single_value_cols_nonnumeric_df) > 0:
+                for col in single_value_cols_nonnumeric_df["Feature"].values:
+                    self.non_numeric_cols.remove(col)
+
+            if len(numeric_cols_to_cat_df) > 0:
+                for col in numeric_cols_to_cat_df["Feature"]:
+                    self.numeric_cols.remove(col)
+                    self.non_numeric_cols.append(col)
+
+            self.pdf = section_on_unique_values_p2(self.pdf, self.numeric_cols, self.non_numeric_cols)
+
         # Save PDF document to current working directory
         if output:
             custom_filename = self.report_prefix + '_Initial'
@@ -102,6 +126,9 @@ class FeaturesEDA:
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         plots_folder = './{}_EDA_plots_{}'.format(self.report_prefix, timestamp)
         Path(plots_folder).mkdir()
+
+        # if self.cols_to_drop is not None:
+        #     data_df = data_df.drop(columns=self.cols_to_drop)
 
         self.run_initial_eda(data_df, output=False)
 
