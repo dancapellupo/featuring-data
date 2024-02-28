@@ -51,7 +51,7 @@ class FeaturesEDA:
     # TODO Create function for running initial EDA only
     # TODO For full EDA, make collinear correlation optional
 
-    def run_initial_eda(self, data_df):
+    def run_initial_eda(self, data_df, output=True):
 
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
@@ -84,7 +84,6 @@ class FeaturesEDA:
         self.pdf = initialize_pdf_doc()
 
         # PDF Page 1: Summary of Null values information and unique values for numeric and non-numeric feature columns
-        print(self.null_cols_df)
         self.pdf = section_on_null_columns(self.pdf, data_df.shape[1], self.null_cols_df)
 
         self.pdf = section_on_unique_values(self.pdf, self.numeric_cols, self.non_numeric_cols,
@@ -94,8 +93,9 @@ class FeaturesEDA:
                                             numeric_cols_to_cat_df=numeric_cols_to_cat_df)
 
         # Save PDF document to current working directory
-        custom_filename = self.report_prefix + '_Initial'
-        save_pdf_doc(self.pdf, custom_filename=custom_filename, timestamp=timestamp)
+        if output:
+            custom_filename = self.report_prefix + '_Initial'
+            save_pdf_doc(self.pdf, custom_filename=custom_filename, timestamp=timestamp)
 
     def run_full_eda(self, data_df):
 
@@ -103,15 +103,7 @@ class FeaturesEDA:
         plots_folder = './{}_EDA_plots_{}'.format(self.report_prefix, timestamp)
         Path(plots_folder).mkdir()
 
-        self.null_cols_df = count_null_values(data_df)
-
-        self.numeric_cols, self.non_numeric_cols = sort_numeric_nonnumeric_columns(data_df, self.target_col)
-
-        self.numeric_uniq_vals_df = count_numeric_unique_values(data_df, self.numeric_cols,
-                                                                uniq_vals_thresh=self.numeric_uniq_vals_thresh)
-
-        self.non_numeric_uniq_vals_df = count_nonnumeric_unique_values(data_df, self.non_numeric_cols,
-                                                                       uniq_vals_thresh=self.nonnumeric_uniq_vals_thresh)
+        self.run_initial_eda(data_df, output=False)
 
         # ---
         # TODO: Add feature correlations
@@ -126,13 +118,7 @@ class FeaturesEDA:
 
         # ---
         # Generating PDF Document
-        self.pdf = initialize_pdf_doc()
-
         # PDF Page 1: Summary of Null values information and unique values for numeric and non-numeric feature columns
-        self.pdf = section_on_null_columns(self.pdf, data_df.shape[1], self.null_cols_df)
-
-        self.pdf = section_on_unique_values(self.pdf, self.numeric_cols, self.non_numeric_cols,
-                                            self.numeric_uniq_vals_df, self.non_numeric_uniq_vals_df)
 
         # PDF Pages 2-3: Summary of numeric and non-numeric feature correlations
         self.pdf = section_on_feature_corr(self.pdf, self.numeric_df, self.numeric_collinear_df, self.non_numeric_df)

@@ -112,7 +112,7 @@ def section_on_unique_values(pdf, numeric_cols, non_numeric_cols, numeric_uniq_v
 
     # Table Header
     non_numeric_uniq_vals_df_tmp = non_numeric_uniq_vals_df.loc[
-        non_numeric_uniq_vals_df["Num Unique Values"] >= nonnumeric_uniq_vals_thresh]
+        non_numeric_uniq_vals_df["Num Unique Values"] > nonnumeric_uniq_vals_thresh]
 
     pdf.set_font('Arial', 'B', 12)
     pdf.cell(w=60, h=10, txt='Non-Numeric Feature', border=1, ln=0, align='C')
