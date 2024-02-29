@@ -50,7 +50,7 @@ class FeaturesEDA:
         self.numeric_collinear_summary_df = None
         self.non_numeric_df = None
 
-    # TODO Create function for running initial EDA only
+    # TODO Create function that does up to correlation
     # TODO For full EDA, make collinear correlation optional
 
     def run_initial_eda(self, data_df, output=True):

@@ -15,6 +15,11 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
     mpl.use("Agg")
     print('*** {} ***'.format(mpl.get_backend()))
 
+    # use_sample = False
+    if len(data_df) > 1000:
+        data_df_sample = data_df.sample(n=1000, replace=False)
+        # use_sample = True
+
     sns.set_theme(style="ticks")
 
     for jj, column in enumerate(columns_list):
@@ -38,7 +43,10 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
 
             # Add in points to show each observation
             if catplot_style == 'swarm':
-                sns.swarmplot(data_df, x=column, y=target_col, size=2, color=".3", warn_thresh=0.4)
+                if 'data_df_sample' in locals():
+                    sns.swarmplot(data_df_sample, x=column, y=target_col, size=2, color=".3", warn_thresh=0.4)
+                else:
+                    sns.swarmplot(data_df, x=column, y=target_col, size=2, color=".3", warn_thresh=0.4)
             else:
                 sns.stripplot(data_df, x=column, y=target_col, jitter=0.25, size=2, color=".3")
 
