@@ -94,9 +94,10 @@ class FeatureSelector:
 
                                     # XGBoost Training:
                                     xgb_reg = XGBRegressor(n_estimators=1000, max_depth=max_depth, random_state=42,
+                                                           early_stopping_rounds=20,
                                                            gamma=gamma, min_child_weight=min_child_weight, max_delta_step=max_delta_step)
 
-                                    xgb_reg.fit(X_train_comb[data_jj][feature_columns_2[data_jj]], y_train_comb[data_jj], early_stopping_rounds=20,
+                                    xgb_reg.fit(X_train_comb[data_jj][feature_columns_2[data_jj]], y_train_comb[data_jj],
                                                 eval_set=[(X_test_comb[data_jj][feature_columns_2[data_jj]], y_test_comb[data_jj])], verbose=False)
 
                                     best_iterations.append(xgb_reg.best_iteration)
@@ -115,10 +116,11 @@ class FeatureSelector:
 
                 # XGBoost Training:
                 xgb_reg = XGBRegressor(n_estimators=1000, max_depth=best_params_dict["max_depth"], random_state=42,
+                                       early_stopping_rounds=20,
                                        gamma=best_params_dict["gamma"], min_child_weight=best_params_dict["min_child_weight"],
                                        max_delta_step=best_params_dict["max_delta_step"])
 
-                xgb_reg.fit(X_train_comb[data_jj][feature_columns_2[data_jj]], y_train_comb[data_jj], early_stopping_rounds=20,
+                xgb_reg.fit(X_train_comb[data_jj][feature_columns_2[data_jj]], y_train_comb[data_jj],
                             eval_set=[(X_test_comb[data_jj][feature_columns_2[data_jj]], y_test_comb[data_jj])], verbose=False)
 
                 y_train_pred = xgb_reg.predict(X_train_comb[data_jj][feature_columns_2[data_jj]])
@@ -156,8 +158,8 @@ class FeatureSelector:
         X_test_best = X_test_comb[1][training_results_df.loc[61, "feature_list_2"].split(', ')]
 
         # XGBoost Training:
-        xgb_reg = XGBRegressor(n_estimators=1000, max_depth=3, random_state=42, gamma=0)
-        xgb_reg.fit(X_train_best, y_train_comb[1], early_stopping_rounds=20, eval_set=[(X_test_best, y_test_comb[1])],
+        xgb_reg = XGBRegressor(n_estimators=1000, max_depth=3, early_stopping_rounds=20, random_state=42, gamma=0)
+        xgb_reg.fit(X_train_best, y_train_comb[1], eval_set=[(X_test_best, y_test_comb[1])],
                     verbose=True)
 
         y_test_pred = xgb_reg.predict(X_test_best)
