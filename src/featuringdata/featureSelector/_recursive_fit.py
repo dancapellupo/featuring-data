@@ -1,7 +1,10 @@
 
+import itertools as it
+
 import numpy as np
 import pandas as pd
 
+from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 from xgboost.sklearn import XGBRegressor
@@ -9,13 +12,11 @@ from xgboost.sklearn import XGBRegressor
 
 def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb):
 
-    max_depth_list = [3, 4, 5, 6]
-    gamma_list = [0, 1, 5]
-    min_child_weight_list = [0, 1, 5]
-    max_delta_step_list = [0, 1, 5]
+    parameter_dict = {'max_depth': [3, 4, 5, 6], 'gamma': [0, 1, 5],
+                      'min_child_weight': [0, 1, 5], 'max_delta_step': [0, 1, 5]}
 
-    best_params_dict = {"max_depth": max_depth_list[0], "gamma": gamma_list[0],
-                        "min_child_weight": min_child_weight_list[0], "max_delta_step": max_delta_step_list[0]}
+    # best_params_dict = {"max_depth": max_depth_list[0], "gamma": gamma_list[0],
+    #                     "min_child_weight": min_child_weight_list[0], "max_delta_step": max_delta_step_list[0]}
 
     feature_columns_full = X_train_comb[0].columns.to_list()
 
@@ -27,43 +28,33 @@ def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb):
     print(num_columns_orig)
 
     training_results_df = pd.DataFrame(columns=["RMSE_train_1", "RMSE_test_1", "num_features_1", "feature_list_1", "features_to_remove_1", "RMSE_train_2", "RMSE_test_2", "num_features_2", "feature_list_2", "features_to_remove_2"])
+    # training_results_df = pd.DataFrame(
+    #     columns=["RMSE_train_1", "RMSE_test_1", "MAE_test_1", "num_features_1", "feature_list_1",
+    #              "features_to_remove_1", "RMSE_train_2", "RMSE_test_2", "MAE_test_2", "num_features_2", "feature_list_2",
+    #              "features_to_remove_2"])
 
     for jj in range(num_columns_orig):
 
         # if jj % round(num_columns_orig / 5.) == 0:
         if jj % 15 == 0:
-            # if 0:
 
-            best_iterations = []
-            best_scores = []
+            for data_jj in range(2):
+                # GridSearchCV + XGBoost Training:
+                xgb_reg = XGBRegressor(n_estimators=1000, early_stopping_rounds=20, random_state=42)
 
-            best_score = 1e10
+                grid_search = GridSearchCV(xgb_reg, param_grid=parameter_dict, cv=2)
 
-            for max_depth in max_depth_list:
+                grid_search.fit(X_train_comb[data_jj][feature_columns[data_jj]], y_train_comb[data_jj],
+                                eval_set=[(X_test_comb[data_jj][feature_columns[data_jj]], y_test_comb[data_jj])],
+                                verbose=False)
 
-                for gamma in gamma_list:
+                if data_jj == 0:
+                    best_params_dict = grid_search.best_params_
+                    best_score = grid_search.best_score_
 
-                    for min_child_weight in min_child_weight_list:
-
-                        for max_delta_step in max_delta_step_list:
-
-                            for data_jj in range(2):
-
-                                # XGBoost Training:
-                                xgb_reg = XGBRegressor(n_estimators=1000, max_depth=max_depth, random_state=42,
-                                                       early_stopping_rounds=20,
-                                                       gamma=gamma, min_child_weight=min_child_weight, max_delta_step=max_delta_step)
-
-                                xgb_reg.fit(X_train_comb[data_jj][feature_columns[data_jj]], y_train_comb[data_jj],
-                                            eval_set=[(X_test_comb[data_jj][feature_columns[data_jj]], y_test_comb[data_jj])], verbose=False)
-
-                                best_iterations.append(xgb_reg.best_iteration)
-                                best_scores.append(xgb_reg.best_score)
-
-                                if xgb_reg.best_score < best_score:
-                                    best_params_dict = {"max_depth": max_depth, "gamma": gamma,
-                                                        "min_child_weight": min_child_weight, "max_delta_step": max_delta_step}
-                                    best_score = xgb_reg.best_score
+                elif grid_search.best_score_ < best_score:
+                    best_params_dict = grid_search.best_params_
+                    best_score = grid_search.best_score_
 
             print(jj, best_params_dict)
 
