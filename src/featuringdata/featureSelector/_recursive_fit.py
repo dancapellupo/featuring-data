@@ -10,13 +10,7 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error
 from xgboost.sklearn import XGBRegressor
 
 
-def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb):
-
-    parameter_dict = {'max_depth': [3, 4, 5, 6], 'gamma': [0, 1, 5],
-                      'min_child_weight': [0, 1, 5], 'max_delta_step': [0, 1, 5]}
-
-    # best_params_dict = {"max_depth": max_depth_list[0], "gamma": gamma_list[0],
-    #                     "min_child_weight": min_child_weight_list[0], "max_delta_step": max_delta_step_list[0]}
+def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, parameter_dict):
 
     feature_columns_full = X_train_comb[0].columns.to_list()
 
@@ -25,13 +19,16 @@ def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb):
     feature_columns.append(feature_columns_full.copy())
 
     num_columns_orig = len(feature_columns_full)
-    print(num_columns_orig)
+    print('Starting number of feature columns: {}\n'.format(num_columns_orig))
 
     training_results_df = pd.DataFrame(columns=["RMSE_train_1", "RMSE_test_1", "num_features_1", "feature_list_1", "features_to_remove_1", "RMSE_train_2", "RMSE_test_2", "num_features_2", "feature_list_2", "features_to_remove_2"])
     # training_results_df = pd.DataFrame(
     #     columns=["RMSE_train_1", "RMSE_test_1", "MAE_test_1", "num_features_1", "feature_list_1",
     #              "features_to_remove_1", "RMSE_train_2", "RMSE_test_2", "MAE_test_2", "num_features_2", "feature_list_2",
     #              "features_to_remove_2"])
+
+    hyperparams_list = list(parameter_dict.keys())
+    hyperparams_df = pd.DataFrame(columns=hyperparams_list)
 
     for jj in range(num_columns_orig):
 
@@ -56,7 +53,11 @@ def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb):
                     best_params_dict = grid_search.best_params_
                     best_score = grid_search.best_score_
 
-            print(jj, best_params_dict)
+            out_row = []
+            for hyperparam in hyperparams_list:
+                out_row.append(best_params_dict[hyperparam])
+            hyperparams_df.loc[jj] = out_row
+            print('\nIter {} -- New best params: {}\n'.format(jj, best_params_dict))
 
         out_row = []
 
@@ -94,10 +95,12 @@ def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb):
 
         training_results_df.loc[jj] = out_row
         # print(jj, out_row[1], out_row[2], out_row[4], out_row[6], out_row[7], out_row[9])
-        print(jj, out_row[1], out_row[2], out_row[6], out_row[7])
+        print('Iter', jj, out_row[1], out_row[2], out_row[6], out_row[7])
 
         if len(feature_columns[0]) == 0 or len(feature_columns[1]) == 0:
             break
 
-    return training_results_df
+    print()
+
+    return training_results_df, hyperparams_df
 
