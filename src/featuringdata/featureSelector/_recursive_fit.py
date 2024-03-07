@@ -10,7 +10,7 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error
 from xgboost.sklearn import XGBRegressor
 
 
-def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, parameter_dict):
+def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, parameter_dict, target_log=False):
 
     feature_columns_full = X_train_comb[0].columns.to_list()
 
@@ -21,11 +21,11 @@ def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, paramete
     num_columns_orig = len(feature_columns_full)
     print('Starting number of feature columns: {}\n'.format(num_columns_orig))
 
-    training_results_df = pd.DataFrame(columns=["RMSE_train_1", "RMSE_test_1", "num_features_1", "feature_list_1", "features_to_remove_1", "RMSE_train_2", "RMSE_test_2", "num_features_2", "feature_list_2", "features_to_remove_2"])
-    # training_results_df = pd.DataFrame(
-    #     columns=["RMSE_train_1", "RMSE_test_1", "MAE_test_1", "num_features_1", "feature_list_1",
-    #              "features_to_remove_1", "RMSE_train_2", "RMSE_test_2", "MAE_test_2", "num_features_2", "feature_list_2",
-    #              "features_to_remove_2"])
+    # training_results_df = pd.DataFrame(columns=["RMSE_train_1", "RMSE_test_1", "num_features_1", "feature_list_1", "features_to_remove_1", "RMSE_train_2", "RMSE_test_2", "num_features_2", "feature_list_2", "features_to_remove_2"])
+    training_results_df = pd.DataFrame(
+        columns=["RMSE_train_1", "RMSE_test_1", "MAE_test_1", "num_features_1", "feature_list_1",
+                 "features_to_remove_1", "RMSE_train_2", "RMSE_test_2", "MAE_test_2", "num_features_2",
+                 "feature_list_2", "features_to_remove_2"])
 
     hyperparams_list = list(parameter_dict.keys())
     hyperparams_df = pd.DataFrame(columns=hyperparams_list)
@@ -75,10 +75,16 @@ def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, paramete
             y_train_pred = xgb_reg.predict(X_train_comb[data_jj][feature_columns[data_jj]])
             y_test_pred = xgb_reg.predict(X_test_comb[data_jj][feature_columns[data_jj]])
 
-            train_err = round(mean_squared_error(y_train_comb[data_jj], y_train_pred, squared=False), 3)
-            test_err = round(mean_squared_error(y_test_comb[data_jj], y_test_pred, squared=False), 3)
+            # TODO: Instead of rounding, go by significant digits [# of digits to be user-configurable]
+            train_err = round(mean_squared_error(y_train_comb[data_jj], y_train_pred, squared=False), 5)
+            test_err = round(mean_squared_error(y_test_comb[data_jj], y_test_pred, squared=False), 5)
 
-            out_row.extend([train_err, test_err, len(feature_columns[data_jj]), ', '.join(feature_columns[data_jj])])
+            if target_log:
+                test_mae = round(mean_absolute_error(np.expm1(y_test_comb[data_jj]), np.expm1(y_test_pred)))
+            else:
+                test_mae = round(mean_absolute_error(y_test_comb[data_jj]), y_test_pred)
+
+            out_row.extend([train_err, test_err, test_mae, len(feature_columns[data_jj]), ', '.join(feature_columns[data_jj])])
 
             xx = np.where(xgb_reg.feature_importances_ == 0)[0]
             if xx.size > 0:

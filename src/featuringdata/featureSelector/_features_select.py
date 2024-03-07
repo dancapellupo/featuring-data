@@ -15,12 +15,13 @@ from ._recursive_fit import recursive_fit
 class FeatureSelector:
 
     def __init__(self, numeric_cols, non_numeric_cols, report_prefix='FeatureSelection', target_col=None,
-                 test_size=0.15, parameter_dict=None):
+                 target_log=False, test_size=0.15, parameter_dict=None):
 
         self.numeric_cols = numeric_cols
         self.non_numeric_cols = non_numeric_cols
         self.report_prefix = report_prefix
         self.target_col = target_col
+        self.target_log = target_log
 
         self.test_size = test_size
 
@@ -45,8 +46,10 @@ class FeatureSelector:
 
         X = X.merge(X_onehot, left_index=True, right_index=True)
 
-        y = data_df[self.target_col].values
-        y = np.log1p(data_df[self.target_col].values)
+        if self.target_log:
+            y = np.log1p(data_df[self.target_col].values)
+        else:
+            y = data_df[self.target_col].values
 
         X_train_42, X_test_42, y_train_42, y_test_42 = train_test_split(X, y, test_size=self.test_size,
                                                                         random_state=42)
@@ -62,8 +65,9 @@ class FeatureSelector:
         y_train_comb = [y_train_42, y_train_46]
         y_test_comb = [y_test_42, y_test_46]
 
-        training_results_df, self.hyperparams_df = recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb,
-                                                                 parameter_dict=self.parameter_dict)
+        training_results_df, self.hyperparams_df = recursive_fit(
+            X_train_comb, y_train_comb, X_test_comb, y_test_comb, target_log=self.target_log,
+            parameter_dict=self.parameter_dict)
 
         best_result_ind_1 = np.argmin(training_results_df["RMSE_test_1"].values)
         best_result_ind_2 = np.argmin(training_results_df["RMSE_test_2"].values)
@@ -90,14 +94,19 @@ class FeatureSelector:
         hyperparam_iter = hyperparam_iters[np.where((best_ind - hyperparam_iters) >= 0)[0][-1]]
 
         hyperparams_dict = self.hyperparams_df.loc[hyperparam_iter].to_dict()
-        print('Using Iter {} from data split {} with {}'.format(best_ind, data_ind, hyperparams_dict))
+        print('Using Iter {} from data split {} with {}'.format(best_ind, data_ind+1, hyperparams_dict))
 
         # XGBoost Training:
         xgb_reg = XGBRegressor(n_estimators=1000, early_stopping_rounds=20, random_state=42, **hyperparams_dict)
         xgb_reg.fit(X_train_best, y_train_comb[data_ind], eval_set=[(X_test_best, y_test_comb[data_ind])], verbose=True)
 
         y_test_pred = xgb_reg.predict(X_test_best)
-        print(mean_absolute_error(np.expm1(y_test_comb[data_ind]), np.expm1(y_test_pred)))
+
+        if self.target_log:
+            mae_final = mean_absolute_error(np.expm1(y_test_comb[data_ind]), np.expm1(y_test_pred))
+        else:
+            mae_final = mean_absolute_error(y_test_comb[data_ind], y_test_pred)
+        print('\nFinal MAE: {}\n'.format(mae_final))
 
         training_results_df.to_csv('{}_training_results_full_{}.csv'.format(self.report_prefix, timestamp))
         self.hyperparams_df.to_csv('{}_best_hyperparameters_{}.csv'.format(self.report_prefix, timestamp))
