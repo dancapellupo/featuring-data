@@ -21,11 +21,13 @@ def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, paramete
     num_columns_orig = len(feature_columns_full)
     print('Starting number of feature columns: {}\n'.format(num_columns_orig))
 
-    # training_results_df = pd.DataFrame(columns=["RMSE_train_1", "RMSE_test_1", "num_features_1", "feature_list_1", "features_to_remove_1", "RMSE_train_2", "RMSE_test_2", "num_features_2", "feature_list_2", "features_to_remove_2"])
-    training_results_df = pd.DataFrame(
-        columns=["RMSE_train_1", "RMSE_test_1", "MAE_test_1", "num_features_1", "feature_list_1",
-                 "features_to_remove_1", "RMSE_train_2", "RMSE_test_2", "MAE_test_2", "num_features_2",
-                 "feature_list_2", "features_to_remove_2"])
+    training_results_cols_prefix = ["RMSE_train_", "RMSE_test_", "MAE_test_", "num_features_", "feature_list_",
+                                    "feat_high_import_name_", "feat_high_import_val_",
+                                    "features_to_remove_"]
+    training_results_cols = []
+    for ii in range(1, 2+1):
+        training_results_cols.extend([x + str(ii) for x in training_results_cols_prefix])
+    training_results_df = pd.DataFrame(columns=training_results_cols)
 
     hyperparams_list = list(parameter_dict.keys())
     hyperparams_df = pd.DataFrame(columns=hyperparams_list)
@@ -85,6 +87,10 @@ def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, paramete
                 test_mae = round(mean_absolute_error(y_test_comb[data_jj]), y_test_pred)
 
             out_row.extend([train_err, test_err, test_mae, len(feature_columns[data_jj]), ', '.join(feature_columns[data_jj])])
+
+            max_feat_import_ind = np.argmax(xgb_reg.feature_importances_)
+            out_row.extend([feature_columns[data_jj][max_feat_import_ind],
+                            round(xgb_reg.feature_importances_[max_feat_import_ind], 2)])
 
             xx = np.where(xgb_reg.feature_importances_ == 0)[0]
             if xx.size > 0:
