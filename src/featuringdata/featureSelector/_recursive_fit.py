@@ -4,13 +4,14 @@ import itertools as it
 import numpy as np
 import pandas as pd
 
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, ParameterGrid
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 from xgboost.sklearn import XGBRegressor
 
 
-def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, parameter_dict, target_log=False):
+def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, parameter_dict, use_gridsearchcv=False,
+                  target_log=False):
 
     feature_columns_full = X_train_comb[0].columns.to_list()
 
@@ -32,28 +33,50 @@ def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, paramete
     hyperparams_list = list(parameter_dict.keys())
     hyperparams_df = pd.DataFrame(columns=hyperparams_list)
 
+    feature_importance_dict_list = []
+    for ii in range(1, 2+1):
+        pass
+
     for jj in range(num_columns_orig):
 
         # if jj % round(num_columns_orig / 5.) == 0:
         if jj % 15 == 0:
 
+            best_score = None
+
             for data_jj in range(2):
-                # GridSearchCV + XGBoost Training:
-                xgb_reg = XGBRegressor(n_estimators=1000, early_stopping_rounds=20, random_state=42)
 
-                grid_search = GridSearchCV(xgb_reg, param_grid=parameter_dict, cv=2)
+                if use_gridsearchcv:
+                    # GridSearchCV + XGBoost Training:
+                    xgb_reg = XGBRegressor(n_estimators=1000, early_stopping_rounds=20, random_state=42)
 
-                grid_search.fit(X_train_comb[data_jj][feature_columns[data_jj]], y_train_comb[data_jj],
-                                eval_set=[(X_test_comb[data_jj][feature_columns[data_jj]], y_test_comb[data_jj])],
-                                verbose=False)
+                    grid_search = GridSearchCV(xgb_reg, param_grid=parameter_dict, cv=2)
 
-                if data_jj == 0:
-                    best_params_dict = grid_search.best_params_
-                    best_score = grid_search.best_score_
+                    grid_search.fit(X_train_comb[data_jj][feature_columns[data_jj]], y_train_comb[data_jj],
+                                    eval_set=[(X_test_comb[data_jj][feature_columns[data_jj]], y_test_comb[data_jj])],
+                                    verbose=False)
 
-                elif grid_search.best_score_ < best_score:
-                    best_params_dict = grid_search.best_params_
-                    best_score = grid_search.best_score_
+                    if data_jj == 0:
+                        best_params_dict = grid_search.best_params_
+                        best_score = grid_search.best_score_
+
+                    elif grid_search.best_score_ < best_score:
+                        best_params_dict = grid_search.best_params_
+                        best_score = grid_search.best_score_
+
+                else:
+                    # XGBoost Training:
+                    for parameter_dict_tmp in iter(ParameterGrid(parameter_dict)):
+
+                        xgb_reg = XGBRegressor(n_estimators=1000, early_stopping_rounds=20, random_state=42,
+                                               **parameter_dict_tmp)
+                        xgb_reg.fit(X_train_comb[data_jj][feature_columns[data_jj]], y_train_comb[data_jj],
+                                    eval_set=[(X_test_comb[data_jj][feature_columns[data_jj]], y_test_comb[data_jj])],
+                                    verbose=False)
+
+                        if (best_score is None) or (xgb_reg.best_score < best_score):
+                            best_score = xgb_reg.best_score
+                            best_params_dict = parameter_dict_tmp
 
             out_row = []
             for hyperparam in hyperparams_list:
@@ -66,10 +89,7 @@ def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, paramete
         for data_jj in range(2):
 
             # XGBoost Training:
-            xgb_reg = XGBRegressor(n_estimators=1000, max_depth=best_params_dict["max_depth"], random_state=42,
-                                   early_stopping_rounds=20,
-                                   gamma=best_params_dict["gamma"], min_child_weight=best_params_dict["min_child_weight"],
-                                   max_delta_step=best_params_dict["max_delta_step"])
+            xgb_reg = XGBRegressor(n_estimators=1000, early_stopping_rounds=20, random_state=42, **best_params_dict)
 
             xgb_reg.fit(X_train_comb[data_jj][feature_columns[data_jj]], y_train_comb[data_jj],
                         eval_set=[(X_test_comb[data_jj][feature_columns[data_jj]], y_test_comb[data_jj])], verbose=False)
