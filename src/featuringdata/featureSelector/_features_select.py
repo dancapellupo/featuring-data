@@ -38,7 +38,7 @@ class FeatureSelector:
     def run(self, data_df):
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         plots_folder = './{}_ModelTraining_plots_{}'.format(self.report_prefix, timestamp)
-        # Path(plots_folder).mkdir()
+        Path(plots_folder).mkdir()
 
         # all_columns = self.numeric_cols.extend(self.non_numeric_cols)
 
@@ -114,8 +114,11 @@ class FeatureSelector:
         self.hyperparams_df.to_csv('{}_best_hyperparameters_{}.csv'.format(self.report_prefix, timestamp))
 
         # Generate plots of results:
-        plot_inline_scatter(training_results_df, x_col="num_features_{}".format(data_ind+1),
-                            y_col="MAE_test_{}".format(data_ind+1),
+        plot_inline_scatter(training_results_df, x_col="num_features_{}".format(1),
+                            y_col="MAE_test_{}".format(1), outfile=False,
+                            )
+        plot_inline_scatter(training_results_df, x_col="num_features_{}".format(2),
+                            y_col="MAE_test_{}".format(2), overplot=True, outfile=True, plots_folder=plots_folder,
                             )
 
         return training_results_df
