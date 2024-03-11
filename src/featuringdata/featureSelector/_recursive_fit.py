@@ -26,7 +26,7 @@ def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, paramete
                                     "feat_high_import_name_", "feat_high_import_val_",
                                     "features_to_remove_"]
     training_results_cols = []
-    for ii in range(1, 2+1):
+    for ii in range(1, len(X_train_comb)+1):
         training_results_cols.extend([x + str(ii) for x in training_results_cols_prefix])
     training_results_df = pd.DataFrame(columns=training_results_cols)
 
@@ -34,11 +34,16 @@ def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, paramete
     hyperparams_df = pd.DataFrame(columns=hyperparams_list)
 
     feature_importance_dict_list = []
-    for ii in range(1, 2+1):
-        pass
+    for ii in range(0, len(X_train_comb)):
+        feature_importance_dict = {}
+        for col in feature_columns_full:
+            feature_importance_dict[col] = []
+        feature_importance_dict_list.append(feature_importance_dict.copy())
 
     for jj in range(num_columns_orig):
 
+        # ---
+        # As the number of features is reduced, perform hyperparameter search to find the best hyperparameters
         # if jj % round(num_columns_orig / 5.) == 0:
         if jj % 15 == 0:
 
@@ -47,7 +52,7 @@ def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, paramete
             for data_jj in range(2):
 
                 if use_gridsearchcv:
-                    # GridSearchCV + XGBoost Training:
+                    # Hyperparameter search using GridSearchCV:
                     xgb_reg = XGBRegressor(n_estimators=1000, early_stopping_rounds=20, random_state=42)
 
                     grid_search = GridSearchCV(xgb_reg, param_grid=parameter_dict, cv=2)
@@ -65,7 +70,7 @@ def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, paramete
                         best_score = grid_search.best_score_
 
                 else:
-                    # XGBoost Training:
+                    # Hyperparameter search using the train and validation sets already defined:
                     for parameter_dict_tmp in iter(ParameterGrid(parameter_dict)):
 
                         xgb_reg = XGBRegressor(n_estimators=1000, early_stopping_rounds=20, random_state=42,
@@ -106,11 +111,15 @@ def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, paramete
             else:
                 test_mae = round(mean_absolute_error(y_test_comb[data_jj]), y_test_pred)
 
-            out_row.extend([train_err, test_err, test_mae, len(feature_columns[data_jj]), ', '.join(feature_columns[data_jj])])
+            out_row.extend(
+                [train_err, test_err, test_mae, len(feature_columns[data_jj]), ', '.join(feature_columns[data_jj])])
 
             max_feat_import_ind = np.argmax(xgb_reg.feature_importances_)
             out_row.extend([feature_columns[data_jj][max_feat_import_ind],
                             round(xgb_reg.feature_importances_[max_feat_import_ind], 2)])
+
+            for ii, col in enumerate(feature_columns[data_jj]):
+                feature_importance_dict_list[data_jj][col].append(xgb_reg.feature_importances_[ii])
 
             xx = np.where(xgb_reg.feature_importances_ == 0)[0]
             if xx.size > 0:
@@ -135,5 +144,5 @@ def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, paramete
 
     print()
 
-    return training_results_df, hyperparams_df
+    return training_results_df, hyperparams_df, feature_importance_dict_list
 

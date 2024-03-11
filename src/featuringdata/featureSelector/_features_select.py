@@ -34,6 +34,7 @@ class FeatureSelector:
             self.parameter_dict = parameter_dict
 
         self.hyperparams_df = pd.DataFrame()
+        self.feature_importance_dict_list = list()
 
     def run(self, data_df):
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -67,10 +68,13 @@ class FeatureSelector:
         y_train_comb = [y_train_42, y_train_46]
         y_test_comb = [y_test_42, y_test_46]
 
-        training_results_df, self.hyperparams_df = recursive_fit(
+        # ---
+        # Run recursive training
+        training_results_df, self.hyperparams_df, self.feature_importance_dict_list = recursive_fit(
             X_train_comb, y_train_comb, X_test_comb, y_test_comb, target_log=self.target_log,
             parameter_dict=self.parameter_dict)
 
+        # ---
         best_result_ind_1 = np.argmin(training_results_df["RMSE_test_1"].values)
         best_result_ind_2 = np.argmin(training_results_df["RMSE_test_2"].values)
 
