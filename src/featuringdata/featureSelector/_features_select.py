@@ -35,6 +35,7 @@ class FeatureSelector:
 
         self.hyperparams_df = pd.DataFrame()
         self.feature_importance_dict_list = list()
+        self.feat_import_bycol_df = pd.DataFrame()
 
     def run(self, data_df):
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -75,6 +76,8 @@ class FeatureSelector:
             parameter_dict=self.parameter_dict)
 
         # ---
+        # Identify best results
+        # TODO: Identify best run based on metric out to certain number [3?] of decimal points
         best_result_ind_1 = np.argmin(training_results_df["RMSE_test_1"].values)
         best_result_ind_2 = np.argmin(training_results_df["RMSE_test_2"].values)
 
@@ -102,7 +105,8 @@ class FeatureSelector:
         hyperparams_dict = self.hyperparams_df.loc[hyperparam_iter].to_dict()
         print('Using Iter {} from data split {} with {}'.format(best_ind, data_ind+1, hyperparams_dict))
 
-        # XGBoost Training:
+        # ---
+        # XGBoost Training with best feature selection:
         xgb_reg = XGBRegressor(n_estimators=1000, early_stopping_rounds=20, random_state=42, **hyperparams_dict)
         xgb_reg.fit(X_train_best, y_train_comb[data_ind], eval_set=[(X_test_best, y_test_comb[data_ind])], verbose=True)
 
@@ -114,9 +118,12 @@ class FeatureSelector:
             mae_final = mean_absolute_error(y_test_comb[data_ind], y_test_pred)
         print('\nFinal MAE: {}\n'.format(mae_final))
 
+        # ---
+        # Save results to CSV:
         training_results_df.to_csv('{}_training_results_full_{}.csv'.format(self.report_prefix, timestamp))
         self.hyperparams_df.to_csv('{}_best_hyperparameters_{}.csv'.format(self.report_prefix, timestamp))
 
+        # ---
         # Generate plots of results:
         plot_inline_scatter(training_results_df, x_col="num_features_{}".format(1),
                             y_col="MAE_test_{}".format(1), outfile=False,
@@ -125,6 +132,20 @@ class FeatureSelector:
                             y_col="MAE_test_{}".format(2), overplot=True, outfile=True, plots_folder=plots_folder,
                             )
 
+        # ---
+        # Collect and examine feature importance values:
+        self.feat_import_bycol_df = pd.DataFrame(columns=["max_feat_imp", "best_feat_imp"])
+        for col in self.feature_importance_dict_list[data_ind].keys():
+            feat_import_vals = self.feature_importance_dict_list[data_ind][col]
+            best_feat_imp = feat_import_vals[best_ind] if best_ind < len(feat_import_vals) else np.nan
+            self.feat_import_bycol_df.loc[col] = max(feat_import_vals), best_feat_imp
+
+        self.feat_import_bycol_df = self.feat_import_bycol_df.sort_values(by=["max_feat_imp"], ascending=False)
+
         return training_results_df
+
+    def rerun_plots(self):
+        # TODO: Option to re-run xgboost and plots with a different choice of iteration from recursive run
+        pass
 
 
