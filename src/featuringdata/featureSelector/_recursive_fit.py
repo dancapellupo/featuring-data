@@ -126,8 +126,9 @@ def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, paramete
             out_row.append(col_to_drop)
 
         training_results_df.loc[jj] = out_row
-        # print(jj, out_row[1], out_row[2], out_row[4], out_row[6], out_row[7], out_row[9])
-        print('Iter', jj, out_row[1], out_row[2], out_row[6], out_row[7])
+        print('Iter', jj, training_results_df.loc[jj, "num_features_1"], training_results_df.loc[jj, "RMSE_test_1"],
+              training_results_df.loc[jj, "feat_high_import_name_1"],
+              training_results_df.loc[jj, "feat_high_import_val_1"])
 
         if len(feature_columns[0]) == 0 or len(feature_columns[1]) == 0:
             break

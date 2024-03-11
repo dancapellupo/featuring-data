@@ -1,5 +1,6 @@
 
 from datetime import datetime
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -10,6 +11,7 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error
 from xgboost.sklearn import XGBRegressor
 
 from ._recursive_fit import recursive_fit
+from ._generate_plots import plot_inline_scatter
 
 
 class FeatureSelector:
@@ -110,6 +112,11 @@ class FeatureSelector:
 
         training_results_df.to_csv('{}_training_results_full_{}.csv'.format(self.report_prefix, timestamp))
         self.hyperparams_df.to_csv('{}_best_hyperparameters_{}.csv'.format(self.report_prefix, timestamp))
+
+        # Generate plots of results:
+        plot_inline_scatter(training_results_df, x_col="num_features_{}".format(data_ind+1),
+                            y_col="MAE_test_{}".format(data_ind+1),
+                            )
 
         return training_results_df
 
