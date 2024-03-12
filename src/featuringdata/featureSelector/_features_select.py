@@ -11,7 +11,7 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error
 from xgboost.sklearn import XGBRegressor
 
 from ._recursive_fit import recursive_fit
-from ._generate_plots import plot_inline_scatter
+from ._generate_plots import plot_inline_scatter, plot_xy
 
 
 class FeatureSelector:
@@ -134,13 +134,33 @@ class FeatureSelector:
 
         # ---
         # Collect and examine feature importance values:
-        self.feat_import_bycol_df = pd.DataFrame(columns=["max_feat_imp", "best_feat_imp"])
+        self.feat_import_bycol_df = pd.DataFrame(columns=["max_feat_imp", "best_feat_imp", "num_iters"])
         for col in self.feature_importance_dict_list[data_ind].keys():
             feat_import_vals = self.feature_importance_dict_list[data_ind][col]
             best_feat_imp = feat_import_vals[best_ind] if best_ind < len(feat_import_vals) else np.nan
-            self.feat_import_bycol_df.loc[col] = max(feat_import_vals), best_feat_imp
+            self.feat_import_bycol_df.loc[col] = max(feat_import_vals), best_feat_imp, len(feat_import_vals)
 
         self.feat_import_bycol_df = self.feat_import_bycol_df.sort_values(by=["max_feat_imp"], ascending=False)
+
+        num_features = training_results_df["num_features_{}".format(data_ind+1)].values
+        for jj in range(0, 15, 5):
+            cols_to_plot = self.feat_import_bycol_df.index[jj:jj+5]
+
+            for jjj, col in enumerate(cols_to_plot):
+                num_iters = int(self.feat_import_bycol_df.loc[col, "num_iters"])
+                x = num_features[0:num_iters]
+                y = self.feature_importance_dict_list[data_ind][col]
+
+                if jjj == 0:
+                    plot_xy(x, y, xlabel='num_features_{}'.format(data_ind+1), ylabel=col, overplot=False,
+                            outfile=False)
+                elif jjj < 5-1:
+                    plot_xy(x, y, xlabel='num_features_{}'.format(data_ind+1), ylabel=col, overplot=True,
+                            outfile=False)
+                else:
+                    plot_xy(x, y, xlabel='num_features_{}'.format(data_ind+1), ylabel=col, overplot=True,
+                            outfile=True, plots_folder=plots_folder)
+
 
         return training_results_df
 
