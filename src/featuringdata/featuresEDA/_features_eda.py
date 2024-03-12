@@ -2,6 +2,8 @@
 from datetime import datetime
 from pathlib import Path
 
+import pandas as pd
+
 from ._create_pdf_report import (
     initialize_pdf_doc,
     section_on_null_columns,
@@ -46,8 +48,8 @@ class FeaturesEDA:
         self.numeric_uniq_vals_df = None
         self.non_numeric_uniq_vals_df = None
         self.numeric_df = None
-        self.numeric_collinear_df = None
-        self.numeric_collinear_summary_df = None
+        self.numeric_collinear_df = pd.DataFrame()
+        self.numeric_collinear_summary_df = pd.DataFrame()
         self.non_numeric_df = None
 
     # TODO Create function that does up to correlation
@@ -121,7 +123,7 @@ class FeaturesEDA:
             custom_filename = self.report_prefix + '_Initial'
             save_pdf_doc(self.pdf, custom_filename=custom_filename, timestamp=timestamp)
 
-    def run_full_eda(self, data_df):
+    def run_full_eda(self, data_df, run_collinear=True, generate_plots=True):
 
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         plots_folder = './{}_EDA_plots_{}'.format(self.report_prefix, timestamp)
@@ -138,8 +140,9 @@ class FeaturesEDA:
         self.numeric_df = calc_numeric_features_target_corr(data_df, self.numeric_cols, self.target_col,
                                                             rf_n_estimators=10)
 
-        self.numeric_collinear_df, self.numeric_collinear_summary_df = calc_corr_numeric_features(data_df,
-                                                                                                  self.numeric_cols)
+        if run_collinear:
+            self.numeric_collinear_df, self.numeric_collinear_summary_df = calc_corr_numeric_features(data_df,
+                                                                                                      self.numeric_cols)
 
         self.non_numeric_df = calc_nonnumeric_features_target_corr(data_df, self.non_numeric_cols, self.target_col)
 

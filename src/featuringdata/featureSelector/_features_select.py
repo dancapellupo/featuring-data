@@ -37,7 +37,7 @@ class FeatureSelector:
         self.feature_importance_dict_list = list()
         self.feat_import_bycol_df = pd.DataFrame()
 
-    def run(self, data_df):
+    def run(self, data_df, numeric_df=None, non_numeric_df=None):
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         plots_folder = './{}_ModelTraining_plots_{}'.format(self.report_prefix, timestamp)
         Path(plots_folder).mkdir()
@@ -125,12 +125,10 @@ class FeatureSelector:
 
         # ---
         # Generate plots of results:
-        plot_inline_scatter(training_results_df, x_col="num_features_{}".format(1),
-                            y_col="MAE_test_{}".format(1), outfile=False,
-                            )
-        plot_inline_scatter(training_results_df, x_col="num_features_{}".format(2),
-                            y_col="MAE_test_{}".format(2), overplot=True, outfile=True, plots_folder=plots_folder,
-                            )
+        plot_inline_scatter(training_results_df, x_col="num_features_{}".format(1), y_col="MAE_test_{}".format(1),
+                            outfile=False)
+        plot_inline_scatter(training_results_df, x_col="num_features_{}".format(2), y_col="MAE_test_{}".format(2),
+                            overplot=True, outfile=True, plots_folder=plots_folder, title='num_features_vs_MAE')
 
         # ---
         # Collect and examine feature importance values:
@@ -142,8 +140,12 @@ class FeatureSelector:
 
         self.feat_import_bycol_df = self.feat_import_bycol_df.sort_values(by=["max_feat_imp"], ascending=False)
 
+        # Generate plots showing how the feature importance of the top features changes depending on the number of
+        #  total features used
         num_features = training_results_df["num_features_{}".format(data_ind+1)].values
-        for jj in range(0, 20, 5):
+        num_feat_per_plot = 5
+        tot_feat_to_plot = 20
+        for jj in range(0, tot_feat_to_plot, num_feat_per_plot):
             cols_to_plot = self.feat_import_bycol_df.index[jj:jj+5]
 
             for jjj, col in enumerate(cols_to_plot):
@@ -160,6 +162,20 @@ class FeatureSelector:
                     plot_xy(x, y, leg_label=col, overplot=True, outfile=True, plots_folder=plots_folder,
                             title='feature_importance_vs_number_features_{}'.format(jj))
 
+        # Generate plot of feature importance versus correlation with target variable:
+        cols_best_iter = self.feat_import_bycol_df.dropna().index
+        if numeric_df is not None:
+            numeric_best_feat = set(cols_best_iter).intersection(set(numeric_df.index))
+            print('Number of numeric features in best iteration: {}'.format(len(numeric_best_feat)))
+
+            x, y = [], []
+            for feat in numeric_best_feat:
+                x.append(numeric_df.loc[feat, "Random Forest"])
+                y.append(self.feat_import_bycol_df.loc[feat, "best_feat_imp"])
+
+            plot_xy(x, y, xlabel='RF Correlation between Feature and Target', ylabel='Feature Importance',
+                    leg_label='', overplot=False, outfile=True, plots_folder=plots_folder,
+                    title='target_correlation_vs_feature_importance')
 
         return training_results_df
 

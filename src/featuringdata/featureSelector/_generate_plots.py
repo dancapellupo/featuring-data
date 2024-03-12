@@ -13,7 +13,7 @@ def plot_inline_scatter(data_df, x_col, y_col, title='', overplot=False, outfile
     sns.scatterplot(data_df, x=x_col, y=y_col, size=3, legend=False)
 
     if outfile:
-        plt.savefig('{}/{}_vs_{}.png'.format(plots_folder, x_col, y_col), bbox_inches='tight')
+        plt.savefig('{}/{}.png'.format(plots_folder, title), bbox_inches='tight')
 
 
 def plot_xy(x, y, xlabel=None, ylabel=None, leg_label='', title='', overplot=False, outfile=True, plots_folder='./'):
@@ -35,6 +35,7 @@ def plot_xy(x, y, xlabel=None, ylabel=None, leg_label='', title='', overplot=Fal
     plt.legend()
 
     if outfile:
+        # TODO Take title, lowercase and replace spaces with underscores
         plt.savefig('{}/{}.png'.format(plots_folder, title), bbox_inches='tight')
 
 
