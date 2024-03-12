@@ -143,7 +143,7 @@ class FeatureSelector:
         self.feat_import_bycol_df = self.feat_import_bycol_df.sort_values(by=["max_feat_imp"], ascending=False)
 
         num_features = training_results_df["num_features_{}".format(data_ind+1)].values
-        for jj in range(0, 15, 5):
+        for jj in range(0, 20, 5):
             cols_to_plot = self.feat_import_bycol_df.index[jj:jj+5]
 
             for jjj, col in enumerate(cols_to_plot):
@@ -152,14 +152,13 @@ class FeatureSelector:
                 y = self.feature_importance_dict_list[data_ind][col]
 
                 if jjj == 0:
-                    plot_xy(x, y, xlabel='num_features_{}'.format(data_ind+1), ylabel=col, overplot=False,
-                            outfile=False)
+                    plot_xy(x, y, xlabel='num_features_{}'.format(data_ind+1), ylabel='feature importance',
+                            leg_label=col, overplot=False, outfile=False)
                 elif jjj < 5-1:
-                    plot_xy(x, y, xlabel='num_features_{}'.format(data_ind+1), ylabel=col, overplot=True,
-                            outfile=False)
+                    plot_xy(x, y, leg_label=col, overplot=True, outfile=False)
                 else:
-                    plot_xy(x, y, xlabel='num_features_{}'.format(data_ind+1), ylabel=col, overplot=True,
-                            outfile=True, plots_folder=plots_folder)
+                    plot_xy(x, y, leg_label=col, overplot=True, outfile=True, plots_folder=plots_folder,
+                            title='feature_importance_vs_number_features_{}'.format(jj))
 
 
         return training_results_df
