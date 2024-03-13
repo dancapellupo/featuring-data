@@ -138,6 +138,7 @@ class FeatureSelector:
             best_feat_imp = feat_import_vals[best_ind] if best_ind < len(feat_import_vals) else np.nan
             self.feat_import_bycol_df.loc[col] = max(feat_import_vals), best_feat_imp, len(feat_import_vals)
 
+        self.feat_import_bycol_df["num_iters"] = self.feat_import_bycol_df["num_iters"].astype(int)
         self.feat_import_bycol_df = self.feat_import_bycol_df.sort_values(by=["max_feat_imp"], ascending=False)
 
         # Generate plots showing how the feature importance of the top features changes depending on the number of
@@ -174,8 +175,24 @@ class FeatureSelector:
                 y.append(self.feat_import_bycol_df.loc[feat, "best_feat_imp"])
 
             plot_xy(x, y, xlabel='RF Correlation between Feature and Target', ylabel='Feature Importance',
-                    leg_label='', overplot=False, outfile=True, plots_folder=plots_folder,
+                    leg_label='Numeric Feature', overplot=False, outfile=True, plots_folder=plots_folder,
                     title='target_correlation_vs_feature_importance')
+
+            if non_numeric_df is not None:
+                feat_import_bycol_df_best = self.feat_import_bycol_df.dropna()
+                # non_numeric_best_feat = set(cols_best_iter).difference()
+
+                x, y = [], []
+                for feat in non_numeric_df.index:
+                    feat_df = feat_import_bycol_df_best.loc[feat_import_bycol_df_best.index.str.startswith(feat + '_')]
+                    if len(feat_df) > 0:
+                        x.append(non_numeric_df.loc[feat, "RF_norm"])
+                        y.append(feat_df["best_feat_imp"].sum())
+
+                print('Number of non-numeric features in best iteration: {}'.format(len(y)))
+                plot_xy(x, y, xlabel='RF Correlation between Feature and Target', ylabel='Feature Importance',
+                        leg_label='Non-Numeric Feature', overplot=True, outfile=True, plots_folder=plots_folder,
+                        title='target_correlation_vs_feature_importance')
 
         return training_results_df
 
