@@ -10,7 +10,14 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 from xgboost.sklearn import XGBRegressor
 
+from ._create_pdf_report import (
+    initialize_pdf_doc,
+    add_plot_pdf,
+    save_pdf_doc
+)
+
 from ._recursive_fit import recursive_fit
+
 from ._generate_plots import plot_inline_scatter, plot_xy
 
 
@@ -26,6 +33,8 @@ class FeatureSelector:
         self.target_log = target_log
 
         self.test_size = test_size
+
+        self.pdf = None
 
         if parameter_dict is None:
             self.parameter_dict = {'max_depth': [3, 4, 5, 6], 'gamma': [0, 1, 5],
@@ -124,11 +133,17 @@ class FeatureSelector:
         self.hyperparams_df.to_csv('{}_best_hyperparameters_{}.csv'.format(self.report_prefix, timestamp))
 
         # ---
+        # Generating PDF Document
+        self.pdf = initialize_pdf_doc()
+
+        # ---
         # Generate plots of results:
         plot_inline_scatter(training_results_df, x_col="num_features_{}".format(1), y_col="MAE_test_{}".format(1),
                             outfile=False)
         plot_inline_scatter(training_results_df, x_col="num_features_{}".format(2), y_col="MAE_test_{}".format(2),
                             overplot=True, outfile=True, plots_folder=plots_folder, title='num_features_vs_MAE')
+
+        self.pdf = add_plot_pdf(self.pdf, file_path=plots_folder+'/num_features_vs_MAE'+'.png', new_page=True)
 
         # ---
         # Collect and examine feature importance values:
@@ -157,11 +172,16 @@ class FeatureSelector:
                 if jjj == 0:
                     plot_xy(x, y, xlabel='num_features_{}'.format(data_ind+1), ylabel='feature importance',
                             leg_label=col, overplot=False, outfile=False)
-                elif jjj < 5-1:
+                elif jjj < num_feat_per_plot-1:
                     plot_xy(x, y, leg_label=col, overplot=True, outfile=False)
                 else:
                     plot_xy(x, y, leg_label=col, overplot=True, outfile=True, plots_folder=plots_folder,
                             title='feature_importance_vs_number_features_{}'.format(jj))
+
+            new_page = True if (jj % 2) == 0 else False
+            self.pdf = add_plot_pdf(self.pdf,
+                                    file_path=plots_folder+'/feature_importance_vs_number_features_{}'.format(jj)+'.png',
+                                    new_page=new_page)
 
         # Generate plot of feature importance versus correlation with target variable:
         cols_best_iter = self.feat_import_bycol_df.dropna().index
@@ -193,6 +213,12 @@ class FeatureSelector:
                 plot_xy(x, y, xlabel='RF Correlation between Feature and Target', ylabel='Feature Importance',
                         leg_label='Non-Numeric Feature', overplot=True, outfile=True, plots_folder=plots_folder,
                         title='target_correlation_vs_feature_importance')
+
+            self.pdf = add_plot_pdf(self.pdf, file_path=plots_folder+'/target_correlation_vs_feature_importance'+'.png',
+                                    new_page=True)
+
+        # Save PDF document to current working directory
+        save_pdf_doc(self.pdf, custom_filename=self.report_prefix, timestamp=timestamp)
 
         return training_results_df
 
