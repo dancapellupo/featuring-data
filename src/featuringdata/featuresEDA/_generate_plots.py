@@ -10,10 +10,10 @@ import seaborn as sns
 def plot_feature_values(data_df, columns_list, correlation_df, target_col, numeric=True, catplot_style='swarm',
                         plots_folder='./plots'):
 
-    backend_ = mpl.get_backend()
-    print('*** {} ***'.format(backend_))
-    mpl.use("Agg")
-    print('*** {} ***'.format(mpl.get_backend()))
+    # backend_ = mpl.get_backend()
+    # print('*** {} ***'.format(backend_))
+    # mpl.use("Agg")
+    # print('*** {} ***'.format(mpl.get_backend()))
 
     # use_sample = False
     if len(data_df) > 1000:
@@ -78,6 +78,8 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
 
         plt.savefig('{}/{}_vs_{}.png'.format(plots_folder, column, target_col), bbox_inches='tight')
 
-    mpl.use(backend_)  # Reset backend
-    print('*** {} ***'.format(mpl.get_backend()))
+        plt.close()
+
+    # mpl.use(backend_)  # Reset backend
+    # print('*** {} ***'.format(mpl.get_backend()))
 
