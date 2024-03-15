@@ -12,6 +12,7 @@ from xgboost.sklearn import XGBRegressor
 
 from ._create_pdf_report import (
     initialize_pdf_doc,
+    add_text_pdf,
     add_plot_pdf,
     save_pdf_doc
 )
@@ -143,7 +144,23 @@ class FeatureSelector:
         plot_inline_scatter(training_results_df, x_col="num_features_{}".format(2), y_col="MAE_test_{}".format(2),
                             overplot=True, outfile=True, plots_folder=plots_folder, title='num_features_vs_MAE')
 
-        self.pdf = add_plot_pdf(self.pdf, file_path=plots_folder+'/num_features_vs_MAE'+'.png', new_page=True)
+        self.pdf = add_text_pdf(self.pdf, txt="Recursive Training Results", bold=True)
+        self.pdf = add_plot_pdf(self.pdf, file_path=plots_folder+'/num_features_vs_MAE'+'.png', new_page=False)
+        out_txt = ("The above plot has our model metric on the y-axis, and the number of features for each model "
+                   "training iteration on the x-axis. In other words, each dot here represents an iteration of the "
+                   "recursive model training.")
+        self.pdf = add_text_pdf(self.pdf, txt=out_txt)
+        out_txt = ("As the number of features is reduced, eventually the model will start to perform much more poorly."
+                   "The vertical line is the location with best value of the evaluation metric, in this case the [].")
+        self.pdf = add_text_pdf(self.pdf, txt=out_txt)
+        out_txt = ("In this model, the model training started with {} features (after one-hot encoding any categorical "
+                   "features), and achieved the best model training results with {} features.")
+        self.pdf = add_text_pdf(self.pdf, txt=out_txt)
+        out_txt = ("Note that there may be a large gap in the data points along the x-axis. Normally, the way this "
+                   "recursive model training works is that it removes the feature with the lowest importance at each "
+                   "iteration. However, if there are multiple features that have exactly zero importance, then all of "
+                   "those zero importance features are removed at once.")
+        self.pdf = add_text_pdf(self.pdf, txt=out_txt)
 
         # ---
         # Collect and examine feature importance values:

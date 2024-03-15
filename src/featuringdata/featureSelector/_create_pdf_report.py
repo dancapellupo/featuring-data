@@ -13,15 +13,26 @@ def initialize_pdf_doc():
     return pdf
 
 
+def add_text_pdf(pdf, txt, bold=False, fontsize=12):
+    style = 'B' if bold else ''
+    pdf.set_font('Arial', style, fontsize)
+
+    pdf.write(5, txt)
+
+    pdf.ln(7)
+
+    return pdf
+
+
 def add_plot_pdf(pdf, file_path, new_page=True):
 
     if new_page:
         pdf.add_page()
-    else:
-        pdf.ln(4)
 
     # TODO: Double-check that file exists
     pdf.image(file_path, x=10, y=None, w=180, h=0, type='PNG')
+
+    pdf.ln(4)
 
     return pdf
 
