@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 
-def plot_inline_scatter(data_df, x_col, y_col, xlabel=None, ylabel=None, title='', overplot=False, outfile=True,
-                        plots_folder='./'):
+def plot_inline_scatter(data_df, x_col, y_col, f=None, ax=None, xlabel=None, ylabel=None, title='', overplot=False,
+                        outfile=True, plots_folder='./'):
 
     if not overplot:
         sns.set_theme(style="whitegrid")
@@ -13,13 +13,21 @@ def plot_inline_scatter(data_df, x_col, y_col, xlabel=None, ylabel=None, title='
 
     sns.scatterplot(data_df, x=x_col, y=y_col, size=3, legend=False)
 
+    if xlabel is not None:
+        plt.xlabel(xlabel)
+    if ylabel is not None:
+        plt.ylabel(ylabel)
+
     if outfile:
         plt.savefig('{}/{}.png'.format(plots_folder, title), bbox_inches='tight')
         # *** Close for now ***
-        plt.close()
+        plt.close(f)
+    else:
+        return f, ax
 
 
-def plot_xy(x, y, xlabel=None, ylabel=None, leg_label='', title='', overplot=False, outfile=True, plots_folder='./'):
+def plot_xy(x, y, f=None, ax=None, xlabel=None, ylabel=None, leg_label='', title='', overplot=False, outfile=True,
+            plots_folder='./'):
 
     if not overplot:
         sns.set_theme(style="whitegrid")
@@ -40,7 +48,26 @@ def plot_xy(x, y, xlabel=None, ylabel=None, leg_label='', title='', overplot=Fal
     if outfile:
         # TODO Take title, lowercase and replace spaces with underscores
         plt.savefig('{}/{}.png'.format(plots_folder, title), bbox_inches='tight')
-        plt.close()
+        plt.close(f)
+    else:
+        return f, ax
+
+
+def plot_horizontal_line(ax, y_loc):
+    ax.hlines(y_loc, 0, 1, transform=ax.get_yaxis_transform(), color='black', linestyles=':')
+    return ax
+
+
+def plot_vertical_line(ax, x_loc):
+    print(ax.get_ylim())
+    ax.vlines(x_loc, 0.5, 1, transform=ax.get_xaxis_transform(), color='black', linestyles=':')
+    print(ax.get_ylim())
+    return ax
+
+
+def save_fig(f, ax, plots_folder='./', title=''):
+    plt.savefig('{}/{}.png'.format(plots_folder, title), bbox_inches='tight')
+    plt.close(f)
 
 
 def plot_xy_splitaxis(x, y, title='test', plots_folder='./'):

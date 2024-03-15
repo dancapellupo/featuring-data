@@ -19,7 +19,7 @@ from ._create_pdf_report import (
 
 from ._recursive_fit import recursive_fit
 
-from ._generate_plots import plot_inline_scatter, plot_xy, plot_xy_splitaxis
+from ._generate_plots import plot_inline_scatter, plot_xy, plot_horizontal_line, plot_vertical_line, save_fig, plot_xy_splitaxis
 
 
 class FeatureSelector:
@@ -146,12 +146,15 @@ class FeatureSelector:
             np.diff(training_results_df["num_features_{}".format(data_ind+1)].values)[0:5] < -0.2*num_features_start)[0]
         start_ii = gap_loc[-1] + 1 if gap_loc.size > 0 else 0
 
-        plot_inline_scatter(training_results_df.iloc[start_ii:], x_col="num_features_{}".format(1),
-                            y_col="MAE_test_{}".format(1), outfile=False)
-        plot_inline_scatter(training_results_df.iloc[start_ii:], x_col="num_features_{}".format(2),
-                            y_col="MAE_test_{}".format(2), xlabel='Number of Features in Iteration',
-                            ylabel='Mean Average Error (MAE) for Val Set', overplot=True, outfile=True,
-                            plots_folder=plots_folder, title='num_features_vs_MAE')
+        f, ax = plot_inline_scatter(training_results_df.iloc[start_ii:], x_col="num_features_{}".format(1),
+                                    y_col="MAE_test_{}".format(1), outfile=False)
+        best_mae = training_results_df["MAE_test_{}".format(data_ind+1)].iloc[best_ind]
+        f, ax = plot_inline_scatter(training_results_df.iloc[start_ii:], f=f, ax=ax, x_col="num_features_{}".format(2),
+                                    y_col="MAE_test_{}".format(2), xlabel='Number of Features in Iteration',
+                                    ylabel='Mean Average Error (MAE) for Val Set', overplot=True, outfile=False)
+        ax = plot_horizontal_line(ax, y_loc=best_mae)
+        # ax = plot_vertical_line(ax, x_loc=training_results_df["num_features_{}".format(data_ind+1)].iloc[best_ind])
+        save_fig(f, ax, plots_folder=plots_folder, title='num_features_vs_MAE')
 
         # plot_xy_splitaxis(x=training_results_df["num_features_1"].values, y=training_results_df["MAE_test_1"].values,
         #                   plots_folder=plots_folder, title='num_features_vs_MAE')
@@ -203,12 +206,12 @@ class FeatureSelector:
                 y = self.feature_importance_dict_list[data_ind][col]
 
                 if jjj == 0:
-                    plot_xy(x, y, xlabel='num_features_{}'.format(data_ind+1), ylabel='feature importance',
-                            leg_label=col, overplot=False, outfile=False)
+                    f, ax = plot_xy(x, y, xlabel='num_features_{}'.format(data_ind+1), ylabel='feature importance',
+                                    leg_label=col, overplot=False, outfile=False)
                 elif jjj < num_feat_per_plot-1:
-                    plot_xy(x, y, leg_label=col, overplot=True, outfile=False)
+                    f, ax = plot_xy(x, y, f=f, ax=ax, leg_label=col, overplot=True, outfile=False)
                 else:
-                    plot_xy(x, y, leg_label=col, overplot=True, outfile=True, plots_folder=plots_folder,
+                    plot_xy(x, y, f=f, ax=ax, leg_label=col, overplot=True, outfile=True, plots_folder=plots_folder,
                             title='feature_importance_vs_number_features_{}'.format(jj))
 
             new_page = True if (jj % 2) == 0 else False
@@ -227,9 +230,9 @@ class FeatureSelector:
                 x.append(numeric_df.loc[feat, "Random Forest"])
                 y.append(self.feat_import_bycol_df.loc[feat, "best_feat_imp"])
 
-            plot_xy(x, y, xlabel='RF Correlation between Feature and Target', ylabel='Feature Importance',
-                    leg_label='Numeric Feature', overplot=False, outfile=True, plots_folder=plots_folder,
-                    title='target_correlation_vs_feature_importance')
+            f, ax = plot_xy(x, y, xlabel='RF Correlation between Feature and Target', ylabel='Feature Importance',
+                            leg_label='Numeric Feature', overplot=False, outfile=False, plots_folder=plots_folder,
+                            title='target_correlation_vs_feature_importance')
 
             if non_numeric_df is not None:
                 feat_import_bycol_df_best = self.feat_import_bycol_df.dropna()
@@ -243,8 +246,8 @@ class FeatureSelector:
                         y.append(feat_df["best_feat_imp"].sum())
 
                 print('Number of non-numeric features in best iteration: {}'.format(len(y)))
-                plot_xy(x, y, leg_label='Non-Numeric Feature', overplot=True, outfile=True, plots_folder=plots_folder,
-                        title='target_correlation_vs_feature_importance')
+                plot_xy(x, y, f=f, ax=ax, leg_label='Non-Numeric Feature', overplot=True, outfile=True,
+                        plots_folder=plots_folder, title='target_correlation_vs_feature_importance')
 
             self.pdf = add_plot_pdf(self.pdf, file_path=plots_folder+'/target_correlation_vs_feature_importance'+'.png',
                                     new_page=True)
