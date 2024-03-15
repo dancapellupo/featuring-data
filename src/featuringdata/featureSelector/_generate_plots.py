@@ -3,7 +3,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 
-def plot_inline_scatter(data_df, x_col, y_col, title='', overplot=False, outfile=True, plots_folder='./'):
+def plot_inline_scatter(data_df, x_col, y_col, xlabel=None, ylabel=None, title='', overplot=False, outfile=True,
+                        plots_folder='./'):
 
     if not overplot:
         sns.set_theme(style="whitegrid")
@@ -14,6 +15,8 @@ def plot_inline_scatter(data_df, x_col, y_col, title='', overplot=False, outfile
 
     if outfile:
         plt.savefig('{}/{}.png'.format(plots_folder, title), bbox_inches='tight')
+        # *** Close for now ***
+        plt.close()
 
 
 def plot_xy(x, y, xlabel=None, ylabel=None, leg_label='', title='', overplot=False, outfile=True, plots_folder='./'):
@@ -37,5 +40,47 @@ def plot_xy(x, y, xlabel=None, ylabel=None, leg_label='', title='', overplot=Fal
     if outfile:
         # TODO Take title, lowercase and replace spaces with underscores
         plt.savefig('{}/{}.png'.format(plots_folder, title), bbox_inches='tight')
+        plt.close()
+
+
+def plot_xy_splitaxis(x, y, title='test', plots_folder='./'):
+
+    sns.set_theme(style="whitegrid")
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, sharey=True)
+    fig.subplots_adjust(wspace=0.05)  # adjust space between axes
+
+    # plot the same data on both axes
+    ax1.plot(x, y, 'o', markersize=3)
+    ax2.plot(x, y, 'o', markersize=3)
+
+    # zoom-in / limit the view to different portions of the data
+    ax1.set_xlim(-1, 140)  # outliers only
+    ax2.set_xlim(265, 300)  # most of the data
+
+    # hide the spines between ax and ax2
+    ax1.spines.bottom.set_visible(False)
+    ax2.spines.top.set_visible(False)
+    ax1.xaxis.tick_top()
+    ax1.tick_params(labeltop=False)  # don't put tick labels at the top
+    ax2.xaxis.tick_bottom()
+
+    # Now, let's turn towards the cut-out slanted lines.
+    # We create line objects in axes coordinates, in which (0,0), (0,1),
+    # (1,0), and (1,1) are the four corners of the axes.
+    # The slanted lines themselves are markers at those locations, such that the
+    # lines keep their angle and position, independent of the axes size or scale
+    # Finally, we need to disable clipping.
+
+    d = .5  # proportion of vertical to horizontal extent of the slanted line
+    kwargs = dict(marker=[(-1, -d), (1, d)], markersize=12,
+                  linestyle="none", color='k', mec='k', mew=1, clip_on=False)
+    ax1.plot([0, 1], [0, 0], transform=ax1.transAxes, **kwargs)
+    ax2.plot([0, 1], [1, 1], transform=ax2.transAxes, **kwargs)
+
+    plt.savefig('{}/{}.png'.format(plots_folder, title), bbox_inches='tight')
+    plt.close()
+
+
 
 

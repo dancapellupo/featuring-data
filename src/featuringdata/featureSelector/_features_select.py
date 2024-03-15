@@ -19,7 +19,7 @@ from ._create_pdf_report import (
 
 from ._recursive_fit import recursive_fit
 
-from ._generate_plots import plot_inline_scatter, plot_xy
+from ._generate_plots import plot_inline_scatter, plot_xy, plot_xy_splitaxis
 
 
 class FeatureSelector:
@@ -139,27 +139,43 @@ class FeatureSelector:
 
         # ---
         # Generate plots of results:
-        plot_inline_scatter(training_results_df, x_col="num_features_{}".format(1), y_col="MAE_test_{}".format(1),
-                            outfile=False)
-        plot_inline_scatter(training_results_df, x_col="num_features_{}".format(2), y_col="MAE_test_{}".format(2),
-                            overplot=True, outfile=True, plots_folder=plots_folder, title='num_features_vs_MAE')
+
+        # First look for large gaps along x-axis:
+        num_features_start = training_results_df["num_features_{}".format(data_ind+1)].iloc[0]
+        gap_loc = np.where(
+            np.diff(training_results_df["num_features_{}".format(data_ind+1)].values)[0:5] < -0.2*num_features_start)[0]
+        start_ii = gap_loc[-1] + 1 if gap_loc.size > 0 else 0
+
+        plot_inline_scatter(training_results_df.iloc[start_ii:], x_col="num_features_{}".format(1),
+                            y_col="MAE_test_{}".format(1), outfile=False)
+        plot_inline_scatter(training_results_df.iloc[start_ii:], x_col="num_features_{}".format(2),
+                            y_col="MAE_test_{}".format(2), xlabel='Number of Features in Iteration',
+                            ylabel='Mean Average Error (MAE) for Val Set', overplot=True, outfile=True,
+                            plots_folder=plots_folder, title='num_features_vs_MAE')
+
+        # plot_xy_splitaxis(x=training_results_df["num_features_1"].values, y=training_results_df["MAE_test_1"].values,
+        #                   plots_folder=plots_folder, title='num_features_vs_MAE')
 
         self.pdf = add_text_pdf(self.pdf, txt="Recursive Training Results", bold=True)
         self.pdf = add_plot_pdf(self.pdf, file_path=plots_folder+'/num_features_vs_MAE'+'.png', new_page=False)
+        if start_ii > 0:
+            out_txt = ("Note: The point from the first iteration with {} features and an MAE of {} was removed from "
+                       "this plot.").format(num_features_start,
+                                            training_results_df["MAE_test_{}".format(data_ind+1)].iloc[0])
+            self.pdf = add_text_pdf(self.pdf, txt=out_txt)
+            out_txt = ("Normally, the way this recursive model training works is that it removes the feature with the "
+                       "lowest importance at each iteration. However, if there are multiple features that have exactly "
+                       "zero importance, then all of those zero importance features are removed at once.")
+            self.pdf = add_text_pdf(self.pdf, txt=out_txt)
         out_txt = ("The above plot has our model metric on the y-axis, and the number of features for each model "
                    "training iteration on the x-axis. In other words, each dot here represents an iteration of the "
                    "recursive model training.")
         self.pdf = add_text_pdf(self.pdf, txt=out_txt)
-        out_txt = ("As the number of features is reduced, eventually the model will start to perform much more poorly."
+        out_txt = ("As the number of features is reduced, eventually the model will start to perform much more poorly. "
                    "The vertical line is the location with best value of the evaluation metric, in this case the [].")
         self.pdf = add_text_pdf(self.pdf, txt=out_txt)
         out_txt = ("In this model, the model training started with {} features (after one-hot encoding any categorical "
                    "features), and achieved the best model training results with {} features.")
-        self.pdf = add_text_pdf(self.pdf, txt=out_txt)
-        out_txt = ("Note that there may be a large gap in the data points along the x-axis. Normally, the way this "
-                   "recursive model training works is that it removes the feature with the lowest importance at each "
-                   "iteration. However, if there are multiple features that have exactly zero importance, then all of "
-                   "those zero importance features are removed at once.")
         self.pdf = add_text_pdf(self.pdf, txt=out_txt)
 
         # ---
@@ -227,8 +243,7 @@ class FeatureSelector:
                         y.append(feat_df["best_feat_imp"].sum())
 
                 print('Number of non-numeric features in best iteration: {}'.format(len(y)))
-                plot_xy(x, y, xlabel='RF Correlation between Feature and Target', ylabel='Feature Importance',
-                        leg_label='Non-Numeric Feature', overplot=True, outfile=True, plots_folder=plots_folder,
+                plot_xy(x, y, leg_label='Non-Numeric Feature', overplot=True, outfile=True, plots_folder=plots_folder,
                         title='target_correlation_vs_feature_importance')
 
             self.pdf = add_plot_pdf(self.pdf, file_path=plots_folder+'/target_correlation_vs_feature_importance'+'.png',
