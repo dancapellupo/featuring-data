@@ -149,12 +149,15 @@ class FeatureSelector:
         f, ax = plot_inline_scatter(training_results_df.iloc[start_ii:], x_col="num_features_{}".format(1),
                                     y_col="MAE_test_{}".format(1), outfile=False)
         best_mae = training_results_df["MAE_test_{}".format(data_ind+1)].iloc[best_ind]
-        f, ax = plot_inline_scatter(training_results_df.iloc[start_ii:], f=f, ax=ax, x_col="num_features_{}".format(2),
+        plot_inline_scatter(training_results_df.iloc[start_ii:], f=f, ax=ax, x_col="num_features_{}".format(2),
                                     y_col="MAE_test_{}".format(2), xlabel='Number of Features in Iteration',
-                                    ylabel='Mean Average Error (MAE) for Val Set', overplot=True, outfile=False)
-        ax = plot_horizontal_line(ax, y_loc=best_mae)
+                                    ylabel='Mean Average Error (MAE) for Val Set',
+                                    hline=best_mae,
+                                    vline=training_results_df["num_features_{}".format(data_ind+1)].iloc[best_ind],
+                                    overplot=True, outfile=True, plots_folder=plots_folder, title='num_features_vs_MAE')
+        # ax = plot_horizontal_line(ax, y_loc=best_mae)
         # ax = plot_vertical_line(ax, x_loc=training_results_df["num_features_{}".format(data_ind+1)].iloc[best_ind])
-        save_fig(f, ax, plots_folder=plots_folder, title='num_features_vs_MAE')
+        # save_fig(f, ax, plots_folder=plots_folder, title='num_features_vs_MAE')
 
         # plot_xy_splitaxis(x=training_results_df["num_features_1"].values, y=training_results_df["MAE_test_1"].values,
         #                   plots_folder=plots_folder, title='num_features_vs_MAE')
@@ -175,11 +178,16 @@ class FeatureSelector:
                    "recursive model training.")
         self.pdf = add_text_pdf(self.pdf, txt=out_txt)
         out_txt = ("As the number of features is reduced, eventually the model will start to perform much more poorly. "
-                   "The vertical line is the location with best value of the evaluation metric, in this case the [].")
+                   "The vertical line is the location with the best value of the evaluation metric, which is an MAE of "
+                   "{}), compared to the starting MAE of {}.").format(
+            best_mae, training_results_df["MAE_test_{}".format(data_ind+1)].iloc[0])
         self.pdf = add_text_pdf(self.pdf, txt=out_txt)
-        out_txt = ("In this model, the model training started with {} features (after one-hot encoding any categorical "
-                   "features), and achieved the best model training results with {} features.")
+        out_txt = ("The model training started with {} features (after one-hot encoding any categorical "
+                   "features), and achieved the best model training results with {} features.").format(
+            num_features_start, training_results_df["num_features_{}".format(data_ind+1)].iloc[best_ind])
         self.pdf = add_text_pdf(self.pdf, txt=out_txt)
+        # TODO: Assess how low, in terms of number of features, one could go without drastically decreasing the
+        #  performance
 
         # ---
         # Collect and examine feature importance values:
@@ -202,8 +210,8 @@ class FeatureSelector:
 
             for jjj, col in enumerate(cols_to_plot):
                 num_iters = int(self.feat_import_bycol_df.loc[col, "num_iters"])
-                x = num_features[0:num_iters]
-                y = self.feature_importance_dict_list[data_ind][col]
+                x = num_features[start_ii:num_iters]
+                y = self.feature_importance_dict_list[data_ind][col][start_ii:]
 
                 if jjj == 0:
                     f, ax = plot_xy(x, y, xlabel='num_features_{}'.format(data_ind+1), ylabel='feature importance',
