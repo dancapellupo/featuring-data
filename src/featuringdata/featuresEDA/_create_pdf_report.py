@@ -40,7 +40,7 @@ def section_on_null_columns(pdf, num_features, null_cols_df):
 
     # Table contents
     pdf.set_font('Arial', '', 12)
-    for ii in range(0, 5):
+    for ii in range(0, min(5, len(null_cols_df))):
         pdf.cell(w=60, h=10, txt=null_cols_df["Feature"].iloc[ii], border=1, ln=0, align='L')
         pdf.cell(w=35, h=10, txt=null_cols_df["Num of Nulls"].iloc[ii].astype(str), border=1, ln=0, align='R')
         pdf.cell(w=35, h=10, txt=null_cols_df["Frac Null"].iloc[ii].astype(str), border=1, ln=1, align='R')
