@@ -188,6 +188,7 @@ class FeatureSelector:
         self.pdf = add_text_pdf(self.pdf, txt=out_txt)
         # TODO: Assess how low, in terms of number of features, one could go without drastically decreasing the
         #  performance
+        # TODO: Print MAE compared to range of y_val values
 
         # ---
         # Collect and examine feature importance values:

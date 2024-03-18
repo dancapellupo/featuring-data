@@ -1,5 +1,6 @@
 
 import itertools as it
+import math
 
 import numpy as np
 import pandas as pd
@@ -8,6 +9,18 @@ from sklearn.model_selection import GridSearchCV, ParameterGrid
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 from xgboost.sklearn import XGBRegressor
+
+
+def round_to_n_sigfig(x, n=3):
+    if x == 0:
+        return int(x)
+    if n < 1:
+        n = 1
+
+    x_round = round(x, -int(math.floor(math.log10(abs(x)))) + (n - 1))
+    if x_round > 10 ** (n - 1):
+        x_round = int(x_round)
+    return x_round
 
 
 def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, parameter_dict, use_gridsearchcv=False,
@@ -103,13 +116,14 @@ def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, paramete
             y_test_pred = xgb_reg.predict(X_test_comb[data_jj][feature_columns[data_jj]])
 
             # TODO: Instead of rounding, go by significant digits [# of digits to be user-configurable]
-            train_err = round(mean_squared_error(y_train_comb[data_jj], y_train_pred, squared=False), 5)
-            test_err = round(mean_squared_error(y_test_comb[data_jj], y_test_pred, squared=False), 5)
+            train_err = round_to_n_sigfig(mean_squared_error(y_train_comb[data_jj], y_train_pred, squared=False), 5)
+            test_err = round_to_n_sigfig(mean_squared_error(y_test_comb[data_jj], y_test_pred, squared=False), 5)
 
             if target_log:
-                test_mae = round(mean_absolute_error(np.expm1(y_test_comb[data_jj]), np.expm1(y_test_pred)))
+                test_mae = round_to_n_sigfig(
+                    mean_absolute_error(np.expm1(y_test_comb[data_jj]), np.expm1(y_test_pred)), 5)
             else:
-                test_mae = round(mean_absolute_error(y_test_comb[data_jj]), y_test_pred)
+                test_mae = round_to_n_sigfig(mean_absolute_error(y_test_comb[data_jj], y_test_pred), 5)
 
             out_row.extend(
                 [train_err, test_err, test_mae, len(feature_columns[data_jj]), ', '.join(feature_columns[data_jj])])
