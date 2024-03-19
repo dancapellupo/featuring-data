@@ -1,6 +1,8 @@
 
 import itertools as it
 
+from tqdm.auto import tqdm
+
 import numpy as np
 import pandas as pd
 
@@ -14,7 +16,8 @@ def calc_numeric_features_target_corr(data_df, numeric_cols, target_col, rf_n_es
 
     numeric_df = pd.DataFrame(columns=["Count not-Null", "Pearson", "Mutual Info", "Random Forest"])
 
-    for col in numeric_cols:
+    print('Running correlations of numeric features to target variable...')
+    for col in tqdm(numeric_cols):
         data_df_col_notnull = data_df[[col, target_col]].dropna()
 
         pcorr = pearsonr(data_df_col_notnull[col].values, data_df_col_notnull[target_col].values)[0]
@@ -109,7 +112,8 @@ def calc_nonnumeric_features_target_corr(data_df, non_numeric_cols, target_col):
 
     non_numeric_df = pd.DataFrame(columns=["Count not-Null", "Num Unique", "Random Forest", "RF_norm"])
 
-    for col in non_numeric_cols:
+    print('Running correlations of non-numeric features to target variable...')
+    for col in tqdm(non_numeric_cols):
         train_col_notnull = data_df[[col, target_col]].dropna()
 
         X_col = pd.get_dummies(train_col_notnull[col], dtype=int)

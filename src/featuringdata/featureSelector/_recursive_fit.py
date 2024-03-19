@@ -2,6 +2,8 @@
 import itertools as it
 import math
 
+from tqdm.auto import tqdm
+
 import numpy as np
 import pandas as pd
 
@@ -84,7 +86,8 @@ def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, paramete
 
                 else:
                     # Hyperparameter search using the train and validation sets already defined:
-                    for parameter_dict_tmp in iter(ParameterGrid(parameter_dict)):
+                    print('Running grid search at Iteration {} on data split {}...'.format(jj, data_jj+1))
+                    for parameter_dict_tmp in iter(tqdm(ParameterGrid(parameter_dict))):
 
                         xgb_reg = XGBRegressor(n_estimators=1000, early_stopping_rounds=20, random_state=42,
                                                **parameter_dict_tmp)

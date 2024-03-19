@@ -43,6 +43,9 @@ class FeatureSelector:
         else:
             self.parameter_dict = parameter_dict
 
+        self.X = None
+        self.y = None
+
         self.hyperparams_df = pd.DataFrame()
         self.feature_importance_dict_list = list()
         self.feat_import_bycol_df = pd.DataFrame()
@@ -54,21 +57,21 @@ class FeatureSelector:
 
         # all_columns = self.numeric_cols.extend(self.non_numeric_cols)
 
-        X = data_df[self.numeric_cols]
+        self.X = data_df[self.numeric_cols]
 
         if len(self.non_numeric_cols) > 0:
             X_onehot = pd.get_dummies(data_df[self.non_numeric_cols], dtype=int)
 
-            X = X.merge(X_onehot, left_index=True, right_index=True)
+            self.X = self.X.merge(X_onehot, left_index=True, right_index=True)
 
         if self.target_log:
-            y = np.log1p(data_df[self.target_col].values)
+            self.y = np.log1p(data_df[self.target_col].values)
         else:
-            y = data_df[self.target_col].values
+            self.y = data_df[self.target_col].values
 
-        X_train_42, X_test_42, y_train_42, y_test_42 = train_test_split(X, y, test_size=self.test_size,
+        X_train_42, X_test_42, y_train_42, y_test_42 = train_test_split(self.X, self.y, test_size=self.test_size,
                                                                         random_state=42)
-        X_train_46, X_test_46, y_train_46, y_test_46 = train_test_split(X, y, test_size=self.test_size,
+        X_train_46, X_test_46, y_train_46, y_test_46 = train_test_split(self.X, self.y, test_size=self.test_size,
                                                                         random_state=46)
 
         # TODO Allow user to set max/min values of these hyperparam ranges, as well as number of total iterations,

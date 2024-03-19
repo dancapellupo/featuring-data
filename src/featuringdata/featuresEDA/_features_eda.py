@@ -133,6 +133,7 @@ class FeaturesEDA:
         #     data_df = data_df.drop(columns=self.cols_to_drop)
 
         self.run_initial_eda(data_df, output=False)
+        print()
 
         # ---
         # TODO: Add feature correlations

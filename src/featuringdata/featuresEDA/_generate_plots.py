@@ -1,4 +1,6 @@
 
+from tqdm.auto import tqdm
+
 import numpy as np
 
 import matplotlib as mpl
@@ -15,14 +17,13 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
     # mpl.use("Agg")
     # print('*** {} ***'.format(mpl.get_backend()))
 
-    # use_sample = False
     if len(data_df) > 1000:
         data_df_sample = data_df.sample(n=1000, replace=False)
-        # use_sample = True
 
     sns.set_theme(style="ticks")
 
-    for jj, column in enumerate(columns_list):
+    print('Generating plots of {} features...'.format('numeric' if numeric else 'non-numeric/categorical'))
+    for jj, column in enumerate(tqdm(columns_list)):
 
         f, ax = plt.subplots(figsize=(9, 6))
 
@@ -63,6 +64,7 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
                 # sns.scatterplot(train_data_mod, x=column, y=target_col, hue="OverallQual")
                 sns.scatterplot(data_df, x=column, y=target_col, size=2, legend=False)
             else:
+                # TODO Need to check index for using xx here
                 sns.scatterplot(data_df.drop(xx), x=column, y=target_col, size=2, legend=False)
                 anc = AnchoredText('Not Shown: {} Outliers'.format(xx.size), loc="upper left", frameon=False)
                 ax.add_artist(anc)
