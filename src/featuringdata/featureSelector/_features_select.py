@@ -56,9 +56,10 @@ class FeatureSelector:
 
         X = data_df[self.numeric_cols]
 
-        X_onehot = pd.get_dummies(data_df[self.non_numeric_cols], dtype=int)
+        if len(self.non_numeric_cols) > 0:
+            X_onehot = pd.get_dummies(data_df[self.non_numeric_cols], dtype=int)
 
-        X = X.merge(X_onehot, left_index=True, right_index=True)
+            X = X.merge(X_onehot, left_index=True, right_index=True)
 
         if self.target_log:
             y = np.log1p(data_df[self.target_col].values)
