@@ -253,10 +253,15 @@ class FeatureSelector:
 
                 x, y = [], []
                 for feat in non_numeric_df.index:
-                    feat_df = feat_import_bycol_df_best.loc[feat_import_bycol_df_best.index.str.startswith(feat + '_')]
-                    if len(feat_df) > 0:
+                    if feat in cols_best_iter:
                         x.append(non_numeric_df.loc[feat, "RF_norm"])
-                        y.append(feat_df["best_feat_imp"].sum())
+                        y.append(self.feat_import_bycol_df.loc[feat, "best_feat_imp"])
+                    else:
+                        feat_df = feat_import_bycol_df_best.loc[
+                            feat_import_bycol_df_best.index.str.startswith(feat + '_')]
+                        if len(feat_df) > 0:
+                            x.append(non_numeric_df.loc[feat, "RF_norm"])
+                            y.append(feat_df["best_feat_imp"].sum())
 
                 print('Number of non-numeric features in best iteration: {}'.format(len(y)))
                 plot_xy(x, y, f=f, ax=ax, leg_label='Non-Numeric Feature', overplot=True, outfile=True,
