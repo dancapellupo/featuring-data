@@ -28,6 +28,7 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
         f, ax = plt.subplots(figsize=(9, 6))
 
         # TODO: Use already calculated DF of unique values:
+        # TODO: User can define this value:
         if (not numeric) or (np.unique(data_df[column]).size <= 10):
 
             if not numeric:
