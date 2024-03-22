@@ -91,6 +91,12 @@ def calc_numeric_features_target_corr(data_df, numeric_cols, target_col, rf_n_es
 
 
 def calc_corr_numeric_features(data_df, numeric_cols):
+    """
+
+    :param data_df:
+    :param numeric_cols:
+    :return:
+    """
 
     numeric_collinear_df = pd.DataFrame(columns=["Feature1", "Feature2", "Count not-Null", "Pearson", "Random Forest"])
 
@@ -145,6 +151,38 @@ def calc_corr_numeric_features(data_df, numeric_cols):
 
 
 def calc_max_rfscore(num=2):
+    """
+    Calculate the theoretical maximum R^2 score one could expect for a given
+    number of unique values for a categorical feature.
+
+    The idea behind this calculation is that, say one had a target variable
+    that ranged from 0 to 1. If a categorical variable has only two unique
+    values, say 'yes' and 'no', then the best-case scenario is that the target
+    variable equals somewhere between 0 and 0.5 for 'yes' and between 0.5 and
+    1 for 'no'. If we assume a uniform distribution of values for the target
+    variable between 0 and 1, then we could say a value of 'yes' predicts a
+    target value of 0.25, and a value of 'no' predicts a value of 0.75. So,
+    the R^2 score in this case works out to be 0.75.
+
+    If instead, we had 10 unique values for a categorical variable, then a
+    best-case scenario, would be 'categorical_value_1' predicts a value
+    between 0 and 0.1, 'categorical_value_2' predicts a value between 0.2 and
+    0.3, etc. In this case, the R^2 score works out to be 0.99.
+
+    So, this function gives us this maximum value, so we can adjust all
+    categorical features' R^2 scores to be roughly on the same scale.
+
+    Parameters
+    ----------
+    num : int
+        The number of unique values for a categorical feature.
+
+    Returns
+    -------
+    r2 : float
+        The theoretical maximum R^2 for the given number of unique values.
+
+    """
     y = np.arange(0, 1.001, 0.001)
     y_pred = np.zeros(1001)
 
