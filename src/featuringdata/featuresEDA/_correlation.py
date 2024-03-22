@@ -13,24 +13,78 @@ from sklearn.ensemble import RandomForestRegressor
 
 
 def calc_numeric_features_target_corr(data_df, numeric_cols, target_col, rf_n_estimators=10):
+    """
+    Calculate the correlation between numeric features and the target
+    variable.
+
+    If the target variable is numeric (i.e., a regression problem), the
+    Pearson correlation is calculated first.
+
+    Then, a random forest model is run for each feature, with just that
+    feature and the target variable. And the R^2 is reported as a proxy for
+    correlation.
+
+    Parameters
+    ----------
+    data_df : pd.DataFrame
+        The input dataframe.
+
+    numeric_cols : List
+        A list of names of columns with numeric values (from the function
+        'sort_numeric_nonnumeric_columns').
+
+    target_col : str, default=None
+        The name of the dataframe column containing the target variable.
+
+    rf_n_estimators : int, default=10
+        The number of separate trees to use when training the random forest
+        model (in other words, this is the 'n_estimators' parameter in
+        sklearn's RandomForestRegressor or RandomForestClassifier)
+
+    Returns
+    -------
+    numeric_df : pd.DataFrame
+        A dataframe with all numeric features and 3 different measures of
+        their correlation with the target variable, for regression scenarios.
+        For classification, ...
+        The index of the dataframe is the feature/column names, and the
+        columns are:
+        - "Count not-Null": Number of non-null values for that feature.
+        - "Pearson" [regression only]: The Pearson correlation between the
+            feature and the target variable.
+        - "Mutual Info" :
+        - "Random Forest": The R^2 value when running a random forest model
+            containing only this one feature and the target variable, using
+            n_estimators=10.
+    """
 
     numeric_df = pd.DataFrame(columns=["Count not-Null", "Pearson", "Mutual Info", "Random Forest"])
 
+    # Loop over each numeric feature:
     print('Running correlations of numeric features to target variable...')
     for col in tqdm(numeric_cols):
+        # Keep only rows that do not have NULL for that feature:
         data_df_col_notnull = data_df[[col, target_col]].dropna()
 
+        # Calculate Pearson correlation between feature and target:
         pcorr = pearsonr(data_df_col_notnull[col].values, data_df_col_notnull[target_col].values)[0]
-        minfo = mutual_info_regression(data_df_col_notnull[col].values.reshape(-1, 1), data_df_col_notnull[target_col].values)[0]
+        # Calculate the Mutual Information for feature and target:
+        minfo = mutual_info_regression(
+            data_df_col_notnull[col].values.reshape(-1, 1), data_df_col_notnull[target_col].values)[0]
 
+        # Train a random forest model with just that feature and the target variable:
         rf_reg = RandomForestRegressor(n_estimators=rf_n_estimators)
         rf_reg.fit(data_df_col_notnull[col].values.reshape(-1, 1), data_df_col_notnull[target_col].values)
         rfscore = rf_reg.score(data_df_col_notnull[col].values.reshape(-1, 1), data_df_col_notnull[target_col])
 
+        # Save the results as a new row in the dataframe for output:
         numeric_df.loc[col] = len(data_df_col_notnull), round(pcorr, 2), round(minfo, 2), round(rfscore, 2)
 
+    # The counts of NULL values should be integers:
     numeric_df["Count not-Null"] = numeric_df["Count not-Null"].astype(int)
 
+    # Sort the dataframe by the Random Forest R^2 for each feature, in
+    # descending order:
     numeric_df = numeric_df.sort_values(by=["Random Forest"], ascending=False)
 
     return numeric_df
@@ -109,27 +163,83 @@ def calc_max_rfscore(num=2):
 
 
 def calc_nonnumeric_features_target_corr(data_df, non_numeric_cols, target_col):
+    """
+    Calculate the correlation between non-numeric features and the target
+    variable.
+
+    To do this, a random forest model is run for each feature, with just that
+    feature and the target variable. And the R^2 is reported as a proxy for
+    correlation.
+
+    Parameters
+    ----------
+    data_df : pd.DataFrame
+        The input dataframe.
+
+    non_numeric_cols : List
+        A list of names of columns with non-numeric values.
+
+    target_col : str, default=None
+        The name of the dataframe column containing the target variable.
+
+    rf_n_estimators : int, default=10
+        The number of separate trees to use when training the random forest
+        model (in other words, this is the 'n_estimators' parameter in
+        sklearn's RandomForestRegressor or RandomForestClassifier)
+
+    Returns
+    -------
+    non_numeric_df = pd.DataFrame
+        A dataframe with all non-numeric/categorical features and a measure of
+        their correlation with the target variable. The index of the dataframe
+        is the feature/column names, and the columns are:
+        - "Count not-Null": Number of non-null values for that feature.
+        - "Num Unique": The number of unique values in that data column.
+        - "Random Forest": The R^2 value when running a random forest model
+            containing only this one feature and the target variable, using
+            n_estimators=10. To be precise, each feature is split into
+            multiple features for the random forest training using one-hot
+            encoding.
+        - "RF_norm": In a regression problem, the greater number of unique
+            values that a categorical variable has will have a higher
+            theoretical maximum R^2, so this R^2 is adjusted to more easily
+            compare categorical features with different number of unique
+            values (see documentation for further explanation).
+    """
 
     non_numeric_df = pd.DataFrame(columns=["Count not-Null", "Num Unique", "Random Forest", "RF_norm"])
 
+    # Loop over each categorical feature:
     print('Running correlations of non-numeric features to target variable...')
     for col in tqdm(non_numeric_cols):
+        # Keep only rows that do not have NULL for that feature:
         train_col_notnull = data_df[[col, target_col]].dropna()
 
+        # Split the feature into multiple features for the random forest
+        # training using one-hot encoding:
         X_col = pd.get_dummies(train_col_notnull[col], dtype=int)
 
+        # Train a random forest model:
         rf_reg = RandomForestRegressor(n_estimators=10)
         rf_reg.fit(X_col, train_col_notnull[target_col].values)
         rfscore = rf_reg.score(X_col, train_col_notnull[target_col])
 
+        # The number of unique values is calculated for the purpose of
+        # adjusting the Random Forest R^2:
         num_uniq = train_col_notnull[col].nunique()
+        # Adjust the R^2 based on the number of unique values affecting a
+        # feature's maximum theoretical R^2:
         rfscore_norm = rfscore * (1 / calc_max_rfscore(num_uniq))
 
+        # Save the results as a new row in the dataframe for output:
         non_numeric_df.loc[col] = len(train_col_notnull), num_uniq, round(rfscore, 2), round(rfscore_norm, 2)
 
+    # The counts of NULL values and unique values should be integers:
     non_numeric_df["Count not-Null"] = non_numeric_df["Count not-Null"].astype(int)
     non_numeric_df["Num Unique"] = non_numeric_df["Num Unique"].astype(int)
 
+    # Sort the dataframe by the adjusted Random Forest R^2 for each feature,
+    # in descending order:
     non_numeric_df = non_numeric_df.sort_values(by=["RF_norm"], ascending=False)
 
     return non_numeric_df
