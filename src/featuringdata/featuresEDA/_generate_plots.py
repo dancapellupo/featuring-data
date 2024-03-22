@@ -11,6 +11,46 @@ import seaborn as sns
 
 def plot_feature_values(data_df, columns_list, correlation_df, target_col, numeric=True, catplot_style='swarm',
                         plots_folder='./plots'):
+    """
+    Generate EDA plots that show each feature versus the target variable.
+
+    The code automatically adjusts based on certain properties of the feature:
+    - For categorical features, as well as numeric features with up to 10
+      unique values, a box plot with a swarm plot is generated. If there are
+      more than 1,000 data points, then only a random selection of 1,000
+      points are plotted on the swarm plot (but the box plot is calculated
+      based on all points).
+    - For typical numeric features, a standard scatter plot is generated. Any
+      large outliers, located more than 10 standard deviations from the
+      median, are not shown.
+
+    Parameters
+    ----------
+    data_df : pd.DataFrame
+        The input dataframe.
+
+    columns_list : list
+        A list of column names to plot.
+
+    correlation_df : pd.DataFrame
+        A dataframe with measures of the correlation of each feature with the
+        target variable. The dataframe is the output from either
+        '_correlation.calc_numeric_features_target_corr' or
+        '_correlation.calc_nonnumeric_features_target_corr'.
+
+    target_col : str
+
+    numeric : bool
+
+    catplot_style : str
+
+    plots_folder : str
+
+    Returns
+    -------
+    r2 : float
+        The theoretical maximum R^2 for the given number of unique values.
+    """
 
     # backend_ = mpl.get_backend()
     # print('*** {} ***'.format(backend_))

@@ -181,7 +181,6 @@ def calc_max_rfscore(num=2):
     -------
     r2 : float
         The theoretical maximum R^2 for the given number of unique values.
-
     """
     y = np.arange(0, 1.001, 0.001)
     y_pred = np.zeros(1001)
