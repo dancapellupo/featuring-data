@@ -110,6 +110,81 @@ class FeaturesEDA:
         For cateogorical features, any feature with greater than this number
         of unique values will be reported.
 
+    Attributes
+    ----------
+    pdf : ??
+        The PDF object.
+
+    null_cols_df : pd.DataFrame
+        A dataframe with all the features that have at least one NULL value.
+        The dataframe has the following columns:
+        - "Feature": Name of the data column.
+        - "Num of Nulls": Total number of null values in the column.
+        - "Frac Null": The fraction of all values in that column that are null.
+
+    numeric_cols : List
+        The final list of numeric column names after any adjustments are made
+        based on the number of unique values.
+
+    non_numeric_cols : List
+        The final list of non-numeric / categorical columns names after any
+        adjustments / additions from columns originally treated as numerical.
+
+    numeric_uniq_vals_df : pd.DataFrame
+        A dataframe listing any numeric columns that have no more than
+        "numeric_uniq_vals_thresh" unique values. The dataframe has the
+        following columns:
+        - "Feature": Name of the numeric data column.
+        - "Num Unique Values": The number of unique values in that data
+          column.
+
+    non_numeric_uniq_vals_df : pd.DataFrame
+        A dataframe listing the number of unique values in every non-numeric
+        column (here, we want to know if there is only a single unique value,
+        and also if there are too many unique values). The dataframe has the
+        following columns:
+        - "Feature": Name of the non-numeric data column.
+        - "Num Unique Values": The number of unique values in that data
+          column.
+
+    numeric_df : pd.DataFrame
+        A dataframe with all numeric features (after any adjustments
+        identifying originally numeric features as actually categorical) and 3
+        different measures of their correlation with the target variable, for
+        regression scenarios. For classification, ...
+        The index of the dataframe is the feature/column names, and the
+        columns are:
+        - "Count not-Null": Number of non-null values for that feature.
+        - "Pearson": The Pearson correlation between the feature and the
+            target variable.
+        - "Mutual Info" :
+        - "Random Forest": The R^2 value when running a random forest model
+            containing only this one feature and the target variable, using
+            n_estimators=10.
+
+    numeric_collinear_df = pd.DataFrame
+        [Work in progress]
+
+    numeric_collinear_summary_df = pd.DataFrame
+        [Work in progress]
+
+    non_numeric_df = pd.DataFrame
+        A dataframe with all non-numeric/categorical features (after switching
+        over any originally numeric features that are actually categorical)
+        and a measure of their correlation with the target variable. The index
+        of the dataframe is the feature/column names, and the columns are:
+        - "Count not-Null": Number of non-null values for that feature.
+        - "Num Unique": The number of unique values in that data column.
+        - "Random Forest": The R^2 value when running a random forest model
+            containing only this one feature and the target variable, using
+            n_estimators=10. To be precise, each feature is split into
+            multiple features for the random forest training using one-hot
+            encoding.
+        - "RF_norm": In a regression problem, the greater number of unique
+            values that a categorical variable has will have a higher
+            theoretical maximum R^2, so this R^2 is adjusted to more easily
+            compare categorical features with different number of unique
+            values (see documentation for further explanation).
 
 
     """
@@ -138,29 +213,61 @@ class FeaturesEDA:
     # TODO For full EDA, make collinear correlation optional
 
     def run_initial_eda(self, data_df, output=True):
+        """
+        Run an initial exploratory data analysis (EDA) on a given dataset.
 
+        This function runs the following steps:
+        - Null values analysis
+        - Unique values analysis
+        - Switching numeric features to categorical
+
+        It is worth running this function first on any new dataset, in order
+        to identify any columns that should be removed before running the full
+        correlation analysis (which can take a lot of time for many features
+        and data samples).
+
+        Parameters
+        ----------
+        data_df : Pandas dataframe of shape (n_samples, n data columns)
+            The data to be analyzed.
+
+        output : boolean, optional (default=True)
+            Whether to save a PDF report of this initial EDA analysis.
+
+        """
+
+        # Save the current timestamp for the report filename:
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
         # TODO: Add a check for columns with words like "ID" to suggest dropping them
+        # Remove any columns that user identified as columns to ignore:
         if self.cols_to_drop is not None:
             data_df = data_df.drop(columns=self.cols_to_drop)
 
+        # --------------------------------------------------------------------
+        # Null values analysis
         self.null_cols_df = count_null_values(data_df)
 
+        # --------------------------------------------------------------------
+        # Sort numeric and non-numeric/categorical columns
         self.numeric_cols, self.non_numeric_cols = sort_numeric_nonnumeric_columns(data_df, self.target_col)
 
+        # Count the number of unique values for each feature
         self.numeric_uniq_vals_df = count_numeric_unique_values(data_df, self.numeric_cols,
                                                                 uniq_vals_thresh=self.numeric_uniq_vals_thresh)
 
         self.non_numeric_uniq_vals_df = count_nonnumeric_unique_values(data_df, self.non_numeric_cols,
                                                                        uniq_vals_thresh=self.nonnumeric_uniq_vals_thresh)
 
+        # Identify any numeric columns with just a single unique value:
         single_value_cols_numeric_df = self.numeric_uniq_vals_df.loc[
             self.numeric_uniq_vals_df["Num Unique Values"] == 1]
 
+        # Identify any numeric columns with only two unique values:
         numeric_cols_to_cat_df = self.numeric_uniq_vals_df.loc[
             self.numeric_uniq_vals_df["Num Unique Values"].between(2, 2, inclusive='both')]
 
+        # Identify any non-numeric columns with just a single unique value:
         single_value_cols_nonnumeric_df = self.non_numeric_uniq_vals_df.loc[
             self.non_numeric_uniq_vals_df["Num Unique Values"] == 1]
 
@@ -169,7 +276,7 @@ class FeaturesEDA:
 
         print('There are {} numeric columns that will be switched to categorical.'.format(len(numeric_cols_to_cat_df)))
 
-        # ---
+        # --------------------------------------------------------------------
         # Generating PDF Document
         self.pdf = initialize_pdf_doc()
 
@@ -182,6 +289,10 @@ class FeaturesEDA:
                                             single_value_cols_nonnumeric_df=single_value_cols_nonnumeric_df,
                                             numeric_cols_to_cat_df=numeric_cols_to_cat_df)
 
+        # Removing any columns with only a single unique value. Any columns
+        # that are numeric, but were determined to be categorical are
+        # removed from the 'numeric_cols' list and added to the
+        # 'non_numeric_cols' list:
         if ((len(single_value_cols_numeric_df) > 0) or (len(single_value_cols_nonnumeric_df) > 0) or
                 (len(numeric_cols_to_cat_df) > 0)):
 
@@ -200,63 +311,111 @@ class FeaturesEDA:
 
             self.pdf = section_on_unique_values_p2(self.pdf, self.numeric_cols, self.non_numeric_cols)
 
-        # Save PDF document to current working directory
+        # Save PDF document to current working directory:
         if output:
             custom_filename = self.report_prefix + '_Initial'
             save_pdf_doc(self.pdf, custom_filename=custom_filename, timestamp=timestamp)
 
     def run_full_eda(self, data_df, run_collinear=True, generate_plots=True):
+        """
+        Run a comprehensive exploratory data analysis (EDA) on a given dataset.
 
+        This function runs the following steps:
+        - The initial EDA -- see "run_initial_eda"
+        - Feature correlations analysis
+        - EDA Plots
+
+        Parameters
+        ----------
+        data_df : Pandas dataframe of shape (n_samples, n data columns)
+            The data to be analyzed.
+
+        run_collinear : boolean, optional (default=True)
+            To save time, one can set this to False, just to get the
+            correlations between each feature and the target variable.
+
+        generate_plots : bool, optional (default=True)
+            This option is here to just get the correlations first, without
+            waiting for all the plots to be generated.
+
+        """
+
+        # Save the current timestamp for the report filename and the folder to
+        # contain the PNG plots:
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        # The directory is created for the EDA plots:
         plots_folder = './{}_EDA_plots_{}'.format(self.report_prefix, timestamp)
         Path(plots_folder).mkdir()
 
         # if self.cols_to_drop is not None:
         #     data_df = data_df.drop(columns=self.cols_to_drop)
 
+        # Run the initial EDA steps:
         self.run_initial_eda(data_df, output=False)
         print()
 
-        # ---
-        # TODO: Add feature correlations
+        # --------------------------------------------------------------------
+        # Calculate feature correlations
 
+        # Calculate correlations between each numeric feature and the target
+        # variable:
         self.numeric_df = calc_numeric_features_target_corr(data_df, self.numeric_cols, self.target_col,
                                                             rf_n_estimators=10)
 
+        # Calculate correlations between numeric features:
         if run_collinear:
             self.numeric_collinear_df, self.numeric_collinear_summary_df = calc_corr_numeric_features(data_df,
                                                                                                       self.numeric_cols)
 
+        # Calculate correlations between each categorical feature and the
+        # target variable:
         self.non_numeric_df = calc_nonnumeric_features_target_corr(data_df, self.non_numeric_cols, self.target_col)
 
-        # ---
+        # --------------------------------------------------------------------
         # Generating PDF Document
-        # PDF Page 1: Summary of Null values information and unique values for numeric and non-numeric feature columns
 
-        # PDF Pages 2-3: Summary of numeric and non-numeric feature correlations
+        # PDF Page 1: Generated during the 'run_initial_eda' function
+
+        # PDF Pages 2-3: Summary of numeric and non-numeric feature
+        # correlations:
         self.pdf = section_on_feature_corr(self.pdf, self.numeric_df, self.numeric_collinear_df, self.non_numeric_df)
 
-        # ---
-        # TODO: Add plots
+        # --------------------------------------------------------------------
+        # Generate EDA plots
 
         if generate_plots:
+            # ----------------------------------
+            # Generate plots of numeric features
+
+            # Order the features by correlation with target variable, in
+            # descending order:
             columns_list_ordered = self.numeric_df.index
 
+            # Generate plots of numeric features, and save them to the
+            # timestamped directory defined above:
             plot_feature_values(data_df, columns_list_ordered, self.numeric_df, target_col=self.target_col,
                                 numeric=True, plots_folder=plots_folder)
 
+            # Add the plots to the PDF:
             self.pdf = section_of_plots(self.pdf, columns_list_ordered, target_col=self.target_col, numeric=True,
                                         plots_folder=plots_folder)
 
+            # ----------------------------------
+            # Generate plots of non-numeric features
 
+            # Order the features by correlation with target variable, in
+            # descending order:
             columns_list_ordered = self.non_numeric_df.index
 
+            # Generate plots of non-numeric features, and save them to the
+            # timestamped directory defined above:
             plot_feature_values(data_df, columns_list_ordered, self.non_numeric_df, target_col=self.target_col,
                                 numeric=False, plots_folder=plots_folder)
 
+            # Add the plots to the PDF:
             self.pdf = section_of_plots(self.pdf, columns_list_ordered, target_col=self.target_col, numeric=False,
                                         plots_folder=plots_folder)
 
-        # Save PDF document to current working directory
+        # Save PDF document to current working directory:
         save_pdf_doc(self.pdf, custom_filename=self.report_prefix, timestamp=timestamp)
 
