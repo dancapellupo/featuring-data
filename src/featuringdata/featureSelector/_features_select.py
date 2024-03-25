@@ -43,7 +43,7 @@ class FeatureSelector:
     - Data preparation tasks:
         - Perform one-hot encoding on categorical features.
         - Split the data into [at least] two training and validation splits.
-    - Iterative / Recursive Model Training:
+    - Iterative / recursive model training:
         - There are a number of feature selection techniques (see the Readme
           for more details), but after some testing, this author recommends
           the recursive technique where one starts training with all features,
@@ -163,30 +163,86 @@ class FeatureSelector:
         self.feat_import_bycol_df = pd.DataFrame()
 
     def run(self, data_df, numeric_df=None, non_numeric_df=None):
+        """
+        Run an iterative model training on a given dataset:
+
+        This function runs the following steps:
+        - Data preparation tasks
+        - Iterative / recursive model training
+        - Generate plots and a PDF report
+
+        Parameters
+        ----------
+        data_df : pd.DataFrame of shape (n_samples, n data columns)
+            The data to be analyzed.
+
+        numeric_df : pd.DataFrame, optional (default=None)
+            A dataframe with all numeric features and measures of their
+            correlation with the target variable (from
+            featuringdata.featuresEDA). This is used for comparing these
+            correlations with model feature importance values.
+
+        numeric_df : pd.DataFrame, optional (default=None)
+            A dataframe with all non-numeric/categorical features and measures
+            of their correlation with the target variable (from
+            featuringdata.featuresEDA). This is used for comparing these
+            correlations with model feature importance values.
+
+        Returns
+        -------
+        training_results_df : pd.DataFrame
+            A dataframe with comprehensive results of the iterative model
+            training run.
+            The index of the dataframe is the number of the iteration,
+            starting from iteration 0 with all features included. The
+            following columns are generated for each random data split:
+            - "RMSE_train_":
+            - "RMSE_test_":
+            - "MAE_test_":
+            - "num_features_":
+            - "feature_list_":
+            - "feat_high_import_name_":
+            - "feat_high_import_val_":
+            - "features_to_remove_":
+
+
+        """
+
+        # Save the current timestamp for the report filename and the folder to
+        # contain the PNG plots:
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        # The directory is created for the EDA plots:
         plots_folder = './{}_ModelTraining_plots_{}'.format(self.report_prefix, timestamp)
         Path(plots_folder).mkdir()
 
         # all_columns = self.numeric_cols.extend(self.non_numeric_cols)
 
+        # --------------------------------------------------------------------
+        # Data Preparation
+
+        # Numeric columns from the input dataset:
         self.X = data_df[self.numeric_cols]
 
+        # Perform onehot encoding on any categorical features:
         if len(self.non_numeric_cols) > 0:
             X_onehot = pd.get_dummies(data_df[self.non_numeric_cols], dtype=int)
 
             self.X = self.X.merge(X_onehot, left_index=True, right_index=True)
 
+        # Take the log of the target variable, if user chooses:
         if self.target_log:
             self.y = np.log1p(data_df[self.target_col].values)
         else:
             self.y = data_df[self.target_col].values
 
+        # TODO: Update this code for more than 2 splits
+        # Perform random data splits:
         X_train_42, X_test_42, y_train_42, y_test_42 = train_test_split(self.X, self.y, test_size=self.test_size,
                                                                         random_state=42)
         X_train_46, X_test_46, y_train_46, y_test_46 = train_test_split(self.X, self.y, test_size=self.test_size,
                                                                         random_state=46)
 
-        # TODO Allow user to set max/min values of these hyperparam ranges, as well as number of total iterations,
+        # TODO Allow user to set max/min values of the hyperparam ranges, as well as number of total iterations,
         #  which would define how many values to consider per hyperparam
 
         X_train_comb = [X_train_42, X_train_46]
@@ -195,14 +251,16 @@ class FeatureSelector:
         y_train_comb = [y_train_42, y_train_46]
         y_test_comb = [y_test_42, y_test_46]
 
-        # ---
-        # Run recursive training
+        # --------------------------------------------------------------------
+        # Run Recursive Training
+
         training_results_df, self.hyperparams_df, self.feature_importance_dict_list = recursive_fit(
             X_train_comb, y_train_comb, X_test_comb, y_test_comb, target_log=self.target_log,
             parameter_dict=self.parameter_dict)
 
-        # ---
-        # Identify best results
+        # --------------------------------------------------------------------
+        # Identify Best Results
+
         # TODO: Identify best run based on metric out to certain number [3?] of decimal points
         best_result_ind_1 = np.argmin(training_results_df["RMSE_test_1"].values)
         best_result_ind_2 = np.argmin(training_results_df["RMSE_test_2"].values)
@@ -225,14 +283,16 @@ class FeatureSelector:
         X_test_best = X_test_comb[data_ind][training_results_df.loc[
             best_ind, "feature_list_{}".format(data_ind+1)].split(', ')]
 
+        # Find the best hyperparameters relevant to the "best" iteration:
         hyperparam_iters = self.hyperparams_df.index.values
         hyperparam_iter = hyperparam_iters[np.where((best_ind - hyperparam_iters) >= 0)[0][-1]]
 
         hyperparams_dict = self.hyperparams_df.loc[hyperparam_iter].to_dict()
         print('Using Iter {} from data split {} with {}'.format(best_ind, data_ind+1, hyperparams_dict))
 
-        # ---
-        # XGBoost Training with best feature selection:
+        # --------------------------------------------------------------------
+        # XGBoost Training with "Best" Feature Selection
+
         xgb_reg = XGBRegressor(n_estimators=1000, early_stopping_rounds=20, random_state=42, **hyperparams_dict)
         xgb_reg.fit(X_train_best, y_train_comb[data_ind], eval_set=[(X_test_best, y_test_comb[data_ind])], verbose=True)
 
@@ -244,17 +304,17 @@ class FeatureSelector:
             mae_final = mean_absolute_error(y_test_comb[data_ind], y_test_pred)
         print('\nFinal MAE: {}\n'.format(mae_final))
 
-        # ---
+        # --------------------
         # Save results to CSV:
         training_results_df.to_csv('{}_training_results_full_{}.csv'.format(self.report_prefix, timestamp))
         self.hyperparams_df.to_csv('{}_best_hyperparameters_{}.csv'.format(self.report_prefix, timestamp))
 
-        # ---
-        # Generating PDF Document
+        # --------------------------------------------------------------------
+        # Generating PDF Document and Plots:
         self.pdf = initialize_pdf_doc()
 
-        # ---
-        # Generate plots of results:
+        # --------------------------------------------------------------------
+        # PLOT #1 - Plot of model metric vs iteration
 
         # First look for large gaps along x-axis:
         num_features_start = training_results_df["num_features_{}".format(data_ind+1)].iloc[0]
@@ -262,6 +322,7 @@ class FeatureSelector:
             np.diff(training_results_df["num_features_{}".format(data_ind+1)].values)[0:5] < -0.2*num_features_start)[0]
         start_ii = gap_loc[-1] + 1 if gap_loc.size > 0 else 0
 
+        # Creat the plot:
         f, ax = plot_inline_scatter(training_results_df.iloc[start_ii:], x_col="num_features_{}".format(1),
                                     y_col="MAE_test_{}".format(1), outfile=False)
         best_mae = training_results_df["MAE_test_{}".format(data_ind+1)].iloc[best_ind]
@@ -278,6 +339,7 @@ class FeatureSelector:
         # plot_xy_splitaxis(x=training_results_df["num_features_1"].values, y=training_results_df["MAE_test_1"].values,
         #                   plots_folder=plots_folder, title='num_features_vs_MAE')
 
+        # Add plot and informative text to PDF:
         self.pdf = add_text_pdf(self.pdf, txt="Recursive Training Results", bold=True)
         self.pdf = add_plot_pdf(self.pdf, file_path=plots_folder+'/num_features_vs_MAE'+'.png', new_page=False)
         if start_ii > 0:
@@ -306,7 +368,7 @@ class FeatureSelector:
         #  performance
         # TODO: Print MAE compared to range of y_val values
 
-        # ---
+        # ----------------------------------------------
         # Collect and examine feature importance values:
         self.feat_import_bycol_df = pd.DataFrame(columns=["max_feat_imp", "best_feat_imp", "num_iters"])
         for col in self.feature_importance_dict_list[data_ind].keys():
@@ -317,36 +379,56 @@ class FeatureSelector:
         self.feat_import_bycol_df["num_iters"] = self.feat_import_bycol_df["num_iters"].astype(int)
         self.feat_import_bycol_df = self.feat_import_bycol_df.sort_values(by=["max_feat_imp"], ascending=False)
 
-        # Generate plots showing how the feature importance of the top features changes depending on the number of
-        #  total features used
-        num_features = training_results_df["num_features_{}".format(data_ind+1)].values
-        num_feat_per_plot = 5
-        tot_feat_to_plot = 20
-        for jj in range(0, tot_feat_to_plot, num_feat_per_plot):
-            cols_to_plot = self.feat_import_bycol_df.index[jj:jj+5]
+        # --------------------------------------------------------------------
+        # PLOT #2 - Generate plots showing how the feature importance of the
+        #  top features changes depending on the number of total features used
 
+        num_features = training_results_df["num_features_{}".format(data_ind+1)].values
+        # Set the number of features to show on each plot:
+        num_feat_per_plot = 5
+        # Set the total number of features to plot:
+        tot_feat_to_plot = 20
+        # Each loop corresponds to one plot:
+        for jj in range(0, tot_feat_to_plot, num_feat_per_plot):
+            cols_to_plot = self.feat_import_bycol_df.index[jj:jj+num_feat_per_plot]
+
+            # Within each plot, loop over each feature to plot:
             for jjj, col in enumerate(cols_to_plot):
+                # Find all the feature importance values for this feature
+                #  (this will vary per feature depending on when that feature
+                #   was removed during the iterative training):
                 num_iters = int(self.feat_import_bycol_df.loc[col, "num_iters"])
                 x = num_features[start_ii:num_iters]
                 y = self.feature_importance_dict_list[data_ind][col][start_ii:]
 
+                # If this is the first feature for this plot panel:
                 if jjj == 0:
                     f, ax = plot_xy(x, y, xlabel='num_features_{}'.format(data_ind+1), ylabel='feature importance',
                                     leg_label=col, overplot=False, outfile=False)
                 elif jjj < num_feat_per_plot-1:
                     f, ax = plot_xy(x, y, f=f, ax=ax, leg_label=col, overplot=True, outfile=False)
+                # If this is the last feature for this plot panel, save the
+                #  plot to disk:
                 else:
                     plot_xy(x, y, f=f, ax=ax, leg_label=col, overplot=True, outfile=True, plots_folder=plots_folder,
                             title='feature_importance_vs_number_features_{}'.format(jj))
 
+            # Create a new PDF page for every 2 plots:
             new_page = True if (jj % 2) == 0 else False
-            self.pdf = add_plot_pdf(self.pdf,
-                                    file_path=plots_folder+'/feature_importance_vs_number_features_{}'.format(jj)+'.png',
-                                    new_page=new_page)
+            self.pdf = add_plot_pdf(
+                self.pdf, file_path=plots_folder+'/feature_importance_vs_number_features_{}'.format(jj)+'.png',
+                new_page=new_page)
 
-        # Generate plot of feature importance versus correlation with target variable:
+        # --------------------------------------------------------------------
+        # PLOT #3 - Generate plot of feature importance versus correlation
+        #  with target variable
+
         cols_best_iter = self.feat_import_bycol_df.dropna().index
+        # This plot can only be generated if a dataframe with feature
+        #  correlations is passed to the function:
         if numeric_df is not None:
+            # Get a list of features that are both numeric and are part of the
+            #  "best" training iteration:
             numeric_best_feat = set(cols_best_iter).intersection(set(numeric_df.index))
             print('Number of numeric features in best iteration: {}'.format(len(numeric_best_feat)))
 
@@ -365,10 +447,14 @@ class FeatureSelector:
 
                 x, y = [], []
                 for feat in non_numeric_df.index:
+                    # For categorical features, the name may appear more than
+                    #  once due to one-hot encoding:
                     if feat in cols_best_iter:
                         x.append(non_numeric_df.loc[feat, "RF_norm"])
                         y.append(self.feat_import_bycol_df.loc[feat, "best_feat_imp"])
                     else:
+                        # For features with one-hot encoding, add up the
+                        #  feature importance values for that feature:
                         feat_df = feat_import_bycol_df_best.loc[
                             feat_import_bycol_df_best.index.str.startswith(feat + '_')]
                         if len(feat_df) > 0:
