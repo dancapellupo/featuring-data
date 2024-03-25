@@ -23,6 +23,118 @@ from ._generate_plots import plot_inline_scatter, plot_xy, plot_horizontal_line,
 
 
 class FeatureSelector:
+    """
+    This class implements an iterative machine learning model training
+    (currently using the xgboost algorithm) to help with feature selection and
+    understanding the importance of the input features.
+
+    The results of this iterative training are available within your Jupyter
+    Notebook environment for further analysis and model training tasks. This
+    code should be used with your training set, with your holdout/test set
+    kept separate. This code will separate your training set into several
+    training / validation set splits [currently set at two separate splits].
+
+    Just as in the EDA class of this library, a (separate) nicely formatted
+    PDF report is generated and saved in your current working directory - for
+    easy reference or sharing results with team members and even stakeholders.
+    The PDF report includes also explanations of the generated plots.
+
+    The functions within this class perform the following tasks:
+    - Data preparation tasks:
+        - Perform one-hot encoding on categorical features.
+        - Split the data into [at least] two training and validation splits.
+    - Iterative / Recursive Model Training:
+        - There are a number of feature selection techniques (see the Readme
+          for more details), but after some testing, this author recommends
+          the recursive technique where one starts training with all features,
+          and then removes the feature with the lowest feature importance at
+          each iteration. The relevant model metric (e.g., mean squared error
+          for regression) is saved at each iteration, and at the end we can
+          see how many, and which, features give as good, if not, better
+          results than using all features.
+        - Another important part of model training is selecting
+          hyperparameters. This code utilizes a grid search approach, and
+          performs this search a few times during the iterative training, to
+          take into account the possibility that a better set of
+          hyperparameters may exist when training with a smaller number of
+          features than with all features.
+        - This iterative training is performed on at least two different
+          random splits of the data.
+        - The following information is kept from every iteration: the feature
+          importance values of every feature at every iteration, performance
+          metrics on both the training and validation set, the number of
+          features, and the features removed at the end of each iteration.
+
+    Parameters
+    ----------
+    numeric_cols : List
+        The final list of numeric column names after any adjustments are made
+        based on the number of unique values (from featuringdata.featuresEDA).
+
+    non_numeric_cols : List
+        The final list of non-numeric / categorical columns names after any
+        adjustments / additions from columns originally treated as numerical
+        (from featuringdata.featuresEDA).
+
+    report_prefix : str, default='FeatureSelection'
+        The prefix used for filename of report, as well as the name of the
+        folder containing the PNG files of plots.
+
+    target_col : str, default=None
+        The name of the dataframe column containing the target variable.
+
+    target_log : bool, default=False
+        Whether to take the log of the target variable for model training.
+
+    TODO: Change name to 'val_size'
+    test_size : float, default=0.15
+        Fraction of the input data to use for validation set.
+
+    parameter_dict : dict, default=None
+        Dictionary of hyperparameters with a range of parameter values to use
+        for the hyperparameter grid search.
+
+    Attributes
+    ----------
+    pdf : ??
+        The PDF object.
+
+    X : pd.DataFrame
+        The final dataframe used for model training, after the data
+        preparation steps, and with all features, including the one-hot
+        encoding.
+
+    y : pd.Series
+        The target variable.
+
+    hyperparams_df : pd.DataFrame
+        The best hyperparameters at each iteration where hyperparameter search
+        is performed.
+
+    feature_importance_dict_list : list
+        A list of dictionaries, with each list corresponding to a different
+        split of the data. The dictionaries contain a list of feature
+        importance values for each feature, corresponding to the iterations in
+        which each feature appears. In other words, if a feature appeared in
+        only the first iteration, then the list for that features contains
+        just 1 feature importance values. If the feature appeared in the first
+        50 iterations before being removed, then its list would contain 50
+        feature importance values.
+
+    feat_import_bycol_df : pd.DataFrame
+        This dataframe summarizes the feature importance information for each
+        feature, with the following columns:
+        - "max_feat_imp": The maximum feature importance that each feature had
+            during the iterative training process.
+        - "best_feat_imp": The feature importance value of each feature at the
+            iteration with the best model performance (if a feature was
+            removed before this iteration, then the value here is set to
+            np.nan.
+        - "num_iters": The number of iterations each feature appeared in,
+            before being removed.
+
+
+    """
 
     def __init__(self, numeric_cols, non_numeric_cols, report_prefix='FeatureSelection', target_col=None,
                  target_log=False, test_size=0.15, parameter_dict=None):
@@ -35,13 +147,13 @@ class FeatureSelector:
 
         self.test_size = test_size
 
-        self.pdf = None
-
         if parameter_dict is None:
             self.parameter_dict = {'max_depth': [3, 4, 5, 6], 'gamma': [0, 1, 5],
                                    'min_child_weight': [0, 1, 5], 'max_delta_step': [0, 1, 5]}
         else:
             self.parameter_dict = parameter_dict
+
+        self.pdf = None
 
         self.X = None
         self.y = None
