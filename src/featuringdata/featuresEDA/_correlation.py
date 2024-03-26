@@ -226,7 +226,7 @@ def calc_nonnumeric_features_target_corr(data_df, non_numeric_cols, target_col):
 
     Returns
     -------
-    non_numeric_df = pd.DataFrame
+    non_numeric_df : pd.DataFrame
         A dataframe with all non-numeric/categorical features and a measure of
         their correlation with the target variable. The index of the dataframe
         is the feature/column names, and the columns are:
