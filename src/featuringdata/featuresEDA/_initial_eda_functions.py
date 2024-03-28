@@ -69,8 +69,8 @@ def sort_numeric_nonnumeric_columns(data_df, target_col=None):
         elif target_col in non_numeric_cols:
             non_numeric_cols.remove(target_col)
 
-    print('There are {} numeric columns and {} non-numeric columns.'.format(len(numeric_cols),
-                                                                            len(non_numeric_cols)))
+    print('There are {} numeric columns and {} non-numeric columns.'.format(
+        len(numeric_cols), len(non_numeric_cols)))
 
     return numeric_cols, non_numeric_cols
 

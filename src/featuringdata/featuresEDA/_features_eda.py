@@ -261,8 +261,8 @@ class FeaturesEDA:
         print()
 
         # --------------------------------------------------------------------
-        # Sort numeric and non-numeric/categorical columns
-        print('--- Sorting Numeric and Non-numeric Columns ---')
+        # Sort Numeric and Non-numeric/Categorical Columns
+        print('--- Sorting Numeric and Non-numeric Columns / Unique Values ---')
 
         self.numeric_cols, self.non_numeric_cols = sort_numeric_nonnumeric_columns(data_df, self.target_col)
 
@@ -287,11 +287,6 @@ class FeaturesEDA:
 
         print('There are {} numeric and {} non-numeric columns with only a single value.'.format(
             len(single_value_cols_numeric_df), len(single_value_cols_nonnumeric_df)))
-
-        print('There are {} numeric columns that will be switched to categorical.'.format(
-            len(numeric_cols_to_cat_df)))
-
-
 
         self.pdf = section_on_unique_values(self.pdf, self.numeric_cols, self.non_numeric_cols,
                                             self.numeric_uniq_vals_df, self.non_numeric_uniq_vals_df,
