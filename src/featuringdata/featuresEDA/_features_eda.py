@@ -200,6 +200,8 @@ class FeaturesEDA:
 
         self.pdf = None
         self.null_cols_df = None
+        self.null_count_by_row_series = None
+        # TODO: Combine unique values and corr info into one DF
         self.numeric_cols = None
         self.non_numeric_cols = None
         self.numeric_uniq_vals_df = None
@@ -245,19 +247,31 @@ class FeaturesEDA:
             data_df = data_df.drop(columns=self.cols_to_drop)
 
         # --------------------------------------------------------------------
-        # Null values analysis
-        self.null_cols_df = count_null_values(data_df)
+        # Generating PDF Document
+        self.pdf = initialize_pdf_doc()
+
+        # --------------------------------------------------------------------
+        # Null Values Analysis
+        print('--- Null Values Analysis ---')
+
+        self.null_cols_df, self.null_count_by_row_series = count_null_values(data_df)
+
+        # PDF Page 1: Summary of Null values information and unique values for numeric and non-numeric feature columns
+        self.pdf = section_on_null_columns(self.pdf, data_df.shape[1], self.null_cols_df, self.null_count_by_row_series)
+        print()
 
         # --------------------------------------------------------------------
         # Sort numeric and non-numeric/categorical columns
+        print('--- Sorting Numeric and Non-numeric Columns ---')
+
         self.numeric_cols, self.non_numeric_cols = sort_numeric_nonnumeric_columns(data_df, self.target_col)
 
         # Count the number of unique values for each feature
-        self.numeric_uniq_vals_df = count_numeric_unique_values(data_df, self.numeric_cols,
-                                                                uniq_vals_thresh=self.numeric_uniq_vals_thresh)
+        self.numeric_uniq_vals_df = count_numeric_unique_values(
+            data_df, self.numeric_cols, uniq_vals_thresh=self.numeric_uniq_vals_thresh)
 
-        self.non_numeric_uniq_vals_df = count_nonnumeric_unique_values(data_df, self.non_numeric_cols,
-                                                                       uniq_vals_thresh=self.nonnumeric_uniq_vals_thresh)
+        self.non_numeric_uniq_vals_df = count_nonnumeric_unique_values(
+            data_df, self.non_numeric_cols, uniq_vals_thresh=self.nonnumeric_uniq_vals_thresh)
 
         # Identify any numeric columns with just a single unique value:
         single_value_cols_numeric_df = self.numeric_uniq_vals_df.loc[
@@ -274,14 +288,10 @@ class FeaturesEDA:
         print('There are {} numeric and {} non-numeric columns with only a single value.'.format(
             len(single_value_cols_numeric_df), len(single_value_cols_nonnumeric_df)))
 
-        print('There are {} numeric columns that will be switched to categorical.'.format(len(numeric_cols_to_cat_df)))
+        print('There are {} numeric columns that will be switched to categorical.'.format(
+            len(numeric_cols_to_cat_df)))
 
-        # --------------------------------------------------------------------
-        # Generating PDF Document
-        self.pdf = initialize_pdf_doc()
 
-        # PDF Page 1: Summary of Null values information and unique values for numeric and non-numeric feature columns
-        self.pdf = section_on_null_columns(self.pdf, data_df.shape[1], self.null_cols_df)
 
         self.pdf = section_on_unique_values(self.pdf, self.numeric_cols, self.non_numeric_cols,
                                             self.numeric_uniq_vals_df, self.non_numeric_uniq_vals_df,

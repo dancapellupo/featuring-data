@@ -32,7 +32,10 @@ def count_null_values(data_df):
     # Sort the dataframe by number of NULL values per feature, in descending order:
     null_cols_df = null_cols_df.sort_values(by=["Num of Nulls"], ascending=False)
 
-    return null_cols_df
+    # Count the number of NULL values in each row:
+    null_count_by_row_series = data_df.isna().sum(axis=1)
+
+    return null_cols_df, null_count_by_row_series
 
 
 def sort_numeric_nonnumeric_columns(data_df, target_col=None):

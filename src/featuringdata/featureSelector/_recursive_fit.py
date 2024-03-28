@@ -36,6 +36,7 @@ def round_to_n_sigfig(x, n=3):
     >>> round_to_n_sigfig(0.2345, n=3)
     0.235
     """
+
     # First check if zero is passed to the function to avoid an error:
     if x == 0:
         return int(x)

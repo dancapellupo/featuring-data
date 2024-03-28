@@ -1,6 +1,8 @@
 
 from fpdf import FPDF
 
+import numpy as np
+
 
 def initialize_pdf_doc():
     pdf = FPDF()
@@ -17,17 +19,23 @@ def save_pdf_doc(pdf, custom_filename='FeatureSelection', timestamp=''):
     pdf.output('./{}_EDA_Report_{}.pdf'.format(custom_filename, timestamp), 'F')
 
 
-def section_on_null_columns(pdf, num_features, null_cols_df):
+def section_on_null_columns(pdf, num_features, null_cols_df, null_count_by_row_series):
     pdf.set_font('Arial', 'B', 13)
-    pdf.cell(w=0, h=10, txt="Null Columns", ln=1)
+    pdf.cell(w=0, h=10, txt="Null Values", ln=1)
+
+    pdf.ln(2)
+
+    pdf.set_font('Arial', 'B', 12)
+    pdf.cell(w=0, h=10, txt="Null Values by Columns/Features", ln=1)
 
     pdf.set_font('Arial', '', 12)
     # TODO: Indicate also if target_col has nulls
-    pdf.cell(w=0, h=10,
-             txt="Out of {} total feature columns, there are {} columns with at least 1 null value.".format(
-                 num_features, len(null_cols_df)), ln=1)
+    output_txt = "Out of {} total feature columns, there are {} columns with at least 1 null value.".format(
+        num_features, len(null_cols_df))
+    print(output_txt)
+    pdf.cell(w=0, h=10, txt=output_txt, ln=1)
 
-    pdf.ln(2)
+    pdf.ln(3)
 
     if len(null_cols_df) == 0:
         return pdf
@@ -44,6 +52,32 @@ def section_on_null_columns(pdf, num_features, null_cols_df):
         pdf.cell(w=60, h=10, txt=null_cols_df["Feature"].iloc[ii], border=1, ln=0, align='L')
         pdf.cell(w=35, h=10, txt=null_cols_df["Num of Nulls"].iloc[ii].astype(str), border=1, ln=0, align='R')
         pdf.cell(w=35, h=10, txt=null_cols_df["Frac Null"].iloc[ii].astype(str), border=1, ln=1, align='R')
+
+    pdf.ln(6)
+    pdf.set_font('Arial', 'B', 12)
+    pdf.cell(w=0, h=10, txt="Null Values by Rows/Data Samples", ln=1)
+
+    null_count_by_row = null_count_by_row_series.values
+    xx = np.where(null_count_by_row > 0)[0]
+    output_txt = 'Out of {} total rows/data samples, {} rows have at least one null value.'.format(
+        null_count_by_row.size, xx.size)
+    print(output_txt)
+    pdf.set_font('Arial', '', 12)
+    pdf.cell(w=0, h=10, txt=output_txt, ln=1)
+
+    # report how many rows have greater than 25% / 50% nulls
+    for frac in [0.25, 0.50, 0.75, 1.]:
+        xx = np.where(null_count_by_row > frac*num_features)[0]
+        if xx.size > 0:
+            output_txt = 'There are {} rows where at least {:.0f}% of the values are NULL.'.format(xx.size, frac*100)
+            print(output_txt)
+            pdf.cell(w=0, h=10, txt=output_txt, ln=1)
+        else:
+            break
+
+    output_txt = 'The row with the most NULL values has {} NULLs.'.format(np.max(null_count_by_row))
+    print(output_txt)
+    pdf.cell(w=0, h=10, txt=output_txt, ln=1)
 
     return pdf
 
