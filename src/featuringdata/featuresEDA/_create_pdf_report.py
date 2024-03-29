@@ -217,20 +217,23 @@ def section_on_feature_corr(pdf, numeric_df, numeric_collinear_df, non_numeric_d
         pdf.cell(w=35, h=10, txt=numeric_df["Random Forest"].iloc[ii].astype(str), border=1, ln=1, align='R')
 
     pdf.ln(6)
-    pdf.image('{}/numeric_columns_target_correlation_ecdf.png'.format(plots_folder),
+    # pdf.image('{}/numeric_columns_target_correlation_ecdf.png'.format(plots_folder),
+    #           x=10, y=None, w=160, h=0, type='PNG')
+    pdf.image('{}/numeric_columns_target_correlation_hist.png'.format(plots_folder),
               x=10, y=None, w=160, h=0, type='PNG')
     pdf.ln(2)
 
-    output_txt = ('The above plot shows what fraction of numeric features have a correlation value with the target'
-                  'variable above a certain value.')
+    # output_txt = ('The above plot shows what fraction of numeric features have a correlation value with the target'
+    #               'variable above a certain value.')
+    output_txt = ('The above plot shows a histogram of all numeric features and their correlation value with the '
+                  'target variable.')
     pdf.write(5, output_txt)
     pdf.ln(7)
 
-
-    pdf.write(5, 'In other words, the ')
+    # pdf.write(5, 'In other words, the ')
 
     # ------------------------------------------------------------------------
-    # Correlations between numeric features
+    # Correlations Between Numeric Features
 
     pdf.add_page()
     pdf.set_font('Arial', 'B', 12)
@@ -255,8 +258,8 @@ def section_on_feature_corr(pdf, numeric_df, numeric_collinear_df, non_numeric_d
         pdf.cell(w=28, h=10, txt=numeric_collinear_df["Pearson"].iloc[ii].astype(str), border=1, ln=0, align='R')
         pdf.cell(w=26, h=10, txt=numeric_collinear_df["Random Forest"].iloc[ii].astype(str), border=1, ln=1, align='R')
 
-    # ---
-    # Non-numeric feature correlations with Target variable
+    # ------------------------------------------------------------------------
+    # Non-numeric Feature Correlations with Target Variable
 
     pdf.add_page()
 
@@ -275,7 +278,7 @@ def section_on_feature_corr(pdf, numeric_df, numeric_collinear_df, non_numeric_d
 
     # Table contents
     pdf.set_font('Arial', '', 12)
-    for ii in range(0, min(10, len(non_numeric_df))):
+    for ii in range(0, min(8, len(non_numeric_df))):
         pdf.cell(w=60, h=10,
                  txt=non_numeric_df.index[ii],
                  border=1, ln=0, align='L')
@@ -291,6 +294,15 @@ def section_on_feature_corr(pdf, numeric_df, numeric_collinear_df, non_numeric_d
         pdf.cell(w=30, h=10,
                  txt=non_numeric_df["RF_norm"].iloc[ii].astype(str),
                  border=1, ln=1, align='R')
+
+    pdf.ln(6)
+    pdf.image('{}/non_numeric_columns_target_correlation_hist.png'.format(plots_folder),
+              x=10, y=None, w=160, h=0, type='PNG')
+    pdf.ln(2)
+
+    output_txt = ('The above plot shows a histogram of all non-numeric features and their correlation value with the '
+                  'target variable.')
+    pdf.write(5, output_txt)
 
     return pdf
 

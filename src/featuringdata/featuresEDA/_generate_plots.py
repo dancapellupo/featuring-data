@@ -9,7 +9,8 @@ from matplotlib.offsetbox import AnchoredText
 import seaborn as sns
 
 
-def plot_ecdf(data_col, data_label='', xlabel='Data Values', filename='ecdf', overplot=False, outfile=True, plots_folder='./'):
+def plot_ecdf(data_col, data_label='', xlabel='Data Values', filename='ecdf', overplot=False, outfile=True,
+              plots_folder='./'):
 
     if not overplot:
         sns.set_theme(style="whitegrid")
@@ -24,6 +25,27 @@ def plot_ecdf(data_col, data_label='', xlabel='Data Values', filename='ecdf', ov
 
         plt.savefig('{}/{}.png'.format(plots_folder, filename), bbox_inches='tight')
         plt.close()
+
+
+def plot_hist(data_for_bins, label_bins='', data_for_line=None, label_line='', xlabel='Data Values', ylabel='Count',
+              filename='hist', plots_folder='./'):
+
+    # sns.set_theme(style="whitegrid")
+    f, ax = plt.subplots(figsize=(8, 5))
+
+    sns.histplot(data=data_for_bins, bins=10, binrange=(0, 1), label=label_bins)
+    if data_for_line is not None:
+        sns.histplot(data=data_for_line, bins=10, binrange=(0, 1), element='step', fill=False, color='orange',
+                     label=label_line)
+    plt.xlim(0, 1)
+
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.xlim(0, 1)
+    plt.legend()
+
+    plt.savefig('{}/{}.png'.format(plots_folder, filename), bbox_inches='tight')
+    plt.close()
 
 
 def plot_feature_values(data_df, columns_list, correlation_df, target_col, numeric=True, catplot_style='swarm',

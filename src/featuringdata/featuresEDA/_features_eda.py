@@ -28,7 +28,7 @@ from ._correlation import (
     calc_nonnumeric_features_target_corr
 )
 
-from ._generate_plots import plot_ecdf, plot_feature_values
+from ._generate_plots import plot_ecdf, plot_hist, plot_feature_values
 
 
 class FeaturesEDA:
@@ -385,10 +385,20 @@ class FeaturesEDA:
         # PDF Pages 2-3: Summary of numeric and non-numeric feature
         # correlations:
 
-        plot_ecdf(np.abs(self.numeric_df["Pearson"].values), data_label="Pearson", outfile=False)
-        plot_ecdf(
-            self.numeric_df["Random Forest"], data_label="Random Forest", xlabel='Correlation Value',
-            filename='numeric_columns_target_correlation_ecdf', overplot=True, outfile=True, plots_folder=plots_folder)
+        # plot_ecdf(np.abs(self.numeric_df["Pearson"].values), data_label="Pearson", outfile=False)
+        # plot_ecdf(
+        #     self.numeric_df["Random Forest"], data_label="Random Forest", xlabel='Correlation Value',
+        #     filename='numeric_columns_target_correlation_ecdf', overplot=True, outfile=True, plots_folder=plots_folder)
+
+        plot_hist(data_for_bins=np.abs(self.numeric_df["Pearson"].values), label_bins='Pearson (abs)',
+                  data_for_line=self.numeric_df["Random Forest"].values, label_line="RF_corr",
+                  xlabel='Correlation Value', ylabel='Feature Count',
+                  filename='numeric_columns_target_correlation_hist', plots_folder=plots_folder)
+
+        plot_hist(data_for_bins=self.non_numeric_df["Random Forest"].values, label_bins='RF_corr',
+                  data_for_line=self.non_numeric_df["RF_norm"].values, label_line="RF_corr (norm)",
+                  xlabel='Correlation Value', ylabel='Feature Count',
+                  filename='non_numeric_columns_target_correlation_hist', plots_folder=plots_folder)
 
         self.pdf = section_on_feature_corr(self.pdf, self.numeric_df, self.numeric_collinear_df, self.non_numeric_df,
                                            plots_folder=plots_folder)
