@@ -9,6 +9,23 @@ from matplotlib.offsetbox import AnchoredText
 import seaborn as sns
 
 
+def plot_ecdf(data_col, data_label='', xlabel='Data Values', filename='ecdf', overplot=False, outfile=True, plots_folder='./'):
+
+    if not overplot:
+        sns.set_theme(style="whitegrid")
+        f, ax = plt.subplots(figsize=(8, 5))
+
+    sns.ecdfplot(data=data_col, complementary=True, label=data_label)
+
+    if outfile:
+        plt.xlabel(xlabel)
+        plt.xlim(0, 1)
+        plt.legend()
+
+        plt.savefig('{}/{}.png'.format(plots_folder, filename), bbox_inches='tight')
+        plt.close()
+
+
 def plot_feature_values(data_df, columns_list, correlation_df, target_col, numeric=True, catplot_style='swarm',
                         plots_folder='./plots'):
     """

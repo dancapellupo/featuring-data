@@ -2,6 +2,7 @@
 from datetime import datetime
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from ._create_pdf_report import (
@@ -27,7 +28,7 @@ from ._correlation import (
     calc_nonnumeric_features_target_corr
 )
 
-from ._generate_plots import plot_feature_values
+from ._generate_plots import plot_ecdf, plot_feature_values
 
 
 class FeaturesEDA:
@@ -383,7 +384,14 @@ class FeaturesEDA:
 
         # PDF Pages 2-3: Summary of numeric and non-numeric feature
         # correlations:
-        self.pdf = section_on_feature_corr(self.pdf, self.numeric_df, self.numeric_collinear_df, self.non_numeric_df)
+
+        plot_ecdf(np.abs(self.numeric_df["Pearson"].values), data_label="Pearson", outfile=False)
+        plot_ecdf(
+            self.numeric_df["Random Forest"], data_label="Random Forest", xlabel='Correlation Value',
+            filename='numeric_columns_target_correlation_ecdf', overplot=True, outfile=True, plots_folder=plots_folder)
+
+        self.pdf = section_on_feature_corr(self.pdf, self.numeric_df, self.numeric_collinear_df, self.non_numeric_df,
+                                           plots_folder=plots_folder)
 
         # --------------------------------------------------------------------
         # Generate EDA plots
