@@ -400,8 +400,8 @@ class FeaturesEDA:
                   xlabel='Correlation Value', ylabel='Feature Count',
                   filename='non_numeric_columns_target_correlation_hist', plots_folder=plots_folder)
 
-        self.pdf = section_on_feature_corr(self.pdf, self.numeric_df, self.numeric_collinear_df, self.non_numeric_df,
-                                           plots_folder=plots_folder)
+        self.pdf = section_on_feature_corr(self.pdf, self.numeric_df, self.numeric_collinear_summary_df,
+                                           self.non_numeric_df, plots_folder=plots_folder)
 
         # --------------------------------------------------------------------
         # Generate EDA plots
