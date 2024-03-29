@@ -103,7 +103,8 @@ def calc_corr_numeric_features(data_df, numeric_cols):
     numeric_collinear_df = pd.DataFrame(columns=["Feature1", "Feature2", "Count not-Null", "Pearson", "Random Forest"])
 
     jj = 0
-    for pair in tqdm(it.combinations(numeric_cols, 2)):
+    total_iters = len(list(it.combinations(numeric_cols, 2)))
+    for pair in tqdm(it.combinations(numeric_cols, 2), total=total_iters):
         col1, col2 = pair[0], pair[1]
 
         data_df_cols_notnull = data_df[[col1, col2]].dropna()
@@ -124,23 +125,6 @@ def calc_corr_numeric_features(data_df, numeric_cols):
 
     numeric_collinear_df = numeric_collinear_df.sort_values(by=["Random Forest"], ascending=False)
     print(time.time() - start)
-
-    # start = time.time()
-    # numeric_collinear_df = pd.DataFrame(columns=["Feature1", "Feature2", "Count not-Null", "Pearson", "Random Forest"])
-    #
-    # for jj, pair in enumerate(tqdm(it.permutations(numeric_cols, 2))):
-    #     col1, col2 = pair[0], pair[1]
-    #
-    #     data_df_cols_notnull = data_df[[col1, col2]].dropna()
-    #
-    #     pcorr = pearsonr(data_df_cols_notnull[col1].values, data_df_cols_notnull[col2].values)[0]
-    #
-    #     rf_reg = RandomForestRegressor(n_estimators=10)
-    #     rf_reg.fit(data_df_cols_notnull[col1].values.reshape(-1, 1), data_df_cols_notnull[col2].values)
-    #     rfscore = rf_reg.score(data_df_cols_notnull[col1].values.reshape(-1, 1), data_df_cols_notnull[col2])
-    #
-    #     numeric_collinear_df.loc[jj] = col1, col2, len(data_df_cols_notnull), round(pcorr, 2), round(rfscore, 2)
-    # print(time.time() - start)
 
     start = time.time()
     numeric_collinear_summary_df = pd.DataFrame(

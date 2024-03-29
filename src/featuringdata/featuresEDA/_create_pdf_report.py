@@ -241,23 +241,6 @@ def section_on_feature_corr(pdf, numeric_df, numeric_collinear_summary_df, non_n
 
     pdf.ln(2)
 
-    # # Table Header
-    # pdf.set_font('Arial', 'B', 12)
-    # pdf.cell(w=52, h=10, txt='Numeric Feature 1', border=1, ln=0, align='C')
-    # pdf.cell(w=52, h=10, txt='Numeric Feature 2', border=1, ln=0, align='C')
-    # pdf.cell(w=32, h=10, txt='Count non-Null', border=1, ln=0, align='C')
-    # pdf.cell(w=28, h=10, txt='Pearson Corr', border=1, ln=0, align='C')
-    # pdf.cell(w=26, h=10, txt='RF Corr', border=1, ln=1, align='C')
-    #
-    # # Table contents
-    # pdf.set_font('Arial', '', 12)
-    # for ii in range(0, min(10, len(numeric_collinear_df))):
-    #     pdf.cell(w=52, h=10, txt=numeric_collinear_df["Feature1"].iloc[ii], border=1, ln=0, align='L')
-    #     pdf.cell(w=52, h=10, txt=numeric_collinear_df["Feature2"].iloc[ii], border=1, ln=0, align='L')
-    #     pdf.cell(w=32, h=10, txt=numeric_collinear_df["Count not-Null"].iloc[ii].astype(str), border=1, ln=0, align='R')
-    #     pdf.cell(w=28, h=10, txt=numeric_collinear_df["Pearson"].iloc[ii].astype(str), border=1, ln=0, align='R')
-    #     pdf.cell(w=26, h=10, txt=numeric_collinear_df["Random Forest"].iloc[ii].astype(str), border=1, ln=1, align='R')
-
     # Table Header
     pdf.set_font('Arial', 'B', 10)
     pdf.cell(w=44, h=6, txt='', border='LTR', ln=0, align='C')
@@ -296,6 +279,16 @@ def section_on_feature_corr(pdf, numeric_df, numeric_collinear_summary_df, non_n
         pdf.set_font('Arial', '', 10)
         pdf.cell(w=24, h=10, txt=numeric_collinear_summary_df["Max RF Corr"].iloc[ii].astype(str), border=1,
                  ln=1, align='R')
+
+    pdf.ln(6)
+    pdf.image('{}/numeric_columns_collinear_correlation_hist.png'.format(plots_folder),
+              x=15, y=None, w=160, h=0, type='PNG')
+    pdf.ln(2)
+
+    output_txt = ('The above plot shows a histogram of all unique pairs of numeric features and the correlation '
+                  'between the two features of each the pair.')
+    pdf.write(5, output_txt)
+    pdf.ln(7)
 
     # ------------------------------------------------------------------------
     # Non-numeric Feature Correlations with Target Variable
@@ -336,7 +329,7 @@ def section_on_feature_corr(pdf, numeric_df, numeric_collinear_summary_df, non_n
 
     pdf.ln(6)
     pdf.image('{}/non_numeric_columns_target_correlation_hist.png'.format(plots_folder),
-              x=10, y=None, w=160, h=0, type='PNG')
+              x=15, y=None, w=160, h=0, type='PNG')
     pdf.ln(2)
 
     output_txt = ('The above plot shows a histogram of all non-numeric features and their correlation value with the '

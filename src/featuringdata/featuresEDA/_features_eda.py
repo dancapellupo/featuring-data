@@ -395,6 +395,11 @@ class FeaturesEDA:
                   xlabel='Correlation Value', ylabel='Feature Count',
                   filename='numeric_columns_target_correlation_hist', plots_folder=plots_folder)
 
+        plot_hist(data_for_bins=np.abs(self.numeric_collinear_df["Pearson"].values), label_bins='Pearson (abs)',
+                  data_for_line=self.numeric_collinear_df["Random Forest"].values, label_line="RF_corr",
+                  xlabel='Correlation Value', ylabel='Count of Numeric Feature Pairs',
+                  filename='numeric_columns_collinear_correlation_hist', plots_folder=plots_folder)
+
         plot_hist(data_for_bins=self.non_numeric_df["Random Forest"].values, label_bins='RF_corr',
                   data_for_line=self.non_numeric_df["RF_norm"].values, label_line="RF_corr (norm)",
                   xlabel='Correlation Value', ylabel='Feature Count',
