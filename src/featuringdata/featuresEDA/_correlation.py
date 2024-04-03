@@ -13,7 +13,23 @@ from sklearn.feature_selection import mutual_info_regression
 from sklearn.ensemble import RandomForestRegressor
 
 
-def calc_numeric_features_target_corr(data_df, numeric_cols, target_col, rf_n_estimators=10):
+def get_random_forest_hyperparams(n_samples, rf_n_estimators='auto'):
+
+    # For 3000 samples or less, use 50 trees. Otherwise, stick to 10:
+    if rf_n_estimators == 'auto':
+        rf_n_estimators = 10 if n_samples >= 3000 else 50
+
+    if n_samples >= 5000:
+        min_samples_leaf = np.ceil(0.01 * n_samples).astype(int)
+    elif n_samples >= 500:
+        min_samples_leaf = np.ceil(0.03 * n_samples).astype(int)
+    else:
+        min_samples_leaf = np.ceil(0.10 * n_samples).astype(int)
+
+    return rf_n_estimators, min_samples_leaf
+
+
+def calc_numeric_features_target_corr(data_df, numeric_cols, target_col, rf_n_estimators='auto'):
     """
     Calculate the correlation between numeric features and the target
     variable.
@@ -59,6 +75,11 @@ def calc_numeric_features_target_corr(data_df, numeric_cols, target_col, rf_n_es
             n_estimators=10.
     """
 
+    rf_n_estimators, min_samples_leaf = get_random_forest_hyperparams(len(data_df), rf_n_estimators=rf_n_estimators)
+
+    print('For random forest (RF) correlation measure, using {} trees and min_samples_leaf={}.\n'.format(
+        rf_n_estimators, min_samples_leaf))
+
     numeric_df = pd.DataFrame(columns=["Count not-Null", "Pearson", "Mutual Info", "Random Forest"])
 
     # Loop over each numeric feature:
@@ -74,7 +95,7 @@ def calc_numeric_features_target_corr(data_df, numeric_cols, target_col, rf_n_es
             data_df_col_notnull[col].values.reshape(-1, 1), data_df_col_notnull[target_col].values)[0]
 
         # Train a random forest model with just that feature and the target variable:
-        rf_reg = RandomForestRegressor(n_estimators=rf_n_estimators)
+        rf_reg = RandomForestRegressor(n_estimators=rf_n_estimators, min_samples_leaf=min_samples_leaf)
         rf_reg.fit(data_df_col_notnull[col].values.reshape(-1, 1), data_df_col_notnull[target_col].values)
         rfscore = rf_reg.score(data_df_col_notnull[col].values.reshape(-1, 1), data_df_col_notnull[target_col])
 
@@ -99,6 +120,8 @@ def calc_corr_numeric_features(data_df, numeric_cols):
     :return:
     """
 
+    rf_n_estimators, min_samples_leaf = get_random_forest_hyperparams(len(data_df))
+
     start = time.time()
     numeric_collinear_df = pd.DataFrame(columns=["Feature1", "Feature2", "Count not-Null", "Pearson", "Random Forest"])
 
@@ -111,11 +134,11 @@ def calc_corr_numeric_features(data_df, numeric_cols):
 
         pcorr = pearsonr(data_df_cols_notnull[col1].values, data_df_cols_notnull[col2].values)[0]
 
-        rf_reg = RandomForestRegressor(n_estimators=10)
+        rf_reg = RandomForestRegressor(n_estimators=10, min_samples_leaf=min_samples_leaf)
         rf_reg.fit(data_df_cols_notnull[col1].values.reshape(-1, 1), data_df_cols_notnull[col2].values)
         rfscore1 = rf_reg.score(data_df_cols_notnull[col1].values.reshape(-1, 1), data_df_cols_notnull[col2])
 
-        rf_reg = RandomForestRegressor(n_estimators=10)
+        rf_reg = RandomForestRegressor(n_estimators=10, min_samples_leaf=min_samples_leaf)
         rf_reg.fit(data_df_cols_notnull[col2].values.reshape(-1, 1), data_df_cols_notnull[col1].values)
         rfscore2 = rf_reg.score(data_df_cols_notnull[col2].values.reshape(-1, 1), data_df_cols_notnull[col1])
 

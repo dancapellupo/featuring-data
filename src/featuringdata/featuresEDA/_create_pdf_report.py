@@ -32,7 +32,7 @@ def section_on_null_columns(pdf, num_features, null_cols_df, null_count_by_row_s
     # TODO: Indicate also if target_col has nulls
     output_txt = "Out of {} total feature columns, there are {} columns with at least 1 null value.".format(
         num_features, len(null_cols_df))
-    print(output_txt)
+    print(output_txt + '\n')
     pdf.cell(w=0, h=10, txt=output_txt, ln=1)
 
     pdf.ln(3)
@@ -280,15 +280,16 @@ def section_on_feature_corr(pdf, numeric_df, numeric_collinear_summary_df, non_n
         pdf.cell(w=24, h=10, txt=numeric_collinear_summary_df["Max RF Corr"].iloc[ii].astype(str), border=1,
                  ln=1, align='R')
 
-    pdf.ln(6)
-    pdf.image('{}/numeric_columns_collinear_correlation_hist.png'.format(plots_folder),
-              x=15, y=None, w=160, h=0, type='PNG')
-    pdf.ln(2)
+    if len(numeric_collinear_summary_df) > 0:
+        pdf.ln(6)
+        pdf.image('{}/numeric_columns_collinear_correlation_hist.png'.format(plots_folder),
+                  x=15, y=None, w=160, h=0, type='PNG')
+        pdf.ln(2)
 
-    output_txt = ('The above plot shows a histogram of all unique pairs of numeric features and the correlation '
-                  'between the two features of each the pair.')
-    pdf.write(5, output_txt)
-    pdf.ln(7)
+        output_txt = ('The above plot shows a histogram of all unique pairs of numeric features and the correlation '
+                      'between the two features of each the pair.')
+        pdf.write(5, output_txt)
+        pdf.ln(7)
 
     # ------------------------------------------------------------------------
     # Non-numeric Feature Correlations with Target Variable
