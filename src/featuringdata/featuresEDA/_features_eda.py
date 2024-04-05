@@ -210,7 +210,7 @@ class FeaturesEDA:
         self.numeric_df = None
         self.numeric_collinear_df = pd.DataFrame()
         self.numeric_collinear_summary_df = pd.DataFrame()
-        self.non_numeric_df = None
+        self.non_numeric_df = pd.DataFrame()
 
     # TODO Create function that does up to correlation
     # TODO For full EDA, make collinear correlation optional
@@ -375,7 +375,8 @@ class FeaturesEDA:
 
         # Calculate correlations between each categorical feature and the
         # target variable:
-        self.non_numeric_df = calc_nonnumeric_features_target_corr(data_df, self.non_numeric_cols, self.target_col)
+        if len(self.non_numeric_cols) > 0:
+            self.non_numeric_df = calc_nonnumeric_features_target_corr(data_df, self.non_numeric_cols, self.target_col)
 
         # --------------------------------------------------------------------
         # Generating PDF Document
@@ -401,10 +402,11 @@ class FeaturesEDA:
                       xlabel='Correlation Value', ylabel='Count of Numeric Feature Pairs',
                       filename='numeric_columns_collinear_correlation_hist', plots_folder=plots_folder)
 
-        plot_hist(data_for_bins=self.non_numeric_df["Random Forest"].values, label_bins='RF_corr',
-                  data_for_line=self.non_numeric_df["RF_norm"].values, label_line="RF_corr (norm)",
-                  xlabel='Correlation Value', ylabel='Feature Count',
-                  filename='non_numeric_columns_target_correlation_hist', plots_folder=plots_folder)
+        if len(self.non_numeric_df) > 0:
+            plot_hist(data_for_bins=self.non_numeric_df["Random Forest"].values, label_bins='RF_corr',
+                      data_for_line=self.non_numeric_df["RF_norm"].values, label_line="RF_corr (norm)",
+                      xlabel='Correlation Value', ylabel='Feature Count',
+                      filename='non_numeric_columns_target_correlation_hist', plots_folder=plots_folder)
 
         self.pdf = section_on_feature_corr(self.pdf, self.numeric_df, self.numeric_collinear_summary_df,
                                            self.non_numeric_df, plots_folder=plots_folder)

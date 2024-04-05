@@ -19,6 +19,39 @@ def save_pdf_doc(pdf, custom_filename='FeatureSelection', timestamp=''):
     pdf.output('./{}_EDA_Report_{}.pdf'.format(custom_filename, timestamp), 'F')
 
 
+def adjust_fontsize_for_feature_names(pdf, feature, box_width=60, start_fontsize=12):
+
+    # sum(i.isupper() for i in a)
+    feat_len_adj = len(feature) + np.floor(sum(map(str.isupper, feature)) / 2).astype(int)
+
+    if box_width == 60:
+        start_shrink = 27
+        font_size_dict = {27: 11, 28: 11, 29: 11, 30: 10, 31: 10, 32: 10, 33: 10, 34: 9, 35: 9, 36: 9, 37: 9, 38: 8,
+                          39: 8, 40: 8, 41: 7, 42: 7, 43: 7, 44: 7}
+        start_cutoff = 45
+    elif box_width == 44:
+        start_shrink = 23
+        font_size_dict = {23: 9, 24: 9, 25: 9, 26: 8, 27: 8, 28: 8, 29: 8, 30: 7, 31: 7, 32: 7, 33: 7}
+        start_cutoff = 34
+    elif box_width == 33:
+        start_shrink = 23
+        font_size_dict = {23: 7, 24: 7}
+        start_cutoff = 25
+
+    if feat_len_adj >= start_shrink:
+        if feat_len_adj >= start_cutoff:
+            feature = feature[0:start_cutoff - 3 - np.floor(
+                sum(map(str.isupper, feature[0:start_cutoff-3])) / 3.5).astype(int)] + '...'
+            font_size = 7
+        else:
+            font_size = font_size_dict[feat_len_adj]
+        pdf.set_font('Arial', '', font_size)
+    pdf.cell(w=box_width, h=10, txt=feature, border=1, ln=0, align='L')
+    pdf.set_font('Arial', '', start_fontsize)
+
+    return pdf
+
+
 def section_on_null_columns(pdf, num_features, null_cols_df, null_count_by_row_series):
     pdf.set_font('Arial', 'B', 13)
     pdf.cell(w=0, h=10, txt="Null Values", ln=1)
@@ -49,7 +82,7 @@ def section_on_null_columns(pdf, num_features, null_cols_df, null_count_by_row_s
     # Table contents
     pdf.set_font('Arial', '', 12)
     for ii in range(0, min(8, len(null_cols_df))):
-        pdf.cell(w=60, h=10, txt=null_cols_df["Feature"].iloc[ii], border=1, ln=0, align='L')
+        pdf = adjust_fontsize_for_feature_names(pdf, null_cols_df["Feature"].iloc[ii])
         pdf.cell(w=35, h=10, txt=null_cols_df["Num of Nulls"].iloc[ii].astype(str), border=1, ln=0, align='R')
         pdf.cell(w=35, h=10, txt=null_cols_df["Frac Null"].iloc[ii].astype(str), border=1, ln=1, align='R')
 
@@ -124,9 +157,7 @@ def section_on_unique_values(pdf, numeric_cols, non_numeric_cols, numeric_uniq_v
         # Table Contents
         pdf.set_font('Arial', '', 12)
         for ii in range(0, min(8, len(numeric_uniq_vals_df))):
-            pdf.cell(w=60, h=10,
-                     txt=numeric_uniq_vals_df["Feature"].iloc[ii],
-                     border=1, ln=0, align='L')
+            pdf = adjust_fontsize_for_feature_names(pdf, numeric_uniq_vals_df["Feature"].iloc[ii])
             pdf.cell(w=42, h=10,
                      txt=numeric_uniq_vals_df["Num Unique Values"].iloc[ii].astype(str),
                      border=1, ln=1, align='R')
@@ -157,9 +188,7 @@ def section_on_unique_values(pdf, numeric_cols, non_numeric_cols, numeric_uniq_v
     # Table contents
     pdf.set_font('Arial', '', 12)
     for ii in range(0, min(8, len(non_numeric_uniq_vals_df_tmp))):
-        pdf.cell(w=60, h=10,
-                 txt=non_numeric_uniq_vals_df_tmp["Feature"].iloc[ii],
-                 border=1, ln=0, align='L')
+        pdf = adjust_fontsize_for_feature_names(pdf, non_numeric_uniq_vals_df_tmp["Feature"].iloc[ii])
         pdf.cell(w=42, h=10,
                  txt=non_numeric_uniq_vals_df_tmp["Num Unique Values"].iloc[ii].astype(str),
                  border=1, ln=1, align='R')
@@ -211,7 +240,7 @@ def section_on_feature_corr(pdf, numeric_df, numeric_collinear_summary_df, non_n
     # Table contents
     pdf.set_font('Arial', '', 12)
     for ii in range(0, min(8, len(numeric_df))):
-        pdf.cell(w=60, h=10, txt=numeric_df.index[ii], border=1, ln=0, align='L')
+        pdf = adjust_fontsize_for_feature_names(pdf, numeric_df.index[ii])
         pdf.cell(w=35, h=10, txt=numeric_df["Count not-Null"].iloc[ii].astype(str), border=1, ln=0, align='R')
         pdf.cell(w=35, h=10, txt=numeric_df["Pearson"].iloc[ii].astype(str), border=1, ln=0, align='R')
         pdf.cell(w=35, h=10, txt=numeric_df["Random Forest"].iloc[ii].astype(str), border=1, ln=1, align='R')
@@ -244,40 +273,39 @@ def section_on_feature_corr(pdf, numeric_df, numeric_collinear_summary_df, non_n
     # Table Header
     pdf.set_font('Arial', 'B', 10)
     pdf.cell(w=44, h=6, txt='', border='LTR', ln=0, align='C')
-    pdf.cell(w=24, h=6, txt='Avg Pearson', border='LTR', ln=0, align='C')
-    pdf.cell(w=23, h=6, txt='Avg RF', border='LTR', ln=0, align='C')
-    pdf.cell(w=26, h=6, txt='Feat with', border='LTR', ln=0, align='C')
-    pdf.cell(w=23, h=6, txt='', border='LTR', ln=0, align='C')
-    pdf.cell(w=26, h=6, txt='Feat with', border='LTR', ln=0, align='C')
-    pdf.cell(w=24, h=6, txt='', border='LTR', ln=1, align='C')
+    pdf.cell(w=23, h=6, txt='Avg Pearson', border='LTR', ln=0, align='C')
+    pdf.cell(w=22, h=6, txt='Avg RF', border='LTR', ln=0, align='C')
+    pdf.cell(w=33, h=6, txt='Feat with Max', border='LTR', ln=0, align='C')
+    pdf.cell(w=18, h=6, txt='Max Pear', border='LTR', ln=0, align='C')
+    pdf.cell(w=33, h=6, txt='Feat with Max', border='LTR', ln=0, align='C')
+    pdf.cell(w=17, h=6, txt='Max RF', border='LTR', ln=1, align='C')
 
     pdf.cell(w=44, h=6, txt='Numeric Feature', border='LBR', ln=0, align='C')
-    pdf.cell(w=24, h=6, txt='Correlation', border='LBR', ln=0, align='C')
     pdf.cell(w=23, h=6, txt='Correlation', border='LBR', ln=0, align='C')
-    pdf.cell(w=26, h=6, txt='Max P Corr', border='LBR', ln=0, align='C')
-    pdf.cell(w=23, h=6, txt='Max P Corr', border='LBR', ln=0, align='C')
-    pdf.cell(w=26, h=6, txt='Max RF Corr', border='LBR', ln=0, align='C')
-    pdf.cell(w=24, h=6, txt='Max RF Corr', border='LBR', ln=1, align='C')
+    pdf.cell(w=22, h=6, txt='Correlation', border='LBR', ln=0, align='C')
+    pdf.cell(w=33, h=6, txt='Pear Corr', border='LBR', ln=0, align='C')
+    pdf.cell(w=18, h=6, txt='Corr', border='LBR', ln=0, align='C')
+    pdf.cell(w=33, h=6, txt='RF Corr', border='LBR', ln=0, align='C')
+    pdf.cell(w=17, h=6, txt='Corr', border='LBR', ln=1, align='C')
 
     # Table contents
     pdf.set_font('Arial', '', 10)
     for ii in range(0, min(8, len(numeric_collinear_summary_df))):
-        pdf.cell(w=44, h=10, txt=numeric_collinear_summary_df.index[ii], border=1, ln=0, align='L')
-        pdf.cell(w=24, h=10, txt=numeric_collinear_summary_df["Avg Pearson Corr"].iloc[ii].astype(str), border=1,
+        pdf = adjust_fontsize_for_feature_names(
+            pdf, numeric_collinear_summary_df.index[ii], box_width=44, start_fontsize=10)
+        pdf.cell(w=23, h=10, txt=numeric_collinear_summary_df["Avg Pearson Corr"].iloc[ii].astype(str), border=1,
                  ln=0, align='R')
-        pdf.cell(w=23, h=10, txt=numeric_collinear_summary_df["Avg RF Corr"].iloc[ii].astype(str), border=1,
-                 ln=0, align='R')
-        pdf.set_font('Arial', '', 8)
-        pdf.cell(w=26, h=10, txt=numeric_collinear_summary_df["Max Pear Corr Feature"].iloc[ii], border=1,
-                 ln=0, align='L')
-        pdf.set_font('Arial', '', 10)
-        pdf.cell(w=23, h=10, txt=numeric_collinear_summary_df["Max Pear"].iloc[ii].astype(str), border=1,
+        pdf.cell(w=22, h=10, txt=numeric_collinear_summary_df["Avg RF Corr"].iloc[ii].astype(str), border=1,
                  ln=0, align='R')
         pdf.set_font('Arial', '', 8)
-        pdf.cell(w=26, h=10, txt=numeric_collinear_summary_df["Max RF Corr Feature"].iloc[ii], border=1,
-                 ln=0, align='L')
-        pdf.set_font('Arial', '', 10)
-        pdf.cell(w=24, h=10, txt=numeric_collinear_summary_df["Max RF Corr"].iloc[ii].astype(str), border=1,
+        pdf = adjust_fontsize_for_feature_names(
+            pdf, numeric_collinear_summary_df["Max Pear Corr Feature"].iloc[ii], box_width=33, start_fontsize=10)
+        pdf.cell(w=18, h=10, txt=numeric_collinear_summary_df["Max Pear"].iloc[ii].astype(str), border=1,
+                 ln=0, align='R')
+        pdf.set_font('Arial', '', 8)
+        pdf = adjust_fontsize_for_feature_names(
+            pdf, numeric_collinear_summary_df["Max RF Corr Feature"].iloc[ii], box_width=33, start_fontsize=10)
+        pdf.cell(w=17, h=10, txt=numeric_collinear_summary_df["Max RF Corr"].iloc[ii].astype(str), border=1,
                  ln=1, align='R')
 
     if len(numeric_collinear_summary_df) > 0:
@@ -301,6 +329,10 @@ def section_on_feature_corr(pdf, numeric_df, numeric_collinear_summary_df, non_n
 
     pdf.ln(2)
 
+    if len(non_numeric_df) == 0:
+        pdf.cell(w=0, h=10, txt="** No non-numeric features in this dataset. **", align='C')
+        return pdf
+
     # Table Header
     pdf.set_font('Arial', 'B', 12)
     pdf.cell(w=60, h=10, txt='Non-Numeric Feature', border=1, ln=0, align='C')
@@ -312,9 +344,7 @@ def section_on_feature_corr(pdf, numeric_df, numeric_collinear_summary_df, non_n
     # Table contents
     pdf.set_font('Arial', '', 12)
     for ii in range(0, min(8, len(non_numeric_df))):
-        pdf.cell(w=60, h=10,
-                 txt=non_numeric_df.index[ii],
-                 border=1, ln=0, align='L')
+        pdf = adjust_fontsize_for_feature_names(pdf, non_numeric_df.index[ii])
         pdf.cell(w=32, h=10,
                  txt=non_numeric_df["Count not-Null"].iloc[ii].astype(str),
                  border=1, ln=0, align='R')
