@@ -388,7 +388,7 @@ def section_of_plots(pdf, columns_list, target_col, numeric=True, plots_folder='
 
         # TODO: Double-check that file exists
         pdf.image('{}/{}_vs_{}.png'.format(plots_folder, column, target_col),
-                  x=10, y=None, w=180, h=0, type='PNG')
+                  x=10, y=None, w=0, h=130, type='PNG')
 
     return pdf
 

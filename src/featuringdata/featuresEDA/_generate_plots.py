@@ -172,6 +172,8 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
             if (not numeric) and data_df[column].nunique() >= 10:
                 plt.xticks(rotation=45)
 
+            plt.grid(axis='y')
+
         else:
             data_df_col_notnull = data_df[[column, target_col]].dropna().reset_index()
 
@@ -199,6 +201,8 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
             # ax.scatter(x, y, c=z, s=100, edgecolor='')
             # ax.scatter(x, y, c=z, s=50)
 
+            plt.grid()
+
             plt.xlabel(column)
             plt.ylabel(target_col)
 
@@ -206,11 +210,11 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
 
         if numeric:
             ax.set_title('{} vs {} : P={}, MI={}, RF={}'.format(
-                target_col, column, correlation_df.loc[column, "Pearson"],
+                column, target_col, correlation_df.loc[column, "Pearson"],
                 correlation_df.loc[column, "Mutual Info"], correlation_df.loc[column, "Random Forest"]))
         else:
             ax.set_title('{} vs {} : RF={}, RF_norm={}'.format(
-                target_col, column, correlation_df.loc[column, "Random Forest"],
+                column, target_col, correlation_df.loc[column, "Random Forest"],
                 correlation_df.loc[column, "RF_norm"]))
 
         plt.savefig('{}/{}_vs_{}.png'.format(plots_folder, column, target_col), bbox_inches='tight')
