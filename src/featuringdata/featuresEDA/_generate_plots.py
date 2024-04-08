@@ -7,6 +7,8 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.offsetbox import AnchoredText
 import seaborn as sns
+from scipy.interpolate import interpn
+from scipy.stats import gaussian_kde
 
 
 def plot_ecdf(data_col, data_label='', xlabel='Data Values', filename='ecdf', overplot=False, outfile=True,
@@ -46,6 +48,42 @@ def plot_hist(data_for_bins, label_bins='', data_for_line=None, label_line='', x
 
     plt.savefig('{}/{}.png'.format(plots_folder, filename), bbox_inches='tight')
     plt.close()
+
+
+def plot_scatter_density( x , y, fig=None, ax = None, sort = True, bins = 20, **kwargs ):
+    """
+    Scatter plot colored by 2d histogram
+    """
+    if ax is None:
+        fig, ax = plt.subplots()
+
+    try:
+        bins = [bins, bins]
+        data, x_e, y_e = np.histogram2d(x, y, bins=bins, density=True)
+        z = interpn((0.5 * (x_e[1:] + x_e[:-1]), 0.5 * (y_e[1:] + y_e[:-1])), data, np.vstack([x, y]).T,
+                    method="splinef2d", bounds_error=False)
+
+        # To be sure to plot all data
+        z[np.where(np.isnan(z))] = 0.0
+
+    except ValueError:
+        # Calculate the point density
+        xy = np.vstack([x, y])
+        z = gaussian_kde(xy)(xy)
+
+    # Sort the points by density, so that the densest points are plotted last
+    if sort:
+        idx = z.argsort()
+        x, y, z = x[idx], y[idx], z[idx]
+
+    plt.scatter(x, y, c=z, **kwargs)
+    plt.colorbar()
+
+    # norm = mpl.colors.Normalize(vmin=np.min(z), vmax=np.max(z))
+    # cbar = fig.colorbar(mpl.cm.ScalarMappable(norm=norm), ax=ax, cmap='viridis')
+    # cbar.ax.set_ylabel('Density')
+
+    return ax
 
 
 def plot_feature_values(data_df, columns_list, correlation_df, target_col, numeric=True, catplot_style='swarm',
@@ -135,19 +173,36 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
                 plt.xticks(rotation=45)
 
         else:
-            med = data_df[column].median()
-            std = data_df[column].std()
-            xx = np.where(data_df[column].values > med + 10*std)[0]
+            data_df_col_notnull = data_df[[column, target_col]].dropna().reset_index()
+
+            med = data_df_col_notnull[column].median()
+            std = data_df_col_notnull[column].std()
+            xx = np.where(data_df_col_notnull[column].values > med + 10*std)[0]
             # print(xx)
 
-            if xx.size == 0:
-                # sns.scatterplot(train_data_mod, x=column, y=target_col, hue="OverallQual")
-                sns.scatterplot(data_df, x=column, y=target_col, size=2, legend=False)
-            else:
-                # TODO Need to check index for using xx here
-                sns.scatterplot(data_df.drop(xx), x=column, y=target_col, size=2, legend=False)
+            if xx.size > 0:
+                data_df_col_notnull = data_df_col_notnull.drop(xx)
+
                 anc = AnchoredText('Not Shown: {} Outliers'.format(xx.size), loc="upper left", frameon=False)
                 ax.add_artist(anc)
+
+            # sns.scatterplot(train_data_mod, x=column, y=target_col, hue="OverallQual")
+            # sns.scatterplot(data_df, x=column, y=target_col, size=2, legend=False)
+
+            ax = plot_scatter_density(data_df_col_notnull[column].values, data_df_col_notnull[target_col].values,
+                                      fig=f, ax=ax, bins=100, s=3, cmap='viridis')
+
+            # plt.hist2d(data_df_col_notnull[column], data_df_col_notnull[target_col], bins=(100, 100),
+            #            cmap='viridis', cmin=1)  # BuPu
+            # plt.colorbar()
+
+            # ax.scatter(x, y, c=z, s=100, edgecolor='')
+            # ax.scatter(x, y, c=z, s=50)
+
+            plt.xlabel(column)
+            plt.ylabel(target_col)
+
+            # DONE Need to check index for using xx here
 
         if numeric:
             ax.set_title('{} vs {} : P={}, MI={}, RF={}'.format(
