@@ -86,7 +86,7 @@ def plot_scatter_density( x , y, fig=None, ax = None, sort = True, bins = 20, **
     return ax
 
 
-def plot_feature_values(data_df, columns_list, correlation_df, target_col, numeric=True, catplot_style='swarm',
+def plot_feature_values(data_df, columns_list, correlation_df, target_col, numeric=True, catplot_style='scatterdense',
                         plots_folder='./plots'):
     """
     Generate EDA plots that show each feature versus the target variable.
@@ -135,6 +135,7 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
     # print('*** {} ***'.format(mpl.get_backend()))
 
     if len(data_df) > 1000:
+    if (catplot_style != 'scatterdense') and (len(data_df) > 1000):
         data_df_sample = data_df.sample(n=1000, replace=False)
 
     sns.set_theme(style="ticks")
@@ -155,10 +156,14 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
                     by=[column]).median().sort_values(by=[target_col]).index.tolist()
 
                 sns.boxplot(data_df_col_notnull, x=column, y=target_col, order=xaxis_order, whis=[0, 100], width=0.6)
+                # sns.boxplot(data_df_col_notnull, x=column, y=target_col, order=xaxis_order, whis=[0, 100], width=0.6)
+                sns.boxplot(data_df_col_notnull, x=column, y=target_col, order=xaxis_order, whis=[0, 100], width=0.6,
+                            fill=False, color='black')
 
             else:
                 # Standard Box Plot
-                sns.boxplot(data_df, x=column, y=target_col, whis=[0, 100], width=0.6,)  # hue="method", palette="vlag"
+                # sns.boxplot(data_df, x=column, y=target_col, whis=[0, 100], width=0.6,) # hue="method", palette="vlag"
+                sns.boxplot(data_df, x=column, y=target_col, whis=[0, 100], width=0.6, fill=False, color='black')
 
             # Add in points to show each observation
             if catplot_style == 'swarm':
@@ -166,8 +171,30 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
                     sns.swarmplot(data_df_sample, x=column, y=target_col, size=2, color=".3", warn_thresh=0.4)
                 else:
                     sns.swarmplot(data_df, x=column, y=target_col, size=2, color=".3", warn_thresh=0.4)
-            else:
+
+            elif catplot_style == 'strip':
                 sns.stripplot(data_df, x=column, y=target_col, jitter=0.25, size=2, color=".3")
+
+            elif catplot_style == 'scatterdense':
+                x_all, y_all = np.array([]), np.array([])
+
+                for cat in ax.get_xticklabels():
+                    # print(cat, cat.get_text(), cat.get_position(), cat.get_position()[0])
+
+                    try:
+                        data_df_cat = data_df.loc[
+                            (data_df[column] == cat.get_text()) | (data_df[column] == float(cat.get_text()))]
+                    except ValueError:
+                        data_df_cat = data_df.loc[data_df[column] == cat.get_text()]
+                    # print(len(data_df_cat))
+
+                    x = (np.zeros(len(data_df_cat)) + cat.get_position()[0] +
+                         np.random.normal(scale=0.06, size=len(data_df_cat)))  # 0.005
+                    y = data_df_cat[target_col].values
+                    x_all, y_all = np.append(x_all, x), np.append(y_all, y)
+
+                ax = plot_scatter_density(x_all, y_all, fig=f, ax=ax, bins=100, s=3, cmap='viridis')
+
 
             if (not numeric) and data_df[column].nunique() >= 10:
                 plt.xticks(rotation=45)
