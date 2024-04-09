@@ -137,6 +137,10 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
     if len(data_df) > 1000:
     if (catplot_style != 'scatterdense') and (len(data_df) > 1000):
         data_df_sample = data_df.sample(n=1000, replace=False)
+    if catplot_style != 'scatterdense':
+        box_params = {'whis': [0, 100], 'width': 0.6}
+    else:
+        box_params = {'whis': [0, 100], 'width': 0.6, 'fill': False, 'color': 'black'}
 
     sns.set_theme(style="ticks")
 
@@ -145,13 +149,14 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
 
         f, ax = plt.subplots(figsize=(9, 6))
 
+        data_df_col_notnull = data_df[[column, target_col]].dropna().reset_index()
+
         # TODO: Use already calculated DF of unique values:
         # TODO: User can define this value:
-        if (not numeric) or (np.unique(data_df[column]).size <= 10):
+        if (not numeric) or (np.unique(data_df_col_notnull[column]).size <= 10):
 
             if not numeric:
                 # Standard Box Plot with X-axis ordered by median value in each category
-                data_df_col_notnull = data_df[[column, target_col]].dropna()
                 xaxis_order = data_df_col_notnull.groupby(
                     by=[column]).median().sort_values(by=[target_col]).index.tolist()
 
@@ -159,21 +164,21 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
                 # sns.boxplot(data_df_col_notnull, x=column, y=target_col, order=xaxis_order, whis=[0, 100], width=0.6)
                 sns.boxplot(data_df_col_notnull, x=column, y=target_col, order=xaxis_order, whis=[0, 100], width=0.6,
                             fill=False, color='black')
+                sns.boxplot(data_df_col_notnull, x=column, y=target_col, order=xaxis_order, **box_params)
 
             else:
                 # Standard Box Plot
-                # sns.boxplot(data_df, x=column, y=target_col, whis=[0, 100], width=0.6,) # hue="method", palette="vlag"
-                sns.boxplot(data_df, x=column, y=target_col, whis=[0, 100], width=0.6, fill=False, color='black')
+                sns.boxplot(data_df_col_notnull, x=column, y=target_col, **box_params)  # hue="method", palette="vlag"
 
             # Add in points to show each observation
+            if (catplot_style != 'scatterdense') and (len(data_df_col_notnull) > 1000):
+                data_df_col_notnull = data_df_col_notnull.sample(n=1000, replace=False)
+
             if catplot_style == 'swarm':
-                if 'data_df_sample' in locals():
-                    sns.swarmplot(data_df_sample, x=column, y=target_col, size=2, color=".3", warn_thresh=0.4)
-                else:
-                    sns.swarmplot(data_df, x=column, y=target_col, size=2, color=".3", warn_thresh=0.4)
+                sns.swarmplot(data_df_col_notnull, x=column, y=target_col, size=2, color=".3", warn_thresh=0.4)
 
             elif catplot_style == 'strip':
-                sns.stripplot(data_df, x=column, y=target_col, jitter=0.25, size=2, color=".3")
+                sns.stripplot(data_df_col_notnull, x=column, y=target_col, jitter=0.25, size=2, color=".3")
 
             elif catplot_style == 'scatterdense':
                 x_all, y_all = np.array([]), np.array([])
@@ -182,10 +187,10 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
                     # print(cat, cat.get_text(), cat.get_position(), cat.get_position()[0])
 
                     try:
-                        data_df_cat = data_df.loc[
-                            (data_df[column] == cat.get_text()) | (data_df[column] == float(cat.get_text()))]
+                        data_df_cat = data_df_col_notnull.loc[
+                            (data_df_col_notnull[column] == cat.get_text()) | (data_df_col_notnull[column] == float(cat.get_text()))]
                     except ValueError:
-                        data_df_cat = data_df.loc[data_df[column] == cat.get_text()]
+                        data_df_cat = data_df_col_notnull.loc[data_df_col_notnull[column] == cat.get_text()]
                     # print(len(data_df_cat))
 
                     x = (np.zeros(len(data_df_cat)) + cat.get_position()[0] +
@@ -196,13 +201,12 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
                 ax = plot_scatter_density(x_all, y_all, fig=f, ax=ax, bins=100, s=3, cmap='viridis')
 
 
-            if (not numeric) and data_df[column].nunique() >= 10:
+            if (not numeric) and data_df_col_notnull[column].nunique() >= 10:
                 plt.xticks(rotation=45)
 
             plt.grid(axis='y')
 
         else:
-            data_df_col_notnull = data_df[[column, target_col]].dropna().reset_index()
 
             med = data_df_col_notnull[column].median()
             std = data_df_col_notnull[column].std()
