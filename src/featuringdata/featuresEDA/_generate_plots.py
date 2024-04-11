@@ -32,7 +32,7 @@ def plot_ecdf(data_col, data_label='', xlabel='Data Values', filename='ecdf', ov
 def plot_hist(data_for_bins, label_bins='', data_for_line=None, label_line='', xlabel='Data Values', ylabel='Count',
               filename='hist', plots_folder='./'):
 
-    # sns.set_theme(style="whitegrid")
+    sns.set_theme(style="ticks", font_scale=1.2)
     f, ax = plt.subplots(figsize=(8, 5))
 
     sns.histplot(data=data_for_bins, bins=10, binrange=(0, 1), label=label_bins)
@@ -137,10 +137,29 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
     if len(data_df) > 1000:
     if (catplot_style != 'scatterdense') and (len(data_df) > 1000):
         data_df_sample = data_df.sample(n=1000, replace=False)
+    # Set box plot display parameters:
     if catplot_style != 'scatterdense':
         box_params = {'whis': [0, 100], 'width': 0.6}
     else:
         box_params = {'whis': [0, 100], 'width': 0.6, 'fill': False, 'color': 'black'}
+
+    # Check for strong outliers in target column:
+    med = data_df[target_col].median()
+    std = data_df[target_col].std()
+    xx = np.where(data_df[target_col].values > med + 10*std)[0]
+    xx = np.append(xx, np.where(data_df[target_col].values < med - 10*std)[0])
+    set_ylim = False
+    if xx.size > 0:
+        print('Target outlier points:', data_df[target_col].values[xx])
+
+        target_col_vals = data_df.reset_index().drop(xx)[target_col].values
+        target_min, target_max = np.min(target_col_vals), np.max(target_col_vals)
+        max_minus_min = target_max - target_min
+        ymin = target_min - 0.025*max_minus_min
+        ymax = target_max + 0.025*max_minus_min
+        print('New target min/max values:', target_min, target_max)
+        print('Set y-axis limits (for display only):', ymin, ymax)
+        set_ylim = True
 
     sns.set_theme(style="ticks")
 
@@ -238,6 +257,9 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
             plt.ylabel(target_col)
 
             # DONE Need to check index for using xx here
+
+        if set_ylim:
+            plt.ylim(ymin, ymax)
 
         if numeric:
             ax.set_title('{} vs {} : P={}, MI={}, RF={}'.format(
