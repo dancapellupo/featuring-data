@@ -13,18 +13,22 @@ from sklearn.feature_selection import mutual_info_regression
 from sklearn.ensemble import RandomForestRegressor
 
 
-def get_random_forest_hyperparams(n_samples, rf_n_estimators='auto'):
+def get_random_forest_hyperparams(n_samples, rf_n_estimators='auto', numeric=True):
 
     # For 3000 samples or less, use 50 trees. Otherwise, stick to 10:
     if rf_n_estimators == 'auto':
         rf_n_estimators = 10 if n_samples >= 3000 else 50
 
-    if n_samples >= 5000:
-        min_samples_leaf = np.ceil(0.01 * n_samples).astype(int)
-    elif n_samples >= 500:
-        min_samples_leaf = np.ceil(0.03 * n_samples).astype(int)
+    if numeric:
+        if n_samples >= 5000:
+            min_samples_leaf = np.ceil(0.01 * n_samples).astype(int)
+        elif n_samples >= 500:
+            min_samples_leaf = np.ceil(0.03 * n_samples).astype(int)
+        else:
+            min_samples_leaf = np.ceil(0.10 * n_samples).astype(int)
+
     else:
-        min_samples_leaf = np.ceil(0.10 * n_samples).astype(int)
+        min_samples_leaf = np.ceil(0.0025 * n_samples).astype(int)
 
     return rf_n_estimators, min_samples_leaf
 
@@ -272,6 +276,12 @@ def calc_nonnumeric_features_target_corr(data_df, non_numeric_cols, target_col):
             values (see documentation for further explanation).
     """
 
+    rf_n_estimators, min_samples_leaf = get_random_forest_hyperparams(len(data_df), rf_n_estimators='auto',
+                                                                      numeric=False)
+
+    print('For random forest (RF) correlation measure, using {} trees and min_samples_leaf={}.\n'.format(
+        rf_n_estimators, min_samples_leaf))
+
     non_numeric_df = pd.DataFrame(columns=["Count not-Null", "Num Unique", "Random Forest", "RF_norm"])
 
     # Loop over each categorical feature:
@@ -285,7 +295,7 @@ def calc_nonnumeric_features_target_corr(data_df, non_numeric_cols, target_col):
         X_col = pd.get_dummies(train_col_notnull[col], dtype=int)
 
         # Train a random forest model:
-        rf_reg = RandomForestRegressor(n_estimators=10)
+        rf_reg = RandomForestRegressor(n_estimators=rf_n_estimators, min_samples_leaf=min_samples_leaf)
         rf_reg.fit(X_col, train_col_notnull[target_col].values)
         rfscore = rf_reg.score(X_col, train_col_notnull[target_col])
 

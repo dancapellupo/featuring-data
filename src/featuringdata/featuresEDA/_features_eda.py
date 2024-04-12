@@ -207,7 +207,7 @@ class FeaturesEDA:
         self.non_numeric_cols = None
         self.numeric_uniq_vals_df = None
         self.non_numeric_uniq_vals_df = None
-        self.numeric_df = None
+        self.numeric_df = pd.DataFrame()
         self.numeric_collinear_df = pd.DataFrame()
         self.numeric_collinear_summary_df = pd.DataFrame()
         self.non_numeric_df = pd.DataFrame()
@@ -365,8 +365,11 @@ class FeaturesEDA:
 
         # Calculate correlations between each numeric feature and the target
         # variable:
-        self.numeric_df = calc_numeric_features_target_corr(data_df, self.numeric_cols, self.target_col,
-                                                            rf_n_estimators='auto')
+        if len(self.numeric_cols) > 0:
+            self.numeric_df = calc_numeric_features_target_corr(data_df, self.numeric_cols, self.target_col,
+                                                                rf_n_estimators='auto')
+        else:
+            run_collinear = False
 
         # Calculate correlations between numeric features:
         if run_collinear:
@@ -391,10 +394,11 @@ class FeaturesEDA:
         #     self.numeric_df["Random Forest"], data_label="Random Forest", xlabel='Correlation Value',
         #     filename='numeric_columns_target_correlation_ecdf', overplot=True, outfile=True, plots_folder=plots_folder)
 
-        plot_hist(data_for_bins=np.abs(self.numeric_df["Pearson"].values), label_bins='Pearson (abs)',
-                  data_for_line=self.numeric_df["Random Forest"].values, label_line="RF_corr",
-                  xlabel='Correlation Value', ylabel='Feature Count',
-                  filename='numeric_columns_target_correlation_hist', plots_folder=plots_folder)
+        if len(self.numeric_df) > 0:
+            plot_hist(data_for_bins=np.abs(self.numeric_df["Pearson"].values), label_bins='Pearson (abs)',
+                      data_for_line=self.numeric_df["Random Forest"].values, label_line="RF_corr",
+                      xlabel='Correlation Value', ylabel='Feature Count',
+                      filename='numeric_columns_target_correlation_hist', plots_folder=plots_folder)
 
         if run_collinear:
             plot_hist(data_for_bins=np.abs(self.numeric_collinear_df["Pearson"].values), label_bins='Pearson (abs)',
@@ -418,34 +422,36 @@ class FeaturesEDA:
             # ----------------------------------
             # Generate plots of numeric features
 
-            # Order the features by correlation with target variable, in
-            # descending order:
-            columns_list_ordered = self.numeric_df.index
+            if len(self.numeric_df) > 0:
+                # Order the features by correlation with target variable, in
+                # descending order:
+                columns_list_ordered = self.numeric_df.index
 
-            # Generate plots of numeric features, and save them to the
-            # timestamped directory defined above:
-            plot_feature_values(data_df, columns_list_ordered, self.numeric_df, target_col=self.target_col,
-                                numeric=True, plots_folder=plots_folder)
+                # Generate plots of numeric features, and save them to the
+                # timestamped directory defined above:
+                plot_feature_values(data_df, columns_list_ordered, self.numeric_df, target_col=self.target_col,
+                                    numeric=True, plots_folder=plots_folder)
 
-            # Add the plots to the PDF:
-            self.pdf = section_of_plots(self.pdf, columns_list_ordered, target_col=self.target_col, numeric=True,
-                                        plots_folder=plots_folder)
+                # Add the plots to the PDF:
+                self.pdf = section_of_plots(self.pdf, columns_list_ordered, target_col=self.target_col, numeric=True,
+                                            plots_folder=plots_folder)
 
             # ----------------------------------
             # Generate plots of non-numeric features
 
-            # Order the features by correlation with target variable, in
-            # descending order:
-            columns_list_ordered = self.non_numeric_df.index
+            if len(self.non_numeric_df) > 0:
+                # Order the features by correlation with target variable, in
+                # descending order:
+                columns_list_ordered = self.non_numeric_df.index
 
-            # Generate plots of non-numeric features, and save them to the
-            # timestamped directory defined above:
-            plot_feature_values(data_df, columns_list_ordered, self.non_numeric_df, target_col=self.target_col,
-                                numeric=False, plots_folder=plots_folder)
+                # Generate plots of non-numeric features, and save them to the
+                # timestamped directory defined above:
+                plot_feature_values(data_df, columns_list_ordered, self.non_numeric_df, target_col=self.target_col,
+                                    numeric=False, plots_folder=plots_folder)
 
-            # Add the plots to the PDF:
-            self.pdf = section_of_plots(self.pdf, columns_list_ordered, target_col=self.target_col, numeric=False,
-                                        plots_folder=plots_folder)
+                # Add the plots to the PDF:
+                self.pdf = section_of_plots(self.pdf, columns_list_ordered, target_col=self.target_col, numeric=False,
+                                            plots_folder=plots_folder)
 
         # Save PDF document to current working directory:
         save_pdf_doc(self.pdf, custom_filename=self.report_prefix, timestamp=timestamp)

@@ -1,4 +1,5 @@
 
+import time
 from tqdm.auto import tqdm
 
 import numpy as np
@@ -50,7 +51,7 @@ def plot_hist(data_for_bins, label_bins='', data_for_line=None, label_line='', x
     plt.close()
 
 
-def plot_scatter_density( x , y, fig=None, ax = None, sort = True, bins = 20, **kwargs ):
+def plot_scatter_density(x, y, fig=None, ax=None, sort=True, bins=20, **kwargs):
     """
     Scatter plot colored by 2d histogram
     """
@@ -134,9 +135,9 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
     # mpl.use("Agg")
     # print('*** {} ***'.format(mpl.get_backend()))
 
-    if len(data_df) > 1000:
-    if (catplot_style != 'scatterdense') and (len(data_df) > 1000):
-        data_df_sample = data_df.sample(n=1000, replace=False)
+    start = time.time()
+    time1, time2 = 0., 0.
+
     # Set box plot display parameters:
     if catplot_style != 'scatterdense':
         box_params = {'whis': [0, 100], 'width': 0.6}
@@ -179,17 +180,16 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
                 xaxis_order = data_df_col_notnull.groupby(
                     by=[column]).median().sort_values(by=[target_col]).index.tolist()
 
-                sns.boxplot(data_df_col_notnull, x=column, y=target_col, order=xaxis_order, whis=[0, 100], width=0.6)
-                # sns.boxplot(data_df_col_notnull, x=column, y=target_col, order=xaxis_order, whis=[0, 100], width=0.6)
-                sns.boxplot(data_df_col_notnull, x=column, y=target_col, order=xaxis_order, whis=[0, 100], width=0.6,
-                            fill=False, color='black')
+                start1 = time.time()
                 sns.boxplot(data_df_col_notnull, x=column, y=target_col, order=xaxis_order, **box_params)
+                time1 += (time.time() - start1)
 
             else:
                 # Standard Box Plot
                 sns.boxplot(data_df_col_notnull, x=column, y=target_col, **box_params)  # hue="method", palette="vlag"
 
             # Add in points to show each observation
+            start2 = time.time()
             if (catplot_style != 'scatterdense') and (len(data_df_col_notnull) > 1000):
                 data_df_col_notnull = data_df_col_notnull.sample(n=1000, replace=False)
 
@@ -219,6 +219,7 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
 
                 ax = plot_scatter_density(x_all, y_all, fig=f, ax=ax, bins=100, s=3, cmap='viridis')
 
+            time2 += (time.time() - start2)
 
             if (not numeric) and data_df_col_notnull[column].nunique() >= 10:
                 plt.xticks(rotation=45)
@@ -276,4 +277,6 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
 
     # mpl.use(backend_)  # Reset backend
     # print('*** {} ***'.format(mpl.get_backend()))
+
+    # print(time.time() - start, time1, time2)
 

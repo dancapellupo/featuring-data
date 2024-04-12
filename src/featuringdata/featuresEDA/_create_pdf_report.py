@@ -230,85 +230,83 @@ def section_on_feature_corr(pdf, numeric_df, numeric_collinear_summary_df, non_n
 
     pdf.ln(2)
 
-    # Table Header
-    pdf.set_font('Arial', 'B', 12)
-    pdf.cell(w=60, h=10, txt='Numeric Feature', border=1, ln=0, align='C')
-    pdf.cell(w=35, h=10, txt='Count non-Null', border=1, ln=0, align='C')
-    pdf.cell(w=35, h=10, txt='Pearson Corr', border=1, ln=0, align='C')
-    pdf.cell(w=35, h=10, txt='RF Corr', border=1, ln=1, align='C')
+    if len(numeric_df) == 0:
+        pdf.cell(w=0, h=10, txt="** No numeric features in this dataset. **", align='C')
 
-    # Table contents
-    pdf.set_font('Arial', '', 12)
-    for ii in range(0, min(8, len(numeric_df))):
-        pdf = adjust_fontsize_for_feature_names(pdf, numeric_df.index[ii])
-        pdf.cell(w=35, h=10, txt=numeric_df["Count not-Null"].iloc[ii].astype(str), border=1, ln=0, align='R')
-        pdf.cell(w=35, h=10, txt=numeric_df["Pearson"].iloc[ii].astype(str), border=1, ln=0, align='R')
-        pdf.cell(w=35, h=10, txt=numeric_df["Random Forest"].iloc[ii].astype(str), border=1, ln=1, align='R')
+    else:
+        # Table Header
+        pdf.set_font('Arial', 'B', 12)
+        pdf.cell(w=60, h=10, txt='Numeric Feature', border=1, ln=0, align='C')
+        pdf.cell(w=35, h=10, txt='Count non-Null', border=1, ln=0, align='C')
+        pdf.cell(w=35, h=10, txt='Pearson Corr', border=1, ln=0, align='C')
+        pdf.cell(w=35, h=10, txt='RF Corr', border=1, ln=1, align='C')
 
-    pdf.ln(6)
-    # pdf.image('{}/numeric_columns_target_correlation_ecdf.png'.format(plots_folder),
-    #           x=10, y=None, w=160, h=0, type='PNG')
-    pdf.image('{}/numeric_columns_target_correlation_hist.png'.format(plots_folder),
-              x=10, y=None, w=160, h=0, type='PNG')
-    pdf.ln(2)
+        # Table contents
+        pdf.set_font('Arial', '', 12)
+        for ii in range(0, min(8, len(numeric_df))):
+            pdf = adjust_fontsize_for_feature_names(pdf, numeric_df.index[ii])
+            pdf.cell(w=35, h=10, txt=numeric_df["Count not-Null"].iloc[ii].astype(str), border=1, ln=0, align='R')
+            pdf.cell(w=35, h=10, txt=numeric_df["Pearson"].iloc[ii].astype(str), border=1, ln=0, align='R')
+            pdf.cell(w=35, h=10, txt=numeric_df["Random Forest"].iloc[ii].astype(str), border=1, ln=1, align='R')
 
-    # output_txt = ('The above plot shows what fraction of numeric features have a correlation value with the target'
-    #               'variable above a certain value.')
-    output_txt = ('The above plot shows a histogram of all numeric features and their correlation value with the '
-                  'target variable.')
-    pdf.write(5, output_txt)
-    pdf.ln(7)
+        pdf.ln(6)
+        pdf.image('{}/numeric_columns_target_correlation_hist.png'.format(plots_folder),
+                  x=10, y=None, w=160, h=0, type='PNG')
+        pdf.ln(2)
 
-    # pdf.write(5, 'In other words, the ')
+        output_txt = ('The above plot shows a histogram of all numeric features and their correlation value with the '
+                      'target variable.')
+        pdf.write(5, output_txt)
+        pdf.ln(7)
 
     # ------------------------------------------------------------------------
     # Correlations Between Numeric Features
 
-    pdf.add_page()
-    pdf.set_font('Arial', 'B', 12)
-    pdf.cell(w=0, h=10, txt="Correlations between Numeric Features", ln=1)
-
-    pdf.ln(2)
-
-    # Table Header
-    pdf.set_font('Arial', 'B', 10)
-    pdf.cell(w=44, h=6, txt='', border='LTR', ln=0, align='C')
-    pdf.cell(w=23, h=6, txt='Avg Pearson', border='LTR', ln=0, align='C')
-    pdf.cell(w=22, h=6, txt='Avg RF', border='LTR', ln=0, align='C')
-    pdf.cell(w=33, h=6, txt='Feat with Max', border='LTR', ln=0, align='C')
-    pdf.cell(w=18, h=6, txt='Max Pear', border='LTR', ln=0, align='C')
-    pdf.cell(w=33, h=6, txt='Feat with Max', border='LTR', ln=0, align='C')
-    pdf.cell(w=17, h=6, txt='Max RF', border='LTR', ln=1, align='C')
-
-    pdf.cell(w=44, h=6, txt='Numeric Feature', border='LBR', ln=0, align='C')
-    pdf.cell(w=23, h=6, txt='Correlation', border='LBR', ln=0, align='C')
-    pdf.cell(w=22, h=6, txt='Correlation', border='LBR', ln=0, align='C')
-    pdf.cell(w=33, h=6, txt='Pear Corr', border='LBR', ln=0, align='C')
-    pdf.cell(w=18, h=6, txt='Corr', border='LBR', ln=0, align='C')
-    pdf.cell(w=33, h=6, txt='RF Corr', border='LBR', ln=0, align='C')
-    pdf.cell(w=17, h=6, txt='Corr', border='LBR', ln=1, align='C')
-
-    # Table contents
-    pdf.set_font('Arial', '', 10)
-    for ii in range(0, min(8, len(numeric_collinear_summary_df))):
-        pdf = adjust_fontsize_for_feature_names(
-            pdf, numeric_collinear_summary_df.index[ii], box_width=44, start_fontsize=10)
-        pdf.cell(w=23, h=10, txt=numeric_collinear_summary_df["Avg Pearson Corr"].iloc[ii].astype(str), border=1,
-                 ln=0, align='R')
-        pdf.cell(w=22, h=10, txt=numeric_collinear_summary_df["Avg RF Corr"].iloc[ii].astype(str), border=1,
-                 ln=0, align='R')
-        pdf.set_font('Arial', '', 8)
-        pdf = adjust_fontsize_for_feature_names(
-            pdf, numeric_collinear_summary_df["Max Pear Corr Feature"].iloc[ii], box_width=33, start_fontsize=10)
-        pdf.cell(w=18, h=10, txt=numeric_collinear_summary_df["Max Pear"].iloc[ii].astype(str), border=1,
-                 ln=0, align='R')
-        pdf.set_font('Arial', '', 8)
-        pdf = adjust_fontsize_for_feature_names(
-            pdf, numeric_collinear_summary_df["Max RF Corr Feature"].iloc[ii], box_width=33, start_fontsize=10)
-        pdf.cell(w=17, h=10, txt=numeric_collinear_summary_df["Max RF Corr"].iloc[ii].astype(str), border=1,
-                 ln=1, align='R')
-
     if len(numeric_collinear_summary_df) > 0:
+        pdf.add_page()
+        pdf.set_font('Arial', 'B', 12)
+        pdf.cell(w=0, h=10, txt="Correlations between Numeric Features", ln=1)
+
+        pdf.ln(2)
+
+        # Table Header
+        pdf.set_font('Arial', 'B', 10)
+        pdf.cell(w=44, h=6, txt='', border='LTR', ln=0, align='C')
+        pdf.cell(w=23, h=6, txt='Avg Pearson', border='LTR', ln=0, align='C')
+        pdf.cell(w=22, h=6, txt='Avg RF', border='LTR', ln=0, align='C')
+        pdf.cell(w=33, h=6, txt='Feat with Max', border='LTR', ln=0, align='C')
+        pdf.cell(w=18, h=6, txt='Max Pear', border='LTR', ln=0, align='C')
+        pdf.cell(w=33, h=6, txt='Feat with Max', border='LTR', ln=0, align='C')
+        pdf.cell(w=17, h=6, txt='Max RF', border='LTR', ln=1, align='C')
+
+        pdf.cell(w=44, h=6, txt='Numeric Feature', border='LBR', ln=0, align='C')
+        pdf.cell(w=23, h=6, txt='Correlation', border='LBR', ln=0, align='C')
+        pdf.cell(w=22, h=6, txt='Correlation', border='LBR', ln=0, align='C')
+        pdf.cell(w=33, h=6, txt='Pear Corr', border='LBR', ln=0, align='C')
+        pdf.cell(w=18, h=6, txt='Corr', border='LBR', ln=0, align='C')
+        pdf.cell(w=33, h=6, txt='RF Corr', border='LBR', ln=0, align='C')
+        pdf.cell(w=17, h=6, txt='Corr', border='LBR', ln=1, align='C')
+
+        # Table contents
+        pdf.set_font('Arial', '', 10)
+        for ii in range(0, min(8, len(numeric_collinear_summary_df))):
+            pdf = adjust_fontsize_for_feature_names(
+                pdf, numeric_collinear_summary_df.index[ii], box_width=44, start_fontsize=10)
+            pdf.cell(w=23, h=10, txt=numeric_collinear_summary_df["Avg Pearson Corr"].iloc[ii].astype(str), border=1,
+                     ln=0, align='R')
+            pdf.cell(w=22, h=10, txt=numeric_collinear_summary_df["Avg RF Corr"].iloc[ii].astype(str), border=1,
+                     ln=0, align='R')
+            pdf.set_font('Arial', '', 8)
+            pdf = adjust_fontsize_for_feature_names(
+                pdf, numeric_collinear_summary_df["Max Pear Corr Feature"].iloc[ii], box_width=33, start_fontsize=10)
+            pdf.cell(w=18, h=10, txt=numeric_collinear_summary_df["Max Pear"].iloc[ii].astype(str), border=1,
+                     ln=0, align='R')
+            pdf.set_font('Arial', '', 8)
+            pdf = adjust_fontsize_for_feature_names(
+                pdf, numeric_collinear_summary_df["Max RF Corr Feature"].iloc[ii], box_width=33, start_fontsize=10)
+            pdf.cell(w=17, h=10, txt=numeric_collinear_summary_df["Max RF Corr"].iloc[ii].astype(str), border=1,
+                     ln=1, align='R')
+
         pdf.ln(6)
         pdf.image('{}/numeric_columns_collinear_correlation_hist.png'.format(plots_folder),
                   x=15, y=None, w=160, h=0, type='PNG')
