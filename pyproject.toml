@@ -1,11 +1,16 @@
 [project]
 name = "featuring-data"
-version = "0.0.2"
+version = "0.2.2"
 authors = [
     { name="Daniel M. Capellupo", email="daniel@dmcdatascience.com" },
 ]
 description = "This package is designed to help anyone with a new dataset get started with EDA quickly."
 readme = "README.md"
+dependencies = [
+  "numpy",
+  "pandas",
+  "fpdf",
+]
 requires-python = ">=3.8"
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -18,5 +23,5 @@ Homepage = "https://github.com/dancapellupo/featuring-data"
 Issues = "https://github.com/dancapellupo/featuring-data/issues"
 
 [build-system]
-requires = ["setuptools>=61.0", "numpy", "pandas", "fpdf"]
+requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
