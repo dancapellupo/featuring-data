@@ -63,7 +63,7 @@ def section_on_null_columns(pdf, num_features, null_cols_df, null_count_by_row_s
 
     pdf.set_font('Arial', '', 12)
     # TODO: Indicate also if target_col has nulls
-    output_txt = "Out of {} total feature columns, there are {} columns with at least 1 null value.".format(
+    output_txt = "Out of {} total data columns, there are {} columns with at least 1 null value.".format(
         num_features, len(null_cols_df))
     print(output_txt + '\n')
     pdf.cell(w=0, h=10, txt=output_txt, ln=1)
@@ -130,6 +130,27 @@ def section_on_unique_values(pdf, numeric_cols, non_numeric_cols, numeric_uniq_v
 
     pdf.ln(3)
 
+    # Table Header
+    pdf.set_font('Arial', 'B', 12)
+    pdf.cell(w=60, h=10, txt='Numeric Feature', border=1, ln=0, align='C')
+    pdf.cell(w=42, h=10, txt=numeric_uniq_vals_df.columns[1], border=1, ln=1, align='C')
+
+    # Table Contents
+    pdf.set_font('Arial', '', 12)
+    for ii in range(0, min(8, len(numeric_uniq_vals_df))):
+        pdf = adjust_fontsize_for_feature_names(pdf, numeric_uniq_vals_df["Feature"].iloc[ii])
+        pdf.cell(w=42, h=10,
+                 txt=numeric_uniq_vals_df["Num Unique Values"].iloc[ii].astype(str),
+                 border=1, ln=1, align='R')
+
+    if len(numeric_uniq_vals_df) > 5:
+        pdf.cell(w=0, h=10,
+                 txt="There are an additional {} numeric feature columns with 10 or fewer unique values.".format(
+                     len(numeric_uniq_vals_df) - 5),
+                 ln=1)
+
+    pdf.ln(4)
+
     if ((single_value_cols_numeric_df is not None and len(single_value_cols_numeric_df) > 0) or
             (numeric_cols_to_cat_df is not None and len(numeric_cols_to_cat_df) > 0)):
 
@@ -138,7 +159,7 @@ def section_on_unique_values(pdf, numeric_cols, non_numeric_cols, numeric_uniq_v
             pdf.cell(w=0, h=10,
                      txt="There are {} numeric columns with just a single value and will be removed.".format(
                          len(single_value_cols_numeric_df)), ln=1)
-            pdf.ln(4)
+            pdf.ln(6)
 
         if numeric_cols_to_cat_df is not None and len(numeric_cols_to_cat_df) > 0:
             pdf.set_font('Arial', 'B', 12)
@@ -146,36 +167,7 @@ def section_on_unique_values(pdf, numeric_cols, non_numeric_cols, numeric_uniq_v
                 len(numeric_cols_to_cat_df))
             print(output_txt)
             pdf.cell(w=0, h=10, txt=output_txt, ln=1)
-            pdf.ln(4)
-
-    else:
-        # Table Header
-        pdf.set_font('Arial', 'B', 12)
-        pdf.cell(w=60, h=10, txt='Numeric Feature', border=1, ln=0, align='C')
-        pdf.cell(w=42, h=10, txt=numeric_uniq_vals_df.columns[1], border=1, ln=1, align='C')
-
-        # Table Contents
-        pdf.set_font('Arial', '', 12)
-        for ii in range(0, min(8, len(numeric_uniq_vals_df))):
-            pdf = adjust_fontsize_for_feature_names(pdf, numeric_uniq_vals_df["Feature"].iloc[ii])
-            pdf.cell(w=42, h=10,
-                     txt=numeric_uniq_vals_df["Num Unique Values"].iloc[ii].astype(str),
-                     border=1, ln=1, align='R')
-
-        if len(numeric_uniq_vals_df) > 5:
-            pdf.cell(w=0, h=10,
-                     txt="There are an additional {} numeric feature columns with 10 or fewer unique values.".format(
-                         len(numeric_uniq_vals_df) - 5),
-                     ln=1)
-
-    pdf.ln(4)
-
-    if single_value_cols_nonnumeric_df is not None and len(single_value_cols_nonnumeric_df) > 0:
-        pdf.set_font('Arial', 'B', 12)
-        pdf.cell(w=0, h=10,
-                 txt="There are {} non-numeric columns with just a single value and will be removed.".format(
-                     len(single_value_cols_nonnumeric_df)), ln=1)
-        pdf.ln(4)
+            pdf.ln(6)
 
     # Table Header
     non_numeric_uniq_vals_df_tmp = non_numeric_uniq_vals_df.loc[
@@ -198,17 +190,62 @@ def section_on_unique_values(pdf, numeric_cols, non_numeric_cols, numeric_uniq_v
                  txt="There are an additional {} non-numeric feature columns with more than {} unique values.".format(
                      len(non_numeric_uniq_vals_df_tmp) - 5, nonnumeric_uniq_vals_thresh), ln=1)
 
+    pdf.ln(4)
+
+    if single_value_cols_nonnumeric_df is not None and len(single_value_cols_nonnumeric_df) > 0:
+        pdf.set_font('Arial', 'B', 12)
+        pdf.cell(w=0, h=10,
+                 txt="There are {} non-numeric columns with just a single value and will be removed.".format(
+                     len(single_value_cols_nonnumeric_df)), ln=1)
+        pdf.ln(4)
+
     return pdf
 
 
 def section_on_unique_values_p2(pdf, numeric_cols, non_numeric_cols):
 
-    pdf.ln(3)
+    pdf.ln(8)
     pdf.set_font('Arial', '', 12)
-    output_txt = ("After the above adjustments, there are now {} feature columns, with {} numeric columns and {} "
+    output_txt = ("After the above adjustments, there are now {} data columns, with {} numeric columns and {} "
                   "non-numeric/categorical columns.").format(
         len(numeric_cols)+len(non_numeric_cols), len(numeric_cols), len(non_numeric_cols))
     print(output_txt)
+    pdf.write(5, output_txt)
+
+    return pdf
+
+
+def section_on_target_column(pdf, target_col, target_type, target_num_null, target_num_uniq):
+
+    pdf.add_page()
+
+    pdf.set_font('Arial', 'B', 13)
+    pdf.cell(w=0, h=10, txt="Target Column", ln=1)
+
+    pdf.ln(2)
+    pdf.set_font('Arial', '', 12)
+    output_txt = "For the chosen target column ('{}'), this appears to be a {} problem.".format(
+        target_col, target_type)
+    print(output_txt)
+    pdf.write(5, output_txt)
+
+    pdf.ln(6)
+    output_txt = "The target column has {} null values and {} unique values.".format(
+        target_num_null, target_num_uniq)
+    print(output_txt)
+    pdf.write(5, output_txt)
+
+    pdf.ln(12)
+
+    return pdf
+
+
+def section_on_target_column_plot(pdf, plots_folder='./'):
+
+    pdf.image('{}/target_data_distribution.png'.format(plots_folder), x=10, y=None, w=160, h=0, type='PNG')
+    pdf.ln(2)
+
+    output_txt = "The above plot shows the distribution of values in the target column."
     pdf.write(5, output_txt)
 
     return pdf

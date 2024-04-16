@@ -10,6 +10,8 @@ from ._create_pdf_report import (
     section_on_null_columns,
     section_on_unique_values,
     section_on_unique_values_p2,
+    section_on_target_column,
+    section_on_target_column_plot,
     section_on_feature_corr,
     section_of_plots,
     save_pdf_doc
@@ -28,7 +30,7 @@ from ._correlation import (
     calc_nonnumeric_features_target_corr
 )
 
-from ._generate_plots import plot_ecdf, plot_hist, plot_feature_values
+from ._generate_plots import plot_ecdf, plot_hist, plot_hist_target_col, plot_feature_values
 
 
 class FeaturesEDA:
@@ -284,7 +286,10 @@ class FeaturesEDA:
 
         # Identify any non-numeric columns with just a single unique value:
         single_value_cols_nonnumeric_df = self.non_numeric_uniq_vals_df.loc[
-            self.non_numeric_uniq_vals_df["Num Unique Values"] == 1]
+            (self.non_numeric_uniq_vals_df["Num Unique Values"] == 1) | (
+                    self.non_numeric_uniq_vals_df["Num Unique Values"] > 0.1 * len(data_df))]
+
+        # TODO: Fix the text here for non-numeric
 
         print('There are {} numeric and {} non-numeric columns with only a single value.'.format(
             len(single_value_cols_numeric_df), len(single_value_cols_nonnumeric_df)))
@@ -316,6 +321,28 @@ class FeaturesEDA:
                     self.non_numeric_cols.append(col)
 
             self.pdf = section_on_unique_values_p2(self.pdf, self.numeric_cols, self.non_numeric_cols)
+
+        # --------------------------------------------------------------------
+        # Target Column
+
+        if self.target_col is not None:
+            print('\n--- Target Column ---')
+
+            # Insert code / function here for target column nulls, unique values, distribution
+            # self.target_type, num_null, num_unique = target_col_eda(data_df[self.target_col])
+            target_col_notnull = data_df[self.target_col].dropna()
+            target_num_null = len(data_df) - len(target_col_notnull)
+            target_num_uniq = target_col_notnull.nunique()
+
+            if pd.api.types.is_string_dtype(target_col_notnull):
+                self.target_type = 'classification'
+            elif target_num_uniq <= 10:
+                self.target_type = 'classification'
+            else:
+                self.target_type = 'regression'
+
+            self.pdf = section_on_target_column(self.pdf, self.target_col, self.target_type, target_num_null,
+                                                target_num_uniq)
 
         # Save PDF document to current working directory:
         if output:
@@ -358,6 +385,10 @@ class FeaturesEDA:
 
         # Run the initial EDA steps:
         self.run_initial_eda(data_df, output=False)
+
+        plot_hist_target_col(data_df[self.target_col].dropna(), target_type=self.target_type, plots_folder=plots_folder)
+        self.pdf = section_on_target_column_plot(self.pdf, plots_folder)
+
         print()
 
         # --------------------------------------------------------------------

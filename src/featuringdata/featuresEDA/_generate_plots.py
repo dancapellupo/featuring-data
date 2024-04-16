@@ -51,6 +51,24 @@ def plot_hist(data_for_bins, label_bins='', data_for_line=None, label_line='', x
     plt.close()
 
 
+def plot_hist_target_col(target_col_vals, target_type='regression', plots_folder='./'):
+
+    sns.set_theme(style="ticks", font_scale=1.2)
+    f, ax = plt.subplots(figsize=(9, 6))
+
+    if target_type == 'regression':
+        sns.histplot(data=target_col_vals)
+        plt.grid()
+        plt.xlim(target_col_vals.min(), target_col_vals.max())
+    else:
+        sns.histplot(data=target_col_vals, discrete=True, shrink=0.6)
+        ax.set_xticks(target_col_vals.unique())
+        plt.grid(axis='y')
+
+    plt.savefig('{}/target_data_distribution.png'.format(plots_folder), bbox_inches='tight')
+    plt.close()
+
+
 def plot_scatter_density(x, y, fig=None, ax=None, sort=True, bins=20, **kwargs):
     """
     Scatter plot colored by 2d histogram
@@ -223,6 +241,7 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
 
             if (not numeric) and data_df_col_notnull[column].nunique() >= 10:
                 plt.xticks(rotation=45)
+                plt.grid(axis='x')
 
             plt.grid(axis='y')
 
