@@ -247,7 +247,7 @@ def calc_max_rfscore(num=2):
     return r2
 
 
-def calc_nonnumeric_features_target_corr(data_df, non_numeric_cols, target_col):
+def calc_nonnumeric_features_target_corr(data_df, non_numeric_cols, target_col, target_type='regression'):
     """
     Calculate the correlation between non-numeric features and the target
     variable.
@@ -298,7 +298,10 @@ def calc_nonnumeric_features_target_corr(data_df, non_numeric_cols, target_col):
     print('For random forest (RF) correlation measure, using {} trees and min_samples_leaf={}.\n'.format(
         rf_n_estimators, min_samples_leaf))
 
-    non_numeric_df = pd.DataFrame(columns=["Count not-Null", "Num Unique", "Random Forest", "RF_norm"])
+    if target_type == 'regression':
+        non_numeric_df = pd.DataFrame(columns=["Count not-Null", "Num Unique", "Random Forest", "RF_norm"])
+    else:
+        non_numeric_df = pd.DataFrame(columns=["Count not-Null", "Num Unique", "Random Forest", "RF_norm"])
 
     # Loop over each categorical feature:
     print('Running correlations of non-numeric features to target variable...')
@@ -310,20 +313,32 @@ def calc_nonnumeric_features_target_corr(data_df, non_numeric_cols, target_col):
         # training using one-hot encoding:
         X_col = pd.get_dummies(train_col_notnull[col], dtype=int)
 
-        # Train a random forest model:
-        rf_reg = RandomForestRegressor(n_estimators=rf_n_estimators, min_samples_leaf=min_samples_leaf)
-        rf_reg.fit(X_col, train_col_notnull[target_col].values)
-        rfscore = rf_reg.score(X_col, train_col_notnull[target_col])
+        if target_type == 'regression':
+            # Train a random forest model:
+            rf_reg = RandomForestRegressor(n_estimators=rf_n_estimators, min_samples_leaf=min_samples_leaf)
+            rf_reg.fit(X_col, train_col_notnull[target_col].values)
+            rfscore = rf_reg.score(X_col, train_col_notnull[target_col])
 
-        # The number of unique values is calculated for the purpose of
-        # adjusting the Random Forest R^2:
-        num_uniq = train_col_notnull[col].nunique()
-        # Adjust the R^2 based on the number of unique values affecting a
-        # feature's maximum theoretical R^2:
-        rfscore_norm = rfscore * (1 / calc_max_rfscore(num_uniq))
+            # The number of unique values is calculated for the purpose of
+            # adjusting the Random Forest R^2:
+            num_uniq = train_col_notnull[col].nunique()
+            # Adjust the R^2 based on the number of unique values affecting a
+            # feature's maximum theoretical R^2:
+            rfscore_norm = rfscore * (1 / calc_max_rfscore(num_uniq))
 
-        # Save the results as a new row in the dataframe for output:
-        non_numeric_df.loc[col] = len(train_col_notnull), num_uniq, round(rfscore, 2), round(rfscore_norm, 2)
+            # Save the results as a new row in the dataframe for output:
+            non_numeric_df.loc[col] = len(train_col_notnull), num_uniq, round(rfscore, 2), round(rfscore_norm, 2)
+
+        else:
+            # Train a random forest model with just that feature and the target variable:
+            rf_class = RandomForestClassifier(n_estimators=rf_n_estimators, min_samples_leaf=min_samples_leaf)
+            rf_class.fit(X_col, train_col_notnull[target_col].values)
+            y_train_pred = rf_class.predict(X_col)
+            rf_ck = max(cohen_kappa_score(train_col_notnull[target_col].values, y_train_pred), 0)
+
+            # Save the results as a new row in the dataframe for output:
+            num_uniq = train_col_notnull[col].nunique()
+            non_numeric_df.loc[col] = len(train_col_notnull), num_uniq, round(rf_ck, 2), round(rf_ck, 2)
 
     # The counts of NULL values and unique values should be integers:
     non_numeric_df["Count not-Null"] = non_numeric_df["Count not-Null"].astype(int)

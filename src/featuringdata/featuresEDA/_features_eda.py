@@ -398,7 +398,7 @@ class FeaturesEDA:
         # variable:
         if len(self.numeric_cols) > 0:
             self.numeric_df = calc_numeric_features_target_corr(data_df, self.numeric_cols, self.target_col,
-                                                                rf_n_estimators='auto')
+                                                                self.target_type, rf_n_estimators='auto')
         else:
             run_collinear = False
 
@@ -410,7 +410,8 @@ class FeaturesEDA:
         # Calculate correlations between each categorical feature and the
         # target variable:
         if len(self.non_numeric_cols) > 0:
-            self.non_numeric_df = calc_nonnumeric_features_target_corr(data_df, self.non_numeric_cols, self.target_col)
+            self.non_numeric_df = calc_nonnumeric_features_target_corr(data_df, self.non_numeric_cols, self.target_col,
+                                                                       self.target_type)
 
         # --------------------------------------------------------------------
         # Generating PDF Document
