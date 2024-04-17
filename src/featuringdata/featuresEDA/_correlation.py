@@ -9,8 +9,9 @@ import pandas as pd
 
 from scipy.stats import pearsonr
 from sklearn.feature_selection import mutual_info_regression
+from sklearn.metrics import cohen_kappa_score
 
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 
 
 def get_random_forest_hyperparams(n_samples, rf_n_estimators='auto', numeric=True):
@@ -33,7 +34,8 @@ def get_random_forest_hyperparams(n_samples, rf_n_estimators='auto', numeric=Tru
     return rf_n_estimators, min_samples_leaf
 
 
-def calc_numeric_features_target_corr(data_df, numeric_cols, target_col, rf_n_estimators='auto'):
+def calc_numeric_features_target_corr(data_df, numeric_cols, target_col, target_type='regression',
+                                      rf_n_estimators='auto'):
     """
     Calculate the correlation between numeric features and the target
     variable.
@@ -84,7 +86,10 @@ def calc_numeric_features_target_corr(data_df, numeric_cols, target_col, rf_n_es
     print('For random forest (RF) correlation measure, using {} trees and min_samples_leaf={}.\n'.format(
         rf_n_estimators, min_samples_leaf))
 
-    numeric_df = pd.DataFrame(columns=["Count not-Null", "Pearson", "Mutual Info", "Random Forest"])
+    if target_type == 'regression':
+        numeric_df = pd.DataFrame(columns=["Count not-Null", "Pearson", "Mutual Info", "Random Forest"])
+    else:
+        numeric_df = pd.DataFrame(columns=["Count not-Null", "Random Forest"])
 
     # Loop over each numeric feature:
     print('Running correlations of numeric features to target variable...')
@@ -92,19 +97,30 @@ def calc_numeric_features_target_corr(data_df, numeric_cols, target_col, rf_n_es
         # Keep only rows that do not have NULL for that feature:
         data_df_col_notnull = data_df[[col, target_col]].dropna()
 
-        # Calculate Pearson correlation between feature and target:
-        pcorr = pearsonr(data_df_col_notnull[col].values, data_df_col_notnull[target_col].values)[0]
-        # Calculate the Mutual Information for feature and target:
-        minfo = mutual_info_regression(
-            data_df_col_notnull[col].values.reshape(-1, 1), data_df_col_notnull[target_col].values)[0]
+        if target_type == 'regression':
+            # Calculate Pearson correlation between feature and target:
+            pcorr = pearsonr(data_df_col_notnull[col].values, data_df_col_notnull[target_col].values)[0]
+            # Calculate the Mutual Information for feature and target:
+            minfo = mutual_info_regression(
+                data_df_col_notnull[col].values.reshape(-1, 1), data_df_col_notnull[target_col].values)[0]
 
-        # Train a random forest model with just that feature and the target variable:
-        rf_reg = RandomForestRegressor(n_estimators=rf_n_estimators, min_samples_leaf=min_samples_leaf)
-        rf_reg.fit(data_df_col_notnull[col].values.reshape(-1, 1), data_df_col_notnull[target_col].values)
-        rfscore = rf_reg.score(data_df_col_notnull[col].values.reshape(-1, 1), data_df_col_notnull[target_col])
+            # Train a random forest model with just that feature and the target variable:
+            rf_reg = RandomForestRegressor(n_estimators=rf_n_estimators, min_samples_leaf=min_samples_leaf)
+            rf_reg.fit(data_df_col_notnull[col].values.reshape(-1, 1), data_df_col_notnull[target_col].values)
+            rfscore = rf_reg.score(data_df_col_notnull[col].values.reshape(-1, 1), data_df_col_notnull[target_col])
 
-        # Save the results as a new row in the dataframe for output:
-        numeric_df.loc[col] = len(data_df_col_notnull), round(pcorr, 2), round(minfo, 2), round(rfscore, 2)
+            # Save the results as a new row in the dataframe for output:
+            numeric_df.loc[col] = len(data_df_col_notnull), round(pcorr, 2), round(minfo, 2), round(rfscore, 2)
+
+        else:
+            # Train a random forest model with just that feature and the target variable:
+            rf_class = RandomForestClassifier(n_estimators=rf_n_estimators, min_samples_leaf=min_samples_leaf)
+            rf_class.fit(data_df_col_notnull[col].values.reshape(-1, 1), data_df_col_notnull[target_col].values)
+            y_train_pred = rf_class.predict(data_df_col_notnull[col].values.reshape(-1, 1))
+            rf_ck = max(cohen_kappa_score(data_df_col_notnull[target_col].values, y_train_pred), 0)
+
+            # Save the results as a new row in the dataframe for output:
+            numeric_df.loc[col] = len(data_df_col_notnull), round(rf_ck, 2)
 
     # The counts of NULL values should be integers:
     numeric_df["Count not-Null"] = numeric_df["Count not-Null"].astype(int)
