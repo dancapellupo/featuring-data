@@ -427,10 +427,15 @@ class FeaturesEDA:
         #     filename='numeric_columns_target_correlation_ecdf', overplot=True, outfile=True, plots_folder=plots_folder)
 
         if len(self.numeric_df) > 0:
-            plot_hist(data_for_bins=np.abs(self.numeric_df["Pearson"].values), label_bins='Pearson (abs)',
-                      data_for_line=self.numeric_df["Random Forest"].values, label_line="RF_corr",
-                      xlabel='Correlation Value', ylabel='Feature Count',
-                      filename='numeric_columns_target_correlation_hist', plots_folder=plots_folder)
+            if self.target_type == 'regression':
+                plot_hist(data_for_bins=np.abs(self.numeric_df["Pearson"].values), label_bins='Pearson (abs)',
+                        data_for_line=self.numeric_df["Random Forest"].values, label_line="RF_corr",
+                        xlabel='Correlation Value', ylabel='Feature Count',
+                        filename='numeric_columns_target_correlation_hist', plots_folder=plots_folder)
+            else:
+                plot_hist(data_for_bins=np.abs(self.numeric_df["Random Forest"].values), label_bins='RF Cohen-Kappa',
+                        xlabel='Correlation Value', ylabel='Feature Count',
+                        filename='numeric_columns_target_correlation_hist', plots_folder=plots_folder)
 
         if run_collinear:
             plot_hist(data_for_bins=np.abs(self.numeric_collinear_df["Pearson"].values), label_bins='Pearson (abs)',
@@ -445,7 +450,7 @@ class FeaturesEDA:
                       filename='non_numeric_columns_target_correlation_hist', plots_folder=plots_folder)
 
         self.pdf = section_on_feature_corr(self.pdf, self.numeric_df, self.numeric_collinear_summary_df,
-                                           self.non_numeric_df, plots_folder=plots_folder)
+                                           self.non_numeric_df, self.target_type, plots_folder=plots_folder)
 
         # --------------------------------------------------------------------
         # Generate EDA plots
@@ -462,7 +467,7 @@ class FeaturesEDA:
                 # Generate plots of numeric features, and save them to the
                 # timestamped directory defined above:
                 plot_feature_values(data_df, columns_list_ordered, self.numeric_df, target_col=self.target_col,
-                                    numeric=True, plots_folder=plots_folder)
+                                    numeric=True, target_type=self.target_type, plots_folder=plots_folder)
 
                 # Add the plots to the PDF:
                 self.pdf = section_of_plots(self.pdf, columns_list_ordered, target_col=self.target_col, numeric=True,
@@ -479,8 +484,8 @@ class FeaturesEDA:
                 # Generate plots of non-numeric features, and save them to the
                 # timestamped directory defined above:
                 plot_feature_values(data_df, columns_list_ordered, self.non_numeric_df, target_col=self.target_col,
-                                    numeric=False, plots_folder=plots_folder)
-
+                                    numeric=False, target_type=self.target_type, plots_folder=plots_folder)
+                
                 # Add the plots to the PDF:
                 self.pdf = section_of_plots(self.pdf, columns_list_ordered, target_col=self.target_col, numeric=False,
                                             plots_folder=plots_folder)

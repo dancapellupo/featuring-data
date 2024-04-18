@@ -105,7 +105,7 @@ def plot_scatter_density(x, y, fig=None, ax=None, sort=True, bins=20, **kwargs):
     return ax
 
 
-def plot_feature_values(data_df, columns_list, correlation_df, target_col, numeric=True, catplot_style='scatterdense',
+def plot_feature_values(data_df, columns_list, correlation_df, target_col, numeric=True, target_type='regression', catplot_style='scatterdense',
                         plots_folder='./plots'):
     """
     Generate EDA plots that show each feature versus the target variable.
@@ -162,23 +162,24 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
     else:
         box_params = {'whis': [0, 100], 'width': 0.6, 'fill': False, 'color': 'black'}
 
-    # Check for strong outliers in target column:
-    med = data_df[target_col].median()
-    std = data_df[target_col].std()
-    xx = np.where(data_df[target_col].values > med + 10*std)[0]
-    xx = np.append(xx, np.where(data_df[target_col].values < med - 10*std)[0])
     set_ylim = False
-    if xx.size > 0:
-        print('Target outlier points:', data_df[target_col].values[xx])
+    if target_type == 'regression':
+        # Check for strong outliers in target column:
+        med = data_df[target_col].median()
+        std = data_df[target_col].std()
+        xx = np.where(data_df[target_col].values > med + 10*std)[0]
+        xx = np.append(xx, np.where(data_df[target_col].values < med - 10*std)[0])
+        if xx.size > 0:
+            print('Target outlier points:', data_df[target_col].values[xx])
 
-        target_col_vals = data_df.reset_index().drop(xx)[target_col].values
-        target_min, target_max = np.min(target_col_vals), np.max(target_col_vals)
-        max_minus_min = target_max - target_min
-        ymin = target_min - 0.025*max_minus_min
-        ymax = target_max + 0.025*max_minus_min
-        print('New target min/max values:', target_min, target_max)
-        print('Set y-axis limits (for display only):', ymin, ymax)
-        set_ylim = True
+            target_col_vals = data_df.reset_index().drop(xx)[target_col].values
+            target_min, target_max = np.min(target_col_vals), np.max(target_col_vals)
+            max_minus_min = target_max - target_min
+            ymin = target_min - 0.025*max_minus_min
+            ymax = target_max + 0.025*max_minus_min
+            print('New target min/max values:', target_min, target_max)
+            print('Set y-axis limits (for display only):', ymin, ymax)
+            set_ylim = True
 
     sns.set_theme(style="ticks")
 
@@ -192,52 +193,57 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
         # TODO: Use already calculated DF of unique values:
         # TODO: User can define this value:
         if (not numeric) or (np.unique(data_df_col_notnull[column]).size <= 10):
+            
+            if target_type == 'regression':
+                if not numeric:
+                    # Standard Box Plot with X-axis ordered by median value in each category
+                    xaxis_order = data_df_col_notnull.groupby(
+                        by=[column]).median().sort_values(by=[target_col]).index.tolist()
 
-            if not numeric:
-                # Standard Box Plot with X-axis ordered by median value in each category
-                xaxis_order = data_df_col_notnull.groupby(
-                    by=[column]).median().sort_values(by=[target_col]).index.tolist()
+                    start1 = time.time()
+                    sns.boxplot(data_df_col_notnull, x=column, y=target_col, order=xaxis_order, **box_params)
+                    time1 += (time.time() - start1)
 
-                start1 = time.time()
-                sns.boxplot(data_df_col_notnull, x=column, y=target_col, order=xaxis_order, **box_params)
-                time1 += (time.time() - start1)
+                else:
+                    # Standard Box Plot
+                    sns.boxplot(data_df_col_notnull, x=column, y=target_col, **box_params)  # hue="method", palette="vlag"
 
+                # Add in points to show each observation
+                start2 = time.time()
+                if (catplot_style != 'scatterdense') and (len(data_df_col_notnull) > 1000):
+                    data_df_col_notnull = data_df_col_notnull.sample(n=1000, replace=False)
+
+                if catplot_style == 'swarm':
+                    sns.swarmplot(data_df_col_notnull, x=column, y=target_col, size=2, color=".3", warn_thresh=0.4)
+
+                elif catplot_style == 'strip':
+                    sns.stripplot(data_df_col_notnull, x=column, y=target_col, jitter=0.25, size=2, color=".3")
+
+                elif catplot_style == 'scatterdense':
+                    x_all, y_all = np.array([]), np.array([])
+
+                    for cat in ax.get_xticklabels():
+                        # print(cat, cat.get_text(), cat.get_position(), cat.get_position()[0])
+
+                        try:
+                            data_df_cat = data_df_col_notnull.loc[
+                                (data_df_col_notnull[column] == cat.get_text()) | (data_df_col_notnull[column] == float(cat.get_text()))]
+                        except ValueError:
+                            data_df_cat = data_df_col_notnull.loc[data_df_col_notnull[column] == cat.get_text()]
+                        # print(len(data_df_cat))
+
+                        x = (np.zeros(len(data_df_cat)) + cat.get_position()[0] +
+                            np.random.normal(scale=0.06, size=len(data_df_cat)))  # 0.005
+                        y = data_df_cat[target_col].values
+                        x_all, y_all = np.append(x_all, x), np.append(y_all, y)
+
+                    ax = plot_scatter_density(x_all, y_all, fig=f, ax=ax, bins=100, s=3, cmap='viridis')
+                
             else:
-                # Standard Box Plot
-                sns.boxplot(data_df_col_notnull, x=column, y=target_col, **box_params)  # hue="method", palette="vlag"
+                sns.histplot(data_df_col_notnull, x=column, hue=target_col, discrete=True, shrink=0.6, multiple="dodge")  # "stack"
+                ax.set_xticks(data_df_col_notnull[column].unique())
 
-            # Add in points to show each observation
-            start2 = time.time()
-            if (catplot_style != 'scatterdense') and (len(data_df_col_notnull) > 1000):
-                data_df_col_notnull = data_df_col_notnull.sample(n=1000, replace=False)
-
-            if catplot_style == 'swarm':
-                sns.swarmplot(data_df_col_notnull, x=column, y=target_col, size=2, color=".3", warn_thresh=0.4)
-
-            elif catplot_style == 'strip':
-                sns.stripplot(data_df_col_notnull, x=column, y=target_col, jitter=0.25, size=2, color=".3")
-
-            elif catplot_style == 'scatterdense':
-                x_all, y_all = np.array([]), np.array([])
-
-                for cat in ax.get_xticklabels():
-                    # print(cat, cat.get_text(), cat.get_position(), cat.get_position()[0])
-
-                    try:
-                        data_df_cat = data_df_col_notnull.loc[
-                            (data_df_col_notnull[column] == cat.get_text()) | (data_df_col_notnull[column] == float(cat.get_text()))]
-                    except ValueError:
-                        data_df_cat = data_df_col_notnull.loc[data_df_col_notnull[column] == cat.get_text()]
-                    # print(len(data_df_cat))
-
-                    x = (np.zeros(len(data_df_cat)) + cat.get_position()[0] +
-                         np.random.normal(scale=0.06, size=len(data_df_cat)))  # 0.005
-                    y = data_df_cat[target_col].values
-                    x_all, y_all = np.append(x_all, x), np.append(y_all, y)
-
-                ax = plot_scatter_density(x_all, y_all, fig=f, ax=ax, bins=100, s=3, cmap='viridis')
-
-            time2 += (time.time() - start2)
+            # time2 += (time.time() - start2)
 
             if (not numeric) and data_df_col_notnull[column].nunique() >= 10:
                 plt.xticks(rotation=45)
@@ -258,33 +264,59 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
                 anc = AnchoredText('Not Shown: {} Outliers'.format(xx.size), loc="upper left", frameon=False)
                 ax.add_artist(anc)
 
-            # sns.scatterplot(train_data_mod, x=column, y=target_col, hue="OverallQual")
-            # sns.scatterplot(data_df, x=column, y=target_col, size=2, legend=False)
+            if target_type == 'regression':
+                # sns.scatterplot(train_data_mod, x=column, y=target_col, hue="OverallQual")
+                # sns.scatterplot(data_df, x=column, y=target_col, size=2, legend=False)
 
-            ax = plot_scatter_density(data_df_col_notnull[column].values, data_df_col_notnull[target_col].values,
-                                      fig=f, ax=ax, bins=100, s=3, cmap='viridis')
+                ax = plot_scatter_density(data_df_col_notnull[column].values, data_df_col_notnull[target_col].values,
+                                        fig=f, ax=ax, bins=100, s=3, cmap='viridis')
 
-            # plt.hist2d(data_df_col_notnull[column], data_df_col_notnull[target_col], bins=(100, 100),
-            #            cmap='viridis', cmin=1)  # BuPu
-            # plt.colorbar()
+                # plt.hist2d(data_df_col_notnull[column], data_df_col_notnull[target_col], bins=(100, 100),
+                #            cmap='viridis', cmin=1)  # BuPu
+                # plt.colorbar()
 
-            # ax.scatter(x, y, c=z, s=100, edgecolor='')
-            # ax.scatter(x, y, c=z, s=50)
+                # ax.scatter(x, y, c=z, s=100, edgecolor='')
+                # ax.scatter(x, y, c=z, s=50)
+            
+            else:
+                sns.boxplot(data_df_col_notnull, x=column, y=target_col, orient='y', **box_params)
+
+                x_all, y_all = np.array([]), np.array([])
+
+                for cat in ax.get_yticklabels():
+                    print(cat, cat.get_text(), cat.get_position(), cat.get_position()[0])
+
+                    try:
+                        data_df_cat = data_df_col_notnull.loc[
+                            (data_df_col_notnull[target_col] == cat.get_text()) | (
+                                        data_df_col_notnull[target_col] == float(cat.get_text()))]
+                    except ValueError:
+                        data_df_cat = data_df_col_notnull.loc[data_df_col_notnull[target_col] == cat.get_text()]
+                    print(len(data_df_cat))
+
+                    y = (np.zeros(len(data_df_cat)) + cat.get_position()[1] +
+                        np.random.normal(scale=0.06, size=len(data_df_cat)))
+                    x = data_df_cat[column].values
+                    x_all, y_all = np.append(x_all, x), np.append(y_all, y)
+
+                ax = plot_scatter_density(x_all, y_all, fig=f, ax=ax, bins=100, s=3, cmap='viridis')
 
             plt.grid()
 
             plt.xlabel(column)
             plt.ylabel(target_col)
 
-            # DONE Need to check index for using xx here
-
         if set_ylim:
             plt.ylim(ymin, ymax)
 
         if numeric:
-            ax.set_title('{} vs {} : P={}, MI={}, RF={}'.format(
-                column, target_col, correlation_df.loc[column, "Pearson"],
-                correlation_df.loc[column, "Mutual Info"], correlation_df.loc[column, "Random Forest"]))
+            if target_type == 'regression':
+                ax.set_title('{} vs {} : P={}, MI={}, RF={}'.format(
+                    column, target_col, correlation_df.loc[column, "Pearson"],
+                    correlation_df.loc[column, "Mutual Info"], correlation_df.loc[column, "Random Forest"]))
+            else:
+                ax.set_title('{} vs {} : RF={}'.format(
+                    column, target_col, correlation_df.loc[column, "Random Forest"]))
         else:
             ax.set_title('{} vs {} : RF={}, RF_norm={}'.format(
                 column, target_col, correlation_df.loc[column, "Random Forest"],

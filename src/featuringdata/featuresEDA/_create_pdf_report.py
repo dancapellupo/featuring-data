@@ -251,7 +251,7 @@ def section_on_target_column_plot(pdf, plots_folder='./'):
     return pdf
 
 
-def section_on_feature_corr(pdf, numeric_df, numeric_collinear_summary_df, non_numeric_df, plots_folder='./'):
+def section_on_feature_corr(pdf, numeric_df, numeric_collinear_summary_df, non_numeric_df, target_type='regression', plots_folder='./'):
 
     pdf.add_page()
 
@@ -275,7 +275,8 @@ def section_on_feature_corr(pdf, numeric_df, numeric_collinear_summary_df, non_n
         pdf.set_font('Arial', 'B', 12)
         pdf.cell(w=60, h=10, txt='Numeric Feature', border=1, ln=0, align='C')
         pdf.cell(w=35, h=10, txt='Count non-Null', border=1, ln=0, align='C')
-        pdf.cell(w=35, h=10, txt='Pearson Corr', border=1, ln=0, align='C')
+        if target_type == 'regression':
+            pdf.cell(w=35, h=10, txt='Pearson Corr', border=1, ln=0, align='C')
         pdf.cell(w=35, h=10, txt='RF Corr', border=1, ln=1, align='C')
 
         # Table contents
@@ -283,7 +284,8 @@ def section_on_feature_corr(pdf, numeric_df, numeric_collinear_summary_df, non_n
         for ii in range(0, min(8, len(numeric_df))):
             pdf = adjust_fontsize_for_feature_names(pdf, numeric_df.index[ii])
             pdf.cell(w=35, h=10, txt=numeric_df["Count not-Null"].iloc[ii].astype(str), border=1, ln=0, align='R')
-            pdf.cell(w=35, h=10, txt=numeric_df["Pearson"].iloc[ii].astype(str), border=1, ln=0, align='R')
+            if target_type == 'regression':
+                pdf.cell(w=35, h=10, txt=numeric_df["Pearson"].iloc[ii].astype(str), border=1, ln=0, align='R')
             pdf.cell(w=35, h=10, txt=numeric_df["Random Forest"].iloc[ii].astype(str), border=1, ln=1, align='R')
 
         pdf.ln(6)
