@@ -131,22 +131,29 @@ def section_on_unique_values(pdf, numeric_cols, non_numeric_cols, numeric_uniq_v
     pdf.ln(3)
 
     # Table Header
+    max_table_len = 8
     pdf.set_font('Arial', 'B', 12)
     pdf.cell(w=60, h=10, txt='Numeric Feature', border=1, ln=0, align='C')
     pdf.cell(w=42, h=10, txt=numeric_uniq_vals_df.columns[1], border=1, ln=1, align='C')
 
-    # Table Contents
     pdf.set_font('Arial', '', 12)
-    for ii in range(0, min(8, len(numeric_uniq_vals_df))):
-        pdf = adjust_fontsize_for_feature_names(pdf, numeric_uniq_vals_df["Feature"].iloc[ii])
-        pdf.cell(w=42, h=10,
-                 txt=numeric_uniq_vals_df["Num Unique Values"].iloc[ii].astype(str),
-                 border=1, ln=1, align='R')
+    if len(numeric_uniq_vals_df) == 0:
+        output_txt = 'There are no numeric columns with 10 or fewer unique values.'
+        print(output_txt)
+        pdf.cell(w=0, h=10, txt=output_txt, ln=1)
+    
+    else:
+        # Table Contents
+        for ii in range(0, min(max_table_len, len(numeric_uniq_vals_df))):
+            pdf = adjust_fontsize_for_feature_names(pdf, numeric_uniq_vals_df["Feature"].iloc[ii])
+            pdf.cell(w=42, h=10,
+                    txt=numeric_uniq_vals_df["Num Unique Values"].iloc[ii].astype(str),
+                    border=1, ln=1, align='R')
 
-    if len(numeric_uniq_vals_df) > 5:
+    if len(numeric_uniq_vals_df) > max_table_len:
         pdf.cell(w=0, h=10,
                  txt="There are an additional {} numeric feature columns with 10 or fewer unique values.".format(
-                     len(numeric_uniq_vals_df) - 5),
+                     len(numeric_uniq_vals_df) - max_table_len),
                  ln=1)
 
     pdf.ln(4)
@@ -177,18 +184,24 @@ def section_on_unique_values(pdf, numeric_cols, non_numeric_cols, numeric_uniq_v
     pdf.cell(w=60, h=10, txt='Non-Numeric Feature', border=1, ln=0, align='C')
     pdf.cell(w=42, h=10, txt=non_numeric_uniq_vals_df_tmp.columns[1], border=1, ln=1, align='C')
 
-    # Table contents
     pdf.set_font('Arial', '', 12)
-    for ii in range(0, min(8, len(non_numeric_uniq_vals_df_tmp))):
-        pdf = adjust_fontsize_for_feature_names(pdf, non_numeric_uniq_vals_df_tmp["Feature"].iloc[ii])
-        pdf.cell(w=42, h=10,
-                 txt=non_numeric_uniq_vals_df_tmp["Num Unique Values"].iloc[ii].astype(str),
-                 border=1, ln=1, align='R')
+    if len(non_numeric_uniq_vals_df_tmp) == 0:
+        output_txt = 'There are no non-numeric columns with more than {} unique values.'.format(nonnumeric_uniq_vals_thresh)
+        print(output_txt)
+        pdf.cell(w=0, h=10, txt=output_txt, ln=1)
 
-    if len(non_numeric_uniq_vals_df_tmp) > 5:
+    else:
+        # Table contents
+        for ii in range(0, min(max_table_len, len(non_numeric_uniq_vals_df_tmp))):
+            pdf = adjust_fontsize_for_feature_names(pdf, non_numeric_uniq_vals_df_tmp["Feature"].iloc[ii])
+            pdf.cell(w=42, h=10,
+                    txt=non_numeric_uniq_vals_df_tmp["Num Unique Values"].iloc[ii].astype(str),
+                    border=1, ln=1, align='R')
+
+    if len(non_numeric_uniq_vals_df_tmp) > max_table_len:
         pdf.cell(w=0, h=10,
                  txt="There are an additional {} non-numeric feature columns with more than {} unique values.".format(
-                     len(non_numeric_uniq_vals_df_tmp) - 5, nonnumeric_uniq_vals_thresh), ln=1)
+                     len(non_numeric_uniq_vals_df_tmp) - max_table_len, nonnumeric_uniq_vals_thresh), ln=1)
 
     pdf.ln(4)
 
