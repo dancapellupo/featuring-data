@@ -284,7 +284,7 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
                 x_all, y_all = np.array([]), np.array([])
 
                 for cat in ax.get_yticklabels():
-                    print(cat, cat.get_text(), cat.get_position(), cat.get_position()[0])
+                    # print(cat, cat.get_text(), cat.get_position(), cat.get_position()[0])
 
                     try:
                         data_df_cat = data_df_col_notnull.loc[
@@ -292,7 +292,7 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
                                         data_df_col_notnull[target_col] == float(cat.get_text()))]
                     except ValueError:
                         data_df_cat = data_df_col_notnull.loc[data_df_col_notnull[target_col] == cat.get_text()]
-                    print(len(data_df_cat))
+                    # print(len(data_df_cat))
 
                     y = (np.zeros(len(data_df_cat)) + cat.get_position()[1] +
                         np.random.normal(scale=0.06, size=len(data_df_cat)))

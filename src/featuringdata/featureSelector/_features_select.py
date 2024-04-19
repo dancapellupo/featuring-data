@@ -7,8 +7,8 @@ import pandas as pd
 
 from sklearn.model_selection import train_test_split, ParameterGrid
 from sklearn.metrics import mean_squared_error, mean_absolute_error
-
-from xgboost.sklearn import XGBRegressor
+from sklearn.preprocessing import LabelEncoder
+from xgboost.sklearn import XGBRegressor, XGBClassifier
 
 from ._create_pdf_report import (
     initialize_pdf_doc,
@@ -17,7 +17,7 @@ from ._create_pdf_report import (
     save_pdf_doc
 )
 
-from ._recursive_fit import recursive_fit
+from ._recursive_fit import recursive_fit, calc_model_metric
 
 from ._generate_plots import plot_inline_scatter, plot_xy, plot_horizontal_line, plot_vertical_line, save_fig, plot_xy_splitaxis
 
@@ -137,13 +137,14 @@ class FeatureSelector:
     """
 
     def __init__(self, numeric_cols, non_numeric_cols, report_prefix='FeatureSelection', target_col=None,
-                 target_log=False, test_size=0.15, parameter_dict=None):
+                 target_log=False, target_type='regression', test_size=0.15, parameter_dict=None):
 
         self.numeric_cols = numeric_cols
         self.non_numeric_cols = non_numeric_cols
         self.report_prefix = report_prefix
         self.target_col = target_col
         self.target_log = target_log
+        self.target_type = target_type
 
         self.test_size = test_size
 
@@ -230,7 +231,10 @@ class FeatureSelector:
             self.X = self.X.merge(X_onehot, left_index=True, right_index=True)
 
         # Take the log of the target variable, if user chooses:
-        if self.target_log:
+        if self.target_type == 'classification':
+            enc = LabelEncoder()
+            self.y = enc.fit_transform(data_df[self.target_col].values)
+        elif self.target_log:
             self.y = np.log1p(data_df[self.target_col].values)
         else:
             self.y = data_df[self.target_col].values
@@ -241,7 +245,6 @@ class FeatureSelector:
                                                                         random_state=42)
         X_train_46, X_test_46, y_train_46, y_test_46 = train_test_split(self.X, self.y, test_size=self.test_size,
                                                                         random_state=46)
-
         # TODO Allow user to set max/min values of the hyperparam ranges, as well as number of total iterations,
         #  which would define how many values to consider per hyperparam
 
@@ -256,7 +259,7 @@ class FeatureSelector:
 
         training_results_df, self.hyperparams_df, self.feature_importance_dict_list = recursive_fit(
             X_train_comb, y_train_comb, X_test_comb, y_test_comb, target_log=self.target_log,
-            parameter_dict=self.parameter_dict)
+            target_type=self.target_type, parameter_dict=self.parameter_dict)
 
         # --------------------------------------------------------------------
         # Identify Best Results
@@ -293,15 +296,19 @@ class FeatureSelector:
         # --------------------------------------------------------------------
         # XGBoost Training with "Best" Feature Selection
 
-        xgb_reg = XGBRegressor(n_estimators=1000, early_stopping_rounds=20, random_state=42, **hyperparams_dict)
+        if self.target_type == 'regression':
+            xgb_reg = XGBRegressor(n_estimators=1000, early_stopping_rounds=20, random_state=42, **hyperparams_dict)
+        else:
+            xgb_reg = XGBClassifier(n_estimators=1000, early_stopping_rounds=20, random_state=42, **hyperparams_dict)
         xgb_reg.fit(X_train_best, y_train_comb[data_ind], eval_set=[(X_test_best, y_test_comb[data_ind])], verbose=True)
 
         y_test_pred = xgb_reg.predict(X_test_best)
-
+        print(xgb_reg.predict_proba(X_test_best))
+        
         if self.target_log:
-            mae_final = mean_absolute_error(np.expm1(y_test_comb[data_ind]), np.expm1(y_test_pred))
+            mae_final = calc_model_metric(np.expm1(y_test_comb[data_ind]), np.expm1(y_test_pred), target_type=self.target_type, metric_type='easy')
         else:
-            mae_final = mean_absolute_error(y_test_comb[data_ind], y_test_pred)
+            mae_final = calc_model_metric(y_test_comb[data_ind], y_test_pred, target_type=self.target_type, metric_type='easy')
         print('\nFinal MAE: {}\n'.format(mae_final))
 
         # --------------------
@@ -387,7 +394,7 @@ class FeatureSelector:
         # Set the number of features to show on each plot:
         num_feat_per_plot = 5
         # Set the total number of features to plot:
-        tot_feat_to_plot = 20
+        tot_feat_to_plot = min(20, len(self.feat_import_bycol_df) - len(self.feat_import_bycol_df) % num_feat_per_plot)
         # Each loop corresponds to one plot:
         for jj in range(0, tot_feat_to_plot, num_feat_per_plot):
             cols_to_plot = self.feat_import_bycol_df.index[jj:jj+num_feat_per_plot]
@@ -400,6 +407,8 @@ class FeatureSelector:
                 num_iters = int(self.feat_import_bycol_df.loc[col, "num_iters"])
                 x = num_features[start_ii:num_iters]
                 y = self.feature_importance_dict_list[data_ind][col][start_ii:]
+
+                print(jj, jjj, col)
 
                 # If this is the first feature for this plot panel:
                 if jjj == 0:

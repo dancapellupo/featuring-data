@@ -7,9 +7,15 @@ import numpy as np
 import pandas as pd
 
 from sklearn.model_selection import GridSearchCV, ParameterGrid
-from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn.metrics import (
+    mean_squared_error,
+    mean_absolute_error,
+    accuracy_score,
+    log_loss,
+    cohen_kappa_score,
+)
 
-from xgboost.sklearn import XGBRegressor
+from xgboost.sklearn import XGBRegressor, XGBClassifier
 
 
 def round_to_n_sigfig(x, n=3):
@@ -53,8 +59,21 @@ def round_to_n_sigfig(x, n=3):
     return x_round
 
 
-def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, parameter_dict, use_gridsearchcv=False,
-                  target_log=False):
+def calc_model_metric(y, y_pred, target_type='regression', metric_type='regular'):
+        if target_type == 'regression':
+            if metric_type == 'regular':
+                return mean_squared_error(y, y_pred, squared=False)
+            else:
+                return mean_absolute_error(y, y_pred)
+        else:
+            if metric_type == 'regular':
+                return log_loss(y, y_pred)
+            else:
+                return cohen_kappa_score(y, y_pred)
+
+
+def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, parameter_dict, target_type='regression',
+                  use_gridsearchcv=False, target_log=False):
     """
     This is the core function that performs the iterative model training.
 
@@ -164,7 +183,10 @@ def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, paramete
 
                 if use_gridsearchcv:
                     # Hyperparameter search using GridSearchCV:
-                    xgb_reg = XGBRegressor(n_estimators=1000, early_stopping_rounds=20, random_state=42)
+                    if target_type == 'regression':
+                        xgb_reg = XGBRegressor(n_estimators=1000, early_stopping_rounds=20, random_state=42)
+                    else:
+                        xgb_reg = XGBClassifier(n_estimators=1000, early_stopping_rounds=20, random_state=42)
 
                     grid_search = GridSearchCV(xgb_reg, param_grid=parameter_dict, cv=2)
 
@@ -184,9 +206,13 @@ def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, paramete
                     # Hyperparameter search using the train and validation sets already defined:
                     print('Running grid search at Iteration {} on data split {}...'.format(jj, data_jj+1))
                     for parameter_dict_tmp in iter(tqdm(ParameterGrid(parameter_dict))):
-
-                        xgb_reg = XGBRegressor(n_estimators=1000, early_stopping_rounds=20, random_state=42,
-                                               **parameter_dict_tmp)
+                        
+                        if target_type == 'regression':
+                            xgb_reg = XGBRegressor(n_estimators=1000, early_stopping_rounds=20, random_state=42,
+                                                   **parameter_dict_tmp)
+                        else:
+                            xgb_reg = XGBClassifier(n_estimators=1000, early_stopping_rounds=20, random_state=42,
+                                                    **parameter_dict_tmp)
                         xgb_reg.fit(X_train_comb[data_jj][feature_columns[data_jj]], y_train_comb[data_jj],
                                     eval_set=[(X_test_comb[data_jj][feature_columns[data_jj]], y_test_comb[data_jj])],
                                     verbose=False)
@@ -210,26 +236,35 @@ def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, paramete
         for data_jj in range(2):
 
             # XGBoost Training:
-            xgb_reg = XGBRegressor(n_estimators=1000, early_stopping_rounds=20, random_state=42, **best_params_dict)
+            if target_type == 'regression':
+                xgb_reg = XGBRegressor(n_estimators=1000, early_stopping_rounds=20, random_state=42, **best_params_dict)
+            else:
+                xgb_reg = XGBClassifier(n_estimators=1000, early_stopping_rounds=20, random_state=42, **best_params_dict)
 
             xgb_reg.fit(X_train_comb[data_jj][feature_columns[data_jj]], y_train_comb[data_jj],
                         eval_set=[(X_test_comb[data_jj][feature_columns[data_jj]], y_test_comb[data_jj])], verbose=False)
 
-            y_train_pred = xgb_reg.predict(X_train_comb[data_jj][feature_columns[data_jj]])
-            y_test_pred = xgb_reg.predict(X_test_comb[data_jj][feature_columns[data_jj]])
+            if target_type == 'regression':
+                y_train_pred = xgb_reg.predict(X_train_comb[data_jj][feature_columns[data_jj]])
+                y_test_pred = xgb_reg.predict(X_test_comb[data_jj][feature_columns[data_jj]])
+            else:
+                y_train_pred = xgb_reg.predict_proba(X_train_comb[data_jj][feature_columns[data_jj]])
+                y_test_pred = xgb_reg.predict_proba(X_test_comb[data_jj][feature_columns[data_jj]])
 
             # TODO: Instead of rounding, go by significant digits [# of digits to be user-configurable]
-            train_err = round_to_n_sigfig(mean_squared_error(y_train_comb[data_jj], y_train_pred, squared=False), 5)
-            test_err = round_to_n_sigfig(mean_squared_error(y_test_comb[data_jj], y_test_pred, squared=False), 5)
+            train_err = round_to_n_sigfig(calc_model_metric(y_train_comb[data_jj], y_train_pred, target_type=target_type), 5)
+            test_err = round_to_n_sigfig(calc_model_metric(y_test_comb[data_jj], y_test_pred, target_type=target_type), 5)
 
             # If the log of the training data was taken, then reverse the log
             #  to save an easier-to-follow MAE value for the user:
             if target_log:
                 test_mae = round_to_n_sigfig(
-                    mean_absolute_error(np.expm1(y_test_comb[data_jj]), np.expm1(y_test_pred)), 5)
+                    calc_model_metric(np.expm1(y_test_comb[data_jj]), np.expm1(y_test_pred), target_type=target_type, metric_type='easy'), 5)
             else:
-                test_mae = round_to_n_sigfig(mean_absolute_error(y_test_comb[data_jj], y_test_pred), 5)
-
+                if target_type == 'classification':
+                    y_test_pred = xgb_reg.predict(X_test_comb[data_jj][feature_columns[data_jj]])
+                test_mae = round_to_n_sigfig(calc_model_metric(y_test_comb[data_jj], y_test_pred, target_type=target_type, metric_type='easy'), 5)
+            
             # ----------------------------------------------------------------
             # Save information from this iteration to dataframe
             out_row.extend(
