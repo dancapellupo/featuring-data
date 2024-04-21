@@ -163,9 +163,10 @@ def section_on_unique_values(pdf, numeric_cols, non_numeric_cols, numeric_uniq_v
 
         if single_value_cols_numeric_df is not None and len(single_value_cols_numeric_df) > 0:
             pdf.set_font('Arial', 'B', 12)
-            pdf.cell(w=0, h=10,
-                     txt="There are {} numeric columns with just a single value and will be removed.".format(
-                         len(single_value_cols_numeric_df)), ln=1)
+            output_txt = "There are {} numeric columns with just a single value and will be removed.".format(
+                len(single_value_cols_numeric_df))
+            print(output_txt)
+            pdf.cell(w=0, h=10, txt=output_txt, ln=1)
             pdf.ln(6)
 
         if numeric_cols_to_cat_df is not None and len(numeric_cols_to_cat_df) > 0:
@@ -206,10 +207,16 @@ def section_on_unique_values(pdf, numeric_cols, non_numeric_cols, numeric_uniq_v
     pdf.ln(4)
 
     if single_value_cols_nonnumeric_df is not None and len(single_value_cols_nonnumeric_df) > 0:
+        num_single = len(single_value_cols_nonnumeric_df.loc[single_value_cols_nonnumeric_df["Num Unique Values"] == 1])
         pdf.set_font('Arial', 'B', 12)
-        pdf.cell(w=0, h=10,
-                 txt="There are {} non-numeric columns with just a single value and will be removed.".format(
-                     len(single_value_cols_nonnumeric_df)), ln=1)
+        output_txt = "There are {} non-numeric columns with just a single value and will be removed.".format(
+            num_single)
+        print(output_txt)
+        pdf.cell(w=0, h=10, txt=output_txt, ln=1)
+        output_txt = "There are {} non-numeric columns with a very large number of unique values and will be removed.".format(
+            len(single_value_cols_nonnumeric_df)-num_single)
+        print(output_txt)
+        pdf.cell(w=0, h=10, txt=output_txt, ln=1)
         pdf.ln(4)
 
     return pdf
@@ -439,6 +446,12 @@ def section_of_plots(pdf, columns_list, target_col, numeric=True, plots_folder='
         # TODO: Double-check that file exists
         pdf.image('{}/{}_vs_{}.png'.format(plots_folder, column, target_col),
                   x=10, y=None, w=0, h=130, type='PNG')
+        
+        if jj == 150:
+            pdf.ln(2)
+            pdf.set_font('Arial', 'B', 12)
+            pdf.cell(w=0, h=20, txt="Any additional plots are located in '{}'.".format(plots_folder), align='C')
+            break
 
     return pdf
 
