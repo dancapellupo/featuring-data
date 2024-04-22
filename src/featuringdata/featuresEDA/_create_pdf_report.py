@@ -52,7 +52,12 @@ def adjust_fontsize_for_feature_names(pdf, feature, box_width=60, start_fontsize
     return pdf
 
 
-def section_on_null_columns(pdf, num_features, null_cols_df, null_count_by_row_series):
+def section_on_null_columns(pdf, num_features, master_columns_df, null_count_by_row_series):
+
+    null_cols_df = master_columns_df.loc[
+        master_columns_df["Num of Nulls"] > 0, ["Num of Nulls", "Frac Null"]].sort_values(
+            by=["Num of Nulls"], ascending=False)
+
     pdf.set_font('Arial', 'B', 13)
     pdf.cell(w=0, h=10, txt="Null Values", ln=1)
 
@@ -62,7 +67,6 @@ def section_on_null_columns(pdf, num_features, null_cols_df, null_count_by_row_s
     pdf.cell(w=0, h=10, txt="Null Values by Columns/Features", ln=1)
 
     pdf.set_font('Arial', '', 12)
-    # TODO: Indicate also if target_col has nulls
     output_txt = "Out of {} total data columns, there are {} columns with at least 1 null value.".format(
         num_features, len(null_cols_df))
     print(output_txt + '\n')
@@ -75,14 +79,14 @@ def section_on_null_columns(pdf, num_features, null_cols_df, null_count_by_row_s
 
     # Table Header
     pdf.set_font('Arial', 'B', 12)
-    pdf.cell(w=60, h=10, txt=null_cols_df.columns[0], border=1, ln=0, align='C')
-    pdf.cell(w=35, h=10, txt=null_cols_df.columns[1], border=1, ln=0, align='C')
-    pdf.cell(w=35, h=10, txt=null_cols_df.columns[2], border=1, ln=1, align='C')
+    pdf.cell(w=60, h=10, txt="Feature", border=1, ln=0, align='C')
+    pdf.cell(w=35, h=10, txt=null_cols_df.columns[0], border=1, ln=0, align='C')
+    pdf.cell(w=35, h=10, txt=null_cols_df.columns[1], border=1, ln=1, align='C')
 
     # Table contents
     pdf.set_font('Arial', '', 12)
     for ii in range(0, min(8, len(null_cols_df))):
-        pdf = adjust_fontsize_for_feature_names(pdf, null_cols_df["Feature"].iloc[ii])
+        pdf = adjust_fontsize_for_feature_names(pdf, null_cols_df.index[ii])
         pdf.cell(w=35, h=10, txt=null_cols_df["Num of Nulls"].iloc[ii].astype(str), border=1, ln=0, align='R')
         pdf.cell(w=35, h=10, txt=null_cols_df["Frac Null"].iloc[ii].astype(str), border=1, ln=1, align='R')
 
@@ -115,26 +119,30 @@ def section_on_null_columns(pdf, num_features, null_cols_df, null_count_by_row_s
     return pdf
 
 
-def section_on_unique_values(pdf, numeric_cols, non_numeric_cols, numeric_uniq_vals_df, non_numeric_uniq_vals_df,
-                             single_value_cols_numeric_df=None, numeric_cols_to_cat_df=None,
-                             single_value_cols_nonnumeric_df=None, nonnumeric_uniq_vals_thresh=5):
+def section_on_unique_values(pdf, master_columns_df, nonnumeric_uniq_vals_thresh=5):
     pdf.add_page()
     pdf.set_font('Arial', 'B', 13)
     pdf.cell(w=0, h=10, txt="Numeric vs Non-Numeric Features and Unique Values Count", ln=1)
 
+    num_numeric_cols = len(master_columns_df.loc[master_columns_df["Column Type (orig)"] == 'numeric'])
+    num_nonnumeric_cols = len(master_columns_df.loc[master_columns_df["Column Type (orig)"] == 'non-numeric'])
+
     pdf.set_font('Arial', '', 12)
     pdf.cell(w=0, h=10,
              txt="Out of {} total feature columns, there are {} numeric columns and {} non-numeric columns.".format(
-                 len(numeric_cols)+len(non_numeric_cols), len(numeric_cols), len(non_numeric_cols)),
+                 num_numeric_cols+num_nonnumeric_cols, num_numeric_cols, num_nonnumeric_cols),
              ln=1)
 
     pdf.ln(3)
 
     # Table Header
     max_table_len = 8
+    numeric_uniq_vals_df = master_columns_df.loc[
+        (master_columns_df["Column Type (orig)"] == 'numeric') & (master_columns_df["Num Unique Values"] <= 10),
+        ["Num Unique Values"]].sort_values(by=["Num Unique Values"])
     pdf.set_font('Arial', 'B', 12)
     pdf.cell(w=60, h=10, txt='Numeric Feature', border=1, ln=0, align='C')
-    pdf.cell(w=42, h=10, txt=numeric_uniq_vals_df.columns[1], border=1, ln=1, align='C')
+    pdf.cell(w=42, h=10, txt=numeric_uniq_vals_df.columns[0], border=1, ln=1, align='C')
 
     pdf.set_font('Arial', '', 12)
     if len(numeric_uniq_vals_df) == 0:
@@ -145,7 +153,7 @@ def section_on_unique_values(pdf, numeric_cols, non_numeric_cols, numeric_uniq_v
     else:
         # Table Contents
         for ii in range(0, min(max_table_len, len(numeric_uniq_vals_df))):
-            pdf = adjust_fontsize_for_feature_names(pdf, numeric_uniq_vals_df["Feature"].iloc[ii])
+            pdf = adjust_fontsize_for_feature_names(pdf, numeric_uniq_vals_df.index[ii])
             pdf.cell(w=42, h=10,
                     txt=numeric_uniq_vals_df["Num Unique Values"].iloc[ii].astype(str),
                     border=1, ln=1, align='R')
@@ -158,32 +166,36 @@ def section_on_unique_values(pdf, numeric_cols, non_numeric_cols, numeric_uniq_v
 
     pdf.ln(4)
 
-    if ((single_value_cols_numeric_df is not None and len(single_value_cols_numeric_df) > 0) or
-            (numeric_cols_to_cat_df is not None and len(numeric_cols_to_cat_df) > 0)):
-
-        if single_value_cols_numeric_df is not None and len(single_value_cols_numeric_df) > 0:
+    if len(master_columns_df.loc[master_columns_df["Column Type (orig)"] == 'numeric', "Column Note"].dropna()) > 0:
+        num_single_val = len(master_columns_df.loc[
+            (master_columns_df["Column Type (orig)"] == 'numeric') & (master_columns_df["Column Note"] == 'remove')])
+        
+        if num_single_val > 0:
             pdf.set_font('Arial', 'B', 12)
             output_txt = "There are {} numeric columns with just a single value and will be removed.".format(
-                len(single_value_cols_numeric_df))
+                num_single_val)
             print(output_txt)
             pdf.cell(w=0, h=10, txt=output_txt, ln=1)
             pdf.ln(6)
 
-        if numeric_cols_to_cat_df is not None and len(numeric_cols_to_cat_df) > 0:
+        num_switch = len(master_columns_df.loc[master_columns_df["Column Note"] == 'switch to non-numeric'])
+        
+        if num_switch > 0:
             pdf.set_font('Arial', 'B', 12)
             output_txt = 'There are {} numeric columns that will be switched to categorical.'.format(
-                len(numeric_cols_to_cat_df))
+                num_switch)
             print(output_txt)
             pdf.cell(w=0, h=10, txt=output_txt, ln=1)
             pdf.ln(6)
 
     # Table Header
-    non_numeric_uniq_vals_df_tmp = non_numeric_uniq_vals_df.loc[
-        non_numeric_uniq_vals_df["Num Unique Values"] > nonnumeric_uniq_vals_thresh]
+    non_numeric_uniq_vals_df_tmp = master_columns_df.loc[
+        (master_columns_df["Column Type (orig)"] == 'non-numeric') & (master_columns_df["Num Unique Values"] > nonnumeric_uniq_vals_thresh),
+        ["Num Unique Values"]].sort_values(by=["Num Unique Values"], ascending=False)
 
     pdf.set_font('Arial', 'B', 12)
     pdf.cell(w=60, h=10, txt='Non-Numeric Feature', border=1, ln=0, align='C')
-    pdf.cell(w=42, h=10, txt=non_numeric_uniq_vals_df_tmp.columns[1], border=1, ln=1, align='C')
+    pdf.cell(w=42, h=10, txt=non_numeric_uniq_vals_df_tmp.columns[0], border=1, ln=1, align='C')
 
     pdf.set_font('Arial', '', 12)
     if len(non_numeric_uniq_vals_df_tmp) == 0:
@@ -194,7 +206,7 @@ def section_on_unique_values(pdf, numeric_cols, non_numeric_cols, numeric_uniq_v
     else:
         # Table contents
         for ii in range(0, min(max_table_len, len(non_numeric_uniq_vals_df_tmp))):
-            pdf = adjust_fontsize_for_feature_names(pdf, non_numeric_uniq_vals_df_tmp["Feature"].iloc[ii])
+            pdf = adjust_fontsize_for_feature_names(pdf, non_numeric_uniq_vals_df_tmp.index[ii])
             pdf.cell(w=42, h=10,
                     txt=non_numeric_uniq_vals_df_tmp["Num Unique Values"].iloc[ii].astype(str),
                     border=1, ln=1, align='R')
@@ -206,31 +218,31 @@ def section_on_unique_values(pdf, numeric_cols, non_numeric_cols, numeric_uniq_v
 
     pdf.ln(4)
 
-    if single_value_cols_nonnumeric_df is not None and len(single_value_cols_nonnumeric_df) > 0:
-        num_single = len(single_value_cols_nonnumeric_df.loc[single_value_cols_nonnumeric_df["Num Unique Values"] == 1])
+    num_issues = len(master_columns_df.loc[master_columns_df["Column Type (orig)"] == 'non-numeric', "Column Note"].dropna())
+    if num_issues > 0:
+        num_single = len(master_columns_df.loc[
+            (master_columns_df["Column Type (orig)"] == 'non-numeric') & (master_columns_df["Num Unique Values"] == 1)])
         pdf.set_font('Arial', 'B', 12)
         output_txt = "There are {} non-numeric columns with just a single value and will be removed.".format(
             num_single)
         print(output_txt)
         pdf.cell(w=0, h=10, txt=output_txt, ln=1)
         output_txt = "There are {} non-numeric columns with a very large number of unique values and will be removed.".format(
-            len(single_value_cols_nonnumeric_df)-num_single)
+            num_issues-num_single)
         print(output_txt)
         pdf.cell(w=0, h=10, txt=output_txt, ln=1)
         pdf.ln(4)
-
-    return pdf
-
-
-def section_on_unique_values_p2(pdf, numeric_cols, non_numeric_cols):
-
-    pdf.ln(8)
-    pdf.set_font('Arial', '', 12)
-    output_txt = ("After the above adjustments, there are now {} data columns, with {} numeric columns and {} "
-                  "non-numeric/categorical columns.").format(
-        len(numeric_cols)+len(non_numeric_cols), len(numeric_cols), len(non_numeric_cols))
-    print(output_txt)
-    pdf.write(5, output_txt)
+    
+    if len(master_columns_df["Column Note"].dropna()) > 0:
+        pdf.ln(8)
+        num_numeric_cols = len(master_columns_df.loc[master_columns_df["Column Type"] == 'numeric'])
+        num_nonnumeric_cols = len(master_columns_df.loc[master_columns_df["Column Type"] == 'non-numeric'])
+        pdf.set_font('Arial', '', 12)
+        output_txt = ("After the above adjustments, there are now {} data columns, with {} numeric columns and {} "
+                      "non-numeric/categorical columns.").format(
+                          num_numeric_cols+num_nonnumeric_cols, num_numeric_cols, num_nonnumeric_cols)
+        print(output_txt)
+        pdf.write(5, output_txt)
 
     return pdf
 

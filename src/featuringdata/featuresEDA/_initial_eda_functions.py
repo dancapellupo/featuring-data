@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 
 
-def count_null_values(data_df):
+def count_null_values(data_df, master_columns_df):
     """
     Counts the null values for every column in the input dataframe.
 
@@ -29,16 +29,19 @@ def count_null_values(data_df):
         num_nulls = data_df[col].isna().sum()
         null_cols_df.loc[jj] = col, num_nulls, round(num_nulls / len(data_df), 2)
 
+    master_columns_df["Num of Nulls"] = data_df.isna().sum()
+    master_columns_df["Frac Null"] = (master_columns_df["Num of Nulls"] / len(data_df)).round(2)
+
     # Sort the dataframe by number of NULL values per feature, in descending order:
     null_cols_df = null_cols_df.sort_values(by=["Num of Nulls"], ascending=False)
 
     # Count the number of NULL values in each row:
     null_count_by_row_series = data_df.isna().sum(axis=1)
 
-    return null_cols_df, null_count_by_row_series
+    return master_columns_df, null_count_by_row_series
 
 
-def sort_numeric_nonnumeric_columns(data_df, target_col=None):
+def sort_numeric_nonnumeric_columns(data_df, master_columns_df, target_col=None):
     """
     Sorts the names of the numeric and nun-numeric/categorical columns into
     two separate lists.
@@ -60,10 +63,17 @@ def sort_numeric_nonnumeric_columns(data_df, target_col=None):
         A list of names of columns with non-numeric / categorical values.
     """
 
+    master_columns_df["dtype"] = data_df.dtypes
+    master_columns_df["Column Type (orig)"] = master_columns_df["dtype"].apply(
+        lambda x: 'non-numeric' if pd.api.types.is_string_dtype(x) else 'numeric')
+    # master_columns_df["Column Type (orig)"] = [
+    #     'non-numeric' if pd.api.types.is_string_dtype(data_df[col]) else 'numeric' for col in master_columns_df.index]
+
     numeric_cols = data_df.select_dtypes(include='number').columns.to_list()
     non_numeric_cols = data_df.select_dtypes(exclude='number').columns.to_list()
 
     if target_col is not None:
+        master_columns_df.loc[target_col, "Column Type (orig)"] = 'target'
         if target_col in numeric_cols:
             numeric_cols.remove(target_col)
         elif target_col in non_numeric_cols:
@@ -72,7 +82,27 @@ def sort_numeric_nonnumeric_columns(data_df, target_col=None):
     print('There are {} numeric columns and {} non-numeric columns.'.format(
         len(numeric_cols), len(non_numeric_cols)))
 
-    return numeric_cols, non_numeric_cols
+    master_columns_df["Num Unique Values"] = data_df.nunique()
+
+    def unique_values_issues(col_type_orig, num_uniq):
+        if num_uniq == 1:
+            return 'remove'
+        elif (col_type_orig == 'numeric') and (num_uniq == 2):
+            return 'switch to non-numeric'
+        elif (col_type_orig == 'non-numeric') and (num_uniq > 0.1*len(data_df)):
+            return 'remove'
+
+    master_columns_df["Column Note"] = master_columns_df.apply(lambda x: unique_values_issues(x["Column Type (orig)"], x["Num Unique Values"]), axis=1)
+
+    def update_col_type(col_type_orig, col_note):
+        if col_note == 'switch to non-numeric':
+            return 'non-numeric'
+        elif col_note != 'remove':
+            return col_type_orig
+    
+    master_columns_df["Column Type"] = master_columns_df.apply(lambda x: update_col_type(x["Column Type (orig)"], x["Column Note"]), axis=1)
+
+    return master_columns_df
 
 
 def count_numeric_unique_values(data_df, numeric_cols, uniq_vals_thresh=10):

@@ -9,7 +9,6 @@ from ._create_pdf_report import (
     initialize_pdf_doc,
     section_on_null_columns,
     section_on_unique_values,
-    section_on_unique_values_p2,
     section_on_target_column,
     section_on_target_column_plot,
     section_on_feature_corr,
@@ -20,8 +19,6 @@ from ._create_pdf_report import (
 from ._initial_eda_functions import (
     count_null_values,
     sort_numeric_nonnumeric_columns,
-    count_numeric_unique_values,
-    count_nonnumeric_unique_values
 )
 
 from ._correlation import (
@@ -202,20 +199,14 @@ class FeaturesEDA:
         self.nonnumeric_uniq_vals_thresh = nonnumeric_uniq_vals_thresh
 
         self.pdf = None
-        self.null_cols_df = None
         self.null_count_by_row_series = None
         # TODO: Combine unique values and corr info into one DF
         self.numeric_cols = None
         self.non_numeric_cols = None
-        self.numeric_uniq_vals_df = None
-        self.non_numeric_uniq_vals_df = None
         self.numeric_df = pd.DataFrame()
         self.numeric_collinear_df = pd.DataFrame()
         self.numeric_collinear_summary_df = pd.DataFrame()
         self.non_numeric_df = pd.DataFrame()
-
-    # TODO Create function that does up to correlation
-    # TODO For full EDA, make collinear correlation optional
 
     def run_initial_eda(self, data_df, output=True):
         """
@@ -253,74 +244,29 @@ class FeaturesEDA:
         # Generating PDF Document
         self.pdf = initialize_pdf_doc()
 
+        # Initialize dataframe for column/feature statistics
+        self.master_columns_df = pd.DataFrame(index=data_df.columns)
+
         # --------------------------------------------------------------------
         # Null Values Analysis
         print('--- Null Values Analysis ---')
 
-        self.null_cols_df, self.null_count_by_row_series = count_null_values(data_df)
+        self.master_columns_df, self.null_count_by_row_series = count_null_values(data_df, self.master_columns_df)
 
         # PDF Page 1: Summary of Null values information and unique values for numeric and non-numeric feature columns
-        self.pdf = section_on_null_columns(self.pdf, data_df.shape[1], self.null_cols_df, self.null_count_by_row_series)
+        self.pdf = section_on_null_columns(self.pdf, data_df.shape[1], self.master_columns_df, self.null_count_by_row_series)
         print()
 
         # --------------------------------------------------------------------
         # Sort Numeric and Non-numeric/Categorical Columns
         print('--- Sorting Numeric and Non-numeric Columns / Unique Values ---')
 
-        self.numeric_cols, self.non_numeric_cols = sort_numeric_nonnumeric_columns(data_df, self.target_col)
+        self.master_columns_df = sort_numeric_nonnumeric_columns(data_df, self.master_columns_df, self.target_col)
 
-        # Count the number of unique values for each feature
-        self.numeric_uniq_vals_df = count_numeric_unique_values(
-            data_df, self.numeric_cols, uniq_vals_thresh=self.numeric_uniq_vals_thresh)
+        self.pdf = section_on_unique_values(self.pdf, self.master_columns_df)
 
-        self.non_numeric_uniq_vals_df = count_nonnumeric_unique_values(
-            data_df, self.non_numeric_cols, uniq_vals_thresh=self.nonnumeric_uniq_vals_thresh)
+        # # Removing any columns with only a single unique value.
 
-        # Identify any numeric columns with just a single unique value:
-        single_value_cols_numeric_df = self.numeric_uniq_vals_df.loc[
-            self.numeric_uniq_vals_df["Num Unique Values"] == 1]
-
-        # Identify any numeric columns with only two unique values:
-        numeric_cols_to_cat_df = self.numeric_uniq_vals_df.loc[
-            self.numeric_uniq_vals_df["Num Unique Values"].between(2, 2, inclusive='both')]
-
-        # Identify any non-numeric columns with just a single unique value:
-        single_value_cols_nonnumeric_df = self.non_numeric_uniq_vals_df.loc[
-            (self.non_numeric_uniq_vals_df["Num Unique Values"] == 1) | (
-                    self.non_numeric_uniq_vals_df["Num Unique Values"] > 0.1 * len(data_df))]
-
-        # TODO: Fix the text here for non-numeric
-
-        # print('There are {} numeric and {} non-numeric columns with only a single value.'.format(
-        #     len(single_value_cols_numeric_df), len(single_value_cols_nonnumeric_df)))
-
-        self.pdf = section_on_unique_values(self.pdf, self.numeric_cols, self.non_numeric_cols,
-                                            self.numeric_uniq_vals_df, self.non_numeric_uniq_vals_df,
-                                            single_value_cols_numeric_df=single_value_cols_numeric_df,
-                                            single_value_cols_nonnumeric_df=single_value_cols_nonnumeric_df,
-                                            numeric_cols_to_cat_df=numeric_cols_to_cat_df)
-
-        # Removing any columns with only a single unique value. Any columns
-        # that are numeric, but were determined to be categorical are
-        # removed from the 'numeric_cols' list and added to the
-        # 'non_numeric_cols' list:
-        if ((len(single_value_cols_numeric_df) > 0) or (len(single_value_cols_nonnumeric_df) > 0) or
-                (len(numeric_cols_to_cat_df) > 0)):
-
-            if len(single_value_cols_numeric_df) > 0:
-                for col in single_value_cols_numeric_df["Feature"].values:
-                    self.numeric_cols.remove(col)
-
-            if len(single_value_cols_nonnumeric_df) > 0:
-                for col in single_value_cols_nonnumeric_df["Feature"].values:
-                    self.non_numeric_cols.remove(col)
-
-            if len(numeric_cols_to_cat_df) > 0:
-                for col in numeric_cols_to_cat_df["Feature"]:
-                    self.numeric_cols.remove(col)
-                    self.non_numeric_cols.append(col)
-
-            self.pdf = section_on_unique_values_p2(self.pdf, self.numeric_cols, self.non_numeric_cols)
 
         # --------------------------------------------------------------------
         # Target Column
@@ -329,7 +275,6 @@ class FeaturesEDA:
             print('\n--- Target Column ---')
 
             # Insert code / function here for target column nulls, unique values, distribution
-            # self.target_type, num_null, num_unique = target_col_eda(data_df[self.target_col])
             target_col_notnull = data_df[self.target_col].dropna()
             target_num_null = len(data_df) - len(target_col_notnull)
             target_num_uniq = target_col_notnull.nunique()
@@ -393,6 +338,11 @@ class FeaturesEDA:
 
         # --------------------------------------------------------------------
         # Calculate feature correlations
+
+        self.numeric_cols = self.master_columns_df.loc[
+            self.master_columns_df["Column Type"] == 'numeric'].index.to_list()
+        self.non_numeric_cols = self.master_columns_df.loc[
+            self.master_columns_df["Column Type"] == 'non-numeric'].index.to_list()
 
         # Calculate correlations between each numeric feature and the target
         # variable:
