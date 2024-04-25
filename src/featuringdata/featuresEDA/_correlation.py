@@ -34,7 +34,7 @@ def get_random_forest_hyperparams(n_samples, rf_n_estimators='auto', numeric=Tru
     return rf_n_estimators, min_samples_leaf
 
 
-def calc_numeric_features_target_corr(data_df, numeric_cols, target_col, target_type='regression',
+def calc_numeric_features_target_corr(data_df, numeric_cols, master_columns_df, target_col, target_type='regression',
                                       rf_n_estimators='auto'):
     """
     Calculate the correlation between numeric features and the target
@@ -110,7 +110,7 @@ def calc_numeric_features_target_corr(data_df, numeric_cols, target_col, target_
             rfscore = rf_reg.score(data_df_col_notnull[col].values.reshape(-1, 1), data_df_col_notnull[target_col])
 
             # Save the results as a new row in the dataframe for output:
-            numeric_df.loc[col] = len(data_df_col_notnull), round(pcorr, 2), round(minfo, 2), round(rfscore, 2)
+            numeric_df.loc[col] = len(data_df_col_notnull), round(pcorr, 2), round(minfo, 2), round(max(rfscore, 0), 2)
 
         else:
             # Train a random forest model with just that feature and the target variable:
@@ -122,17 +122,19 @@ def calc_numeric_features_target_corr(data_df, numeric_cols, target_col, target_
             # Save the results as a new row in the dataframe for output:
             numeric_df.loc[col] = len(data_df_col_notnull), round(rf_ck, 2)
 
+    master_columns_df.loc[numeric_df.index, numeric_df.columns] = numeric_df
+
     # The counts of NULL values should be integers:
-    numeric_df["Count not-Null"] = numeric_df["Count not-Null"].astype(int)
+    # numeric_df["Count not-Null"] = numeric_df["Count not-Null"].astype(int)
 
     # Sort the dataframe by the Random Forest R^2 for each feature, in
     # descending order:
-    numeric_df = numeric_df.sort_values(by=["Random Forest"], ascending=False)
+    # numeric_df = numeric_df.sort_values(by=["Random Forest"], ascending=False)
 
-    return numeric_df
+    return master_columns_df
 
 
-def calc_corr_numeric_features(data_df, numeric_cols):
+def calc_corr_numeric_features(data_df, numeric_cols, master_columns_df):
     """
 
     :param data_df:
@@ -156,11 +158,11 @@ def calc_corr_numeric_features(data_df, numeric_cols):
 
         rf_reg = RandomForestRegressor(n_estimators=10, min_samples_leaf=min_samples_leaf)
         rf_reg.fit(data_df_cols_notnull[col1].values.reshape(-1, 1), data_df_cols_notnull[col2].values)
-        rfscore1 = rf_reg.score(data_df_cols_notnull[col1].values.reshape(-1, 1), data_df_cols_notnull[col2])
+        rfscore1 = max(rf_reg.score(data_df_cols_notnull[col1].values.reshape(-1, 1), data_df_cols_notnull[col2]), 0)
 
         rf_reg = RandomForestRegressor(n_estimators=10, min_samples_leaf=min_samples_leaf)
         rf_reg.fit(data_df_cols_notnull[col2].values.reshape(-1, 1), data_df_cols_notnull[col1].values)
-        rfscore2 = rf_reg.score(data_df_cols_notnull[col2].values.reshape(-1, 1), data_df_cols_notnull[col1])
+        rfscore2 = max(rf_reg.score(data_df_cols_notnull[col2].values.reshape(-1, 1), data_df_cols_notnull[col1]), 0)
 
         numeric_collinear_df.loc[jj] = col1, col2, len(data_df_cols_notnull), round(pcorr, 2), round((rfscore1+rfscore2)/2, 2)
 
@@ -171,8 +173,8 @@ def calc_corr_numeric_features(data_df, numeric_cols):
 
     start = time.time()
     numeric_collinear_summary_df = pd.DataFrame(
-        columns=["Avg Pearson Corr", "Avg RF Corr", "Max Pear Corr Feature", "Max Pear", "Max RF Corr Feature",
-                 "Max RF Corr"])
+        columns=["COLLIN Avg Pearson Corr", "COLLIN Avg RF Corr", "COLLIN Max Pear Corr Feature", "COLLIN Max Pear",
+                 "COLLIN Max RF Corr Feature", "COLLIN Max RF Corr"])
 
     for col in numeric_cols:
         numeric_collinear_df_col = numeric_collinear_df.loc[
@@ -191,11 +193,14 @@ def calc_corr_numeric_features(data_df, numeric_cols):
             round(numeric_collinear_df_col["Random Forest"].mean(), 2), max_pn_corr_feat,
             numeric_collinear_df_col["Pearson"].iloc[pn_xx], max_rf_corr_feat,
             numeric_collinear_df_col["Random Forest"].iloc[rf_xx])
+    
+    master_columns_df.loc[
+        numeric_collinear_summary_df.index, numeric_collinear_summary_df.columns] = numeric_collinear_summary_df
 
-    numeric_collinear_summary_df = numeric_collinear_summary_df.sort_values(by=["Max RF Corr"], ascending=False)
+    # numeric_collinear_summary_df = numeric_collinear_summary_df.sort_values(by=["Max RF Corr"], ascending=False)
     print(time.time() - start)
 
-    return numeric_collinear_df, numeric_collinear_summary_df
+    return numeric_collinear_df, master_columns_df
 
 
 def calc_max_rfscore(num=2):
@@ -317,7 +322,7 @@ def calc_nonnumeric_features_target_corr(data_df, non_numeric_cols, target_col, 
             # Train a random forest model:
             rf_reg = RandomForestRegressor(n_estimators=rf_n_estimators, min_samples_leaf=min_samples_leaf)
             rf_reg.fit(X_col, train_col_notnull[target_col].values)
-            rfscore = rf_reg.score(X_col, train_col_notnull[target_col])
+            rfscore = max(rf_reg.score(X_col, train_col_notnull[target_col]), 0)
 
             # The number of unique values is calculated for the purpose of
             # adjusting the Random Forest R^2:

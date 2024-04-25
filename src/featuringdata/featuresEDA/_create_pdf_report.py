@@ -283,7 +283,7 @@ def section_on_target_column_plot(pdf, plots_folder='./'):
     return pdf
 
 
-def section_on_feature_corr(pdf, numeric_df, numeric_collinear_summary_df, non_numeric_df, target_type='regression', plots_folder='./'):
+def section_on_feature_corr(pdf, master_columns_df, non_numeric_df, target_type='regression', plots_folder='./'):
 
     pdf.add_page()
 
@@ -298,6 +298,9 @@ def section_on_feature_corr(pdf, numeric_df, numeric_collinear_summary_df, non_n
     pdf.cell(w=0, h=10, txt="Correlations of Numeric Features with Target Variable", ln=1)
 
     pdf.ln(2)
+
+    numeric_df = master_columns_df.loc[
+        master_columns_df["Column Type"] == 'numeric'].sort_values(by=["Random Forest"], ascending=False)
 
     if len(numeric_df) == 0:
         pdf.cell(w=0, h=10, txt="** No numeric features in this dataset. **", align='C')
@@ -333,7 +336,10 @@ def section_on_feature_corr(pdf, numeric_df, numeric_collinear_summary_df, non_n
     # ------------------------------------------------------------------------
     # Correlations Between Numeric Features
 
-    if len(numeric_collinear_summary_df) > 0:
+    if "COLLIN Max RF Corr" in master_columns_df.columns:
+        numeric_collinear_summary_df = master_columns_df.loc[
+            master_columns_df["Column Type"] == 'numeric'].sort_values(by=["COLLIN Max RF Corr"], ascending=False)
+
         pdf.add_page()
         pdf.set_font('Arial', 'B', 12)
         pdf.cell(w=0, h=10, txt="Correlations between Numeric Features", ln=1)
@@ -363,19 +369,19 @@ def section_on_feature_corr(pdf, numeric_df, numeric_collinear_summary_df, non_n
         for ii in range(0, min(8, len(numeric_collinear_summary_df))):
             pdf = adjust_fontsize_for_feature_names(
                 pdf, numeric_collinear_summary_df.index[ii], box_width=44, start_fontsize=10)
-            pdf.cell(w=23, h=10, txt=numeric_collinear_summary_df["Avg Pearson Corr"].iloc[ii].astype(str), border=1,
+            pdf.cell(w=23, h=10, txt=numeric_collinear_summary_df["COLLIN Avg Pearson Corr"].iloc[ii].astype(str), border=1,
                      ln=0, align='R')
-            pdf.cell(w=22, h=10, txt=numeric_collinear_summary_df["Avg RF Corr"].iloc[ii].astype(str), border=1,
-                     ln=0, align='R')
-            pdf.set_font('Arial', '', 8)
-            pdf = adjust_fontsize_for_feature_names(
-                pdf, numeric_collinear_summary_df["Max Pear Corr Feature"].iloc[ii], box_width=33, start_fontsize=10)
-            pdf.cell(w=18, h=10, txt=numeric_collinear_summary_df["Max Pear"].iloc[ii].astype(str), border=1,
+            pdf.cell(w=22, h=10, txt=numeric_collinear_summary_df["COLLIN Avg RF Corr"].iloc[ii].astype(str), border=1,
                      ln=0, align='R')
             pdf.set_font('Arial', '', 8)
             pdf = adjust_fontsize_for_feature_names(
-                pdf, numeric_collinear_summary_df["Max RF Corr Feature"].iloc[ii], box_width=33, start_fontsize=10)
-            pdf.cell(w=17, h=10, txt=numeric_collinear_summary_df["Max RF Corr"].iloc[ii].astype(str), border=1,
+                pdf, numeric_collinear_summary_df["COLLIN Max Pear Corr Feature"].iloc[ii], box_width=33, start_fontsize=10)
+            pdf.cell(w=18, h=10, txt=numeric_collinear_summary_df["COLLIN Max Pear"].iloc[ii].astype(str), border=1,
+                     ln=0, align='R')
+            pdf.set_font('Arial', '', 8)
+            pdf = adjust_fontsize_for_feature_names(
+                pdf, numeric_collinear_summary_df["COLLIN Max RF Corr Feature"].iloc[ii], box_width=33, start_fontsize=10)
+            pdf.cell(w=17, h=10, txt=numeric_collinear_summary_df["COLLIN Max RF Corr"].iloc[ii].astype(str), border=1,
                      ln=1, align='R')
 
         pdf.ln(6)

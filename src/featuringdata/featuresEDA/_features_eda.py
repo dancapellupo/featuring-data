@@ -339,6 +339,8 @@ class FeaturesEDA:
         # --------------------------------------------------------------------
         # Calculate feature correlations
 
+        print('--- Feature Correlations ---')
+        
         self.numeric_cols = self.master_columns_df.loc[
             self.master_columns_df["Column Type"] == 'numeric'].index.to_list()
         self.non_numeric_cols = self.master_columns_df.loc[
@@ -347,22 +349,25 @@ class FeaturesEDA:
         # Calculate correlations between each numeric feature and the target
         # variable:
         if len(self.numeric_cols) > 0:
-            self.numeric_df = calc_numeric_features_target_corr(data_df, self.numeric_cols, self.target_col,
-                                                                self.target_type, rf_n_estimators='auto')
+            self.master_columns_df = calc_numeric_features_target_corr(data_df, self.numeric_cols, self.master_columns_df,
+                                                                       self.target_col, self.target_type, rf_n_estimators='auto')
         else:
             run_collinear = False
 
         # Calculate correlations between numeric features:
         if run_collinear:
-            self.numeric_collinear_df, self.numeric_collinear_summary_df = calc_corr_numeric_features(data_df,
-                                                                                                      self.numeric_cols)
+            self.numeric_collinear_df, self.master_columns_df = calc_corr_numeric_features(
+                data_df, self.numeric_cols, self.master_columns_df)
 
         # Calculate correlations between each categorical feature and the
         # target variable:
         if len(self.non_numeric_cols) > 0:
             self.non_numeric_df = calc_nonnumeric_features_target_corr(data_df, self.non_numeric_cols, self.target_col,
                                                                        self.target_type)
-
+        
+        # The counts of NULL values should be integers:
+        # self.master_columns_df["Count not-Null"] = self.master_columns_df["Count not-Null"].astype(int)
+        
         # --------------------------------------------------------------------
         # Generating PDF Document
 
@@ -376,16 +381,17 @@ class FeaturesEDA:
         #     self.numeric_df["Random Forest"], data_label="Random Forest", xlabel='Correlation Value',
         #     filename='numeric_columns_target_correlation_ecdf', overplot=True, outfile=True, plots_folder=plots_folder)
 
-        if len(self.numeric_df) > 0:
+        if len(self.numeric_cols) > 0:
+            rf_vals = self.master_columns_df.loc[self.master_columns_df["Column Type"] == 'numeric', "Random Forest"].values
             if self.target_type == 'regression':
-                plot_hist(data_for_bins=np.abs(self.numeric_df["Pearson"].values), label_bins='Pearson (abs)',
-                        data_for_line=self.numeric_df["Random Forest"].values, label_line="RF_corr",
-                        xlabel='Correlation Value', ylabel='Feature Count',
-                        filename='numeric_columns_target_correlation_hist', plots_folder=plots_folder)
+                pearson_vals = self.master_columns_df.loc[self.master_columns_df["Column Type"] == 'numeric', "Pearson"].values
+                plot_hist(data_for_bins=np.abs(pearson_vals), label_bins='Pearson (abs)', data_for_line=rf_vals,
+                          label_line="RF_corr", xlabel='Correlation Value', ylabel='Feature Count',
+                          filename='numeric_columns_target_correlation_hist', plots_folder=plots_folder)
             else:
-                plot_hist(data_for_bins=np.abs(self.numeric_df["Random Forest"].values), label_bins='RF Cohen-Kappa',
-                        xlabel='Correlation Value', ylabel='Feature Count',
-                        filename='numeric_columns_target_correlation_hist', plots_folder=plots_folder)
+                plot_hist(data_for_bins=rf_vals, label_bins='RF Cohen-Kappa',
+                          xlabel='Correlation Value', ylabel='Feature Count',
+                          filename='numeric_columns_target_correlation_hist', plots_folder=plots_folder)
 
         if run_collinear:
             plot_hist(data_for_bins=np.abs(self.numeric_collinear_df["Pearson"].values), label_bins='Pearson (abs)',
@@ -399,7 +405,7 @@ class FeaturesEDA:
                       xlabel='Correlation Value', ylabel='Feature Count',
                       filename='non_numeric_columns_target_correlation_hist', plots_folder=plots_folder)
 
-        self.pdf = section_on_feature_corr(self.pdf, self.numeric_df, self.numeric_collinear_summary_df,
+        self.pdf = section_on_feature_corr(self.pdf, self.master_columns_df,
                                            self.non_numeric_df, self.target_type, plots_folder=plots_folder)
 
         # --------------------------------------------------------------------
