@@ -284,7 +284,7 @@ def section_on_target_column_plot(pdf, plots_folder='./'):
     return pdf
 
 
-def section_on_feature_corr(pdf, master_columns_df, non_numeric_df, target_type='regression', plots_folder='./'):
+def section_on_feature_corr(pdf, master_columns_df, target_type='regression', plots_folder='./'):
 
     pdf.add_page()
 
