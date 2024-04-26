@@ -163,7 +163,7 @@ class FeatureSelector:
         self.feature_importance_dict_list = list()
         self.feat_import_bycol_df = pd.DataFrame()
 
-    def run(self, data_df, numeric_df=None, non_numeric_df=None):
+    def run(self, data_df, master_columns_df=None, numeric_df=None, non_numeric_df=None):
         """
         Run an iterative model training on a given dataset:
 
@@ -303,12 +303,13 @@ class FeatureSelector:
         xgb_reg.fit(X_train_best, y_train_comb[data_ind], eval_set=[(X_test_best, y_test_comb[data_ind])], verbose=True)
 
         y_test_pred = xgb_reg.predict(X_test_best)
-        print(xgb_reg.predict_proba(X_test_best))
         
         if self.target_log:
-            mae_final = calc_model_metric(np.expm1(y_test_comb[data_ind]), np.expm1(y_test_pred), target_type=self.target_type, metric_type='easy')
+            mae_final = calc_model_metric(np.expm1(y_test_comb[data_ind]), np.expm1(y_test_pred),
+                                          target_type=self.target_type, metric_type='easy')
         else:
-            mae_final = calc_model_metric(y_test_comb[data_ind], y_test_pred, target_type=self.target_type, metric_type='easy')
+            mae_final = calc_model_metric(y_test_comb[data_ind], y_test_pred, target_type=self.target_type,
+                                          metric_type='easy')
         print('\nFinal MAE: {}\n'.format(mae_final))
 
         # --------------------
@@ -435,22 +436,25 @@ class FeatureSelector:
         cols_best_iter = self.feat_import_bycol_df.dropna().index
         # This plot can only be generated if a dataframe with feature
         #  correlations is passed to the function:
-        if numeric_df is not None:
+        if master_columns_df is not None:
             # Get a list of features that are both numeric and are part of the
             #  "best" training iteration:
-            numeric_best_feat = set(cols_best_iter).intersection(set(numeric_df.index))
-            print('Number of numeric features in best iteration: {}'.format(len(numeric_best_feat)))
+            numeric_df = master_columns_df.loc[master_columns_df["Column Type"] == 'numeric']
+            if len(numeric_df) > 0:
+                numeric_best_feat = set(cols_best_iter).intersection(set(numeric_df.index))
+                print('Number of numeric features in best iteration: {}'.format(len(numeric_best_feat)))
 
-            x, y = [], []
-            for feat in numeric_best_feat:
-                x.append(numeric_df.loc[feat, "Random Forest"])
-                y.append(self.feat_import_bycol_df.loc[feat, "best_feat_imp"])
+                x, y = [], []
+                for feat in numeric_best_feat:
+                    x.append(numeric_df.loc[feat, "Random Forest"])
+                    y.append(self.feat_import_bycol_df.loc[feat, "best_feat_imp"])
 
-            f, ax = plot_xy(x, y, xlabel='RF Correlation between Feature and Target', ylabel='Feature Importance',
-                            leg_label='Numeric Feature', overplot=False, outfile=False, plots_folder=plots_folder,
-                            title='target_correlation_vs_feature_importance')
+                f, ax = plot_xy(x, y, xlabel='RF Correlation between Feature and Target', ylabel='Feature Importance',
+                                leg_label='Numeric Feature', overplot=False, outfile=False, plots_folder=plots_folder,
+                                title='target_correlation_vs_feature_importance')
 
-            if non_numeric_df is not None:
+            non_numeric_df = master_columns_df.loc[master_columns_df["Column Type"] == 'non-numeric']
+            if len(non_numeric_df) > 0:
                 feat_import_bycol_df_best = self.feat_import_bycol_df.dropna()
                 # non_numeric_best_feat = set(cols_best_iter).difference()
 
