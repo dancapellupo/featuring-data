@@ -153,9 +153,6 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
     # mpl.use("Agg")
     # print('*** {} ***'.format(mpl.get_backend()))
 
-    start = time.time()
-    time1, time2 = 0., 0.
-
     # Set box plot display parameters:
     if catplot_style != 'scatterdense':
         box_params = {'whis': [0, 100], 'width': 0.6}
@@ -189,10 +186,10 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
         f, ax = plt.subplots(figsize=(9, 6))
 
         data_df_col_notnull = data_df[[column, target_col]].dropna().reset_index()
-
-        # TODO: Use already calculated DF of unique values:
+        
         # TODO: User can define this value:
-        if (not numeric) or (np.unique(data_df_col_notnull[column]).size <= 10):
+        num_uniq = correlation_df.loc[column, "Num Unique Values"]
+        if (not numeric) or (num_uniq <= 10):
             
             if target_type == 'regression':
                 if not numeric:
@@ -200,16 +197,13 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
                     xaxis_order = data_df_col_notnull.groupby(
                         by=[column]).median().sort_values(by=[target_col]).index.tolist()
 
-                    start1 = time.time()
                     sns.boxplot(data_df_col_notnull, x=column, y=target_col, order=xaxis_order, **box_params)
-                    time1 += (time.time() - start1)
 
                 else:
                     # Standard Box Plot
                     sns.boxplot(data_df_col_notnull, x=column, y=target_col, **box_params)  # hue="method", palette="vlag"
 
                 # Add in points to show each observation
-                start2 = time.time()
                 if (catplot_style != 'scatterdense') and (len(data_df_col_notnull) > 1000):
                     data_df_col_notnull = data_df_col_notnull.sample(n=1000, replace=False)
 
@@ -243,9 +237,7 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
                 sns.histplot(data_df_col_notnull, x=column, hue=target_col, discrete=True, shrink=0.6, multiple="dodge")  # "stack"
                 ax.set_xticks(data_df_col_notnull[column].unique())
 
-            # time2 += (time.time() - start2)
-
-            if (not numeric) and data_df_col_notnull[column].nunique() >= 10:
+            if (not numeric) and num_uniq >= 10:
                 plt.xticks(rotation=45)
                 plt.grid(axis='x')
 
@@ -328,6 +320,4 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
 
     # mpl.use(backend_)  # Reset backend
     # print('*** {} ***'.format(mpl.get_backend()))
-
-    # print(time.time() - start, time1, time2)
 

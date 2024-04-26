@@ -323,7 +323,7 @@ def calc_nonnumeric_features_target_corr(data_df, non_numeric_cols, master_colum
 
             # The number of unique values is calculated for the purpose of
             # adjusting the Random Forest R^2:
-            num_uniq = train_col_notnull[col].nunique()
+            num_uniq = master_columns_df.loc[col, "Num Unique Values"]
             # Adjust the R^2 based on the number of unique values affecting a
             # feature's maximum theoretical R^2:
             rfscore_norm = rfscore * (1 / calc_max_rfscore(num_uniq))
@@ -339,7 +339,7 @@ def calc_nonnumeric_features_target_corr(data_df, non_numeric_cols, master_colum
             rf_ck = max(cohen_kappa_score(train_col_notnull[target_col].values, y_train_pred), 0)
 
             # Save the results as a new row in the dataframe for output:
-            num_uniq = train_col_notnull[col].nunique()
+            num_uniq = master_columns_df.loc[col, "Num Unique Values"]
             non_numeric_df.loc[col] = len(train_col_notnull), round(rf_ck, 2), round(rf_ck, 2)
 
     master_columns_df.loc[non_numeric_df.index, non_numeric_df.columns] = non_numeric_df
