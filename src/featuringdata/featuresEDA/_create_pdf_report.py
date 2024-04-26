@@ -404,6 +404,10 @@ def section_on_feature_corr(pdf, master_columns_df, non_numeric_df, target_type=
 
     pdf.ln(2)
 
+    sort_col = "RF_norm" if "RF_norm" in master_columns_df.columns else "Random Forest"
+    non_numeric_df = master_columns_df.loc[
+        master_columns_df["Column Type"] == 'non-numeric'].sort_values(by=[sort_col], ascending=False)
+
     if len(non_numeric_df) == 0:
         pdf.cell(w=0, h=10, txt="** No non-numeric features in this dataset. **", align='C')
         return pdf
@@ -424,7 +428,7 @@ def section_on_feature_corr(pdf, master_columns_df, non_numeric_df, target_type=
                  txt=non_numeric_df["Count not-Null"].iloc[ii].astype(str),
                  border=1, ln=0, align='R')
         pdf.cell(w=28, h=10,
-                 txt=non_numeric_df["Num Unique"].iloc[ii].astype(str),
+                 txt=non_numeric_df["Num Unique Values"].iloc[ii].astype(str),
                  border=1, ln=0, align='R')
         pdf.cell(w=30, h=10,
                  txt=non_numeric_df["Random Forest"].iloc[ii].astype(str),

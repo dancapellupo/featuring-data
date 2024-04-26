@@ -105,8 +105,8 @@ def plot_scatter_density(x, y, fig=None, ax=None, sort=True, bins=20, **kwargs):
     return ax
 
 
-def plot_feature_values(data_df, columns_list, correlation_df, target_col, numeric=True, target_type='regression', catplot_style='scatterdense',
-                        plots_folder='./plots'):
+def plot_feature_values(data_df, columns_list, correlation_df, target_col, numeric=True, target_type='regression',
+                        catplot_style='scatterdense', plots_folder='./plots'):
     """
     Generate EDA plots that show each feature versus the target variable.
 

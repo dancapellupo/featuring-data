@@ -144,7 +144,6 @@ def calc_corr_numeric_features(data_df, numeric_cols, master_columns_df):
 
     rf_n_estimators, min_samples_leaf = get_random_forest_hyperparams(len(data_df))
 
-    start = time.time()
     numeric_collinear_df = pd.DataFrame(columns=["Feature1", "Feature2", "Count not-Null", "Pearson", "Random Forest"])
 
     jj = 0
@@ -169,9 +168,7 @@ def calc_corr_numeric_features(data_df, numeric_cols, master_columns_df):
         jj += 1
 
     numeric_collinear_df = numeric_collinear_df.sort_values(by=["Random Forest"], ascending=False)
-    print(time.time() - start)
 
-    start = time.time()
     numeric_collinear_summary_df = pd.DataFrame(
         columns=["COLLIN Avg Pearson Corr", "COLLIN Avg RF Corr", "COLLIN Max Pear Corr Feature", "COLLIN Max Pear",
                  "COLLIN Max RF Corr Feature", "COLLIN Max RF Corr"])
@@ -198,7 +195,6 @@ def calc_corr_numeric_features(data_df, numeric_cols, master_columns_df):
         numeric_collinear_summary_df.index, numeric_collinear_summary_df.columns] = numeric_collinear_summary_df
 
     # numeric_collinear_summary_df = numeric_collinear_summary_df.sort_values(by=["Max RF Corr"], ascending=False)
-    print(time.time() - start)
 
     return numeric_collinear_df, master_columns_df
 
@@ -252,7 +248,8 @@ def calc_max_rfscore(num=2):
     return r2
 
 
-def calc_nonnumeric_features_target_corr(data_df, non_numeric_cols, target_col, target_type='regression'):
+def calc_nonnumeric_features_target_corr(data_df, non_numeric_cols, master_columns_df, target_col,
+                                         target_type='regression'):
     """
     Calculate the correlation between non-numeric features and the target
     variable.
@@ -304,9 +301,9 @@ def calc_nonnumeric_features_target_corr(data_df, non_numeric_cols, target_col, 
         rf_n_estimators, min_samples_leaf))
 
     if target_type == 'regression':
-        non_numeric_df = pd.DataFrame(columns=["Count not-Null", "Num Unique", "Random Forest", "RF_norm"])
+        non_numeric_df = pd.DataFrame(columns=["Count not-Null", "Random Forest", "RF_norm"])
     else:
-        non_numeric_df = pd.DataFrame(columns=["Count not-Null", "Num Unique", "Random Forest", "RF_norm"])
+        non_numeric_df = pd.DataFrame(columns=["Count not-Null", "Random Forest", "RF_norm"])
 
     # Loop over each categorical feature:
     print('Running correlations of non-numeric features to target variable...')
@@ -332,7 +329,7 @@ def calc_nonnumeric_features_target_corr(data_df, non_numeric_cols, target_col, 
             rfscore_norm = rfscore * (1 / calc_max_rfscore(num_uniq))
 
             # Save the results as a new row in the dataframe for output:
-            non_numeric_df.loc[col] = len(train_col_notnull), num_uniq, round(rfscore, 2), round(rfscore_norm, 2)
+            non_numeric_df.loc[col] = len(train_col_notnull), round(rfscore, 2), round(rfscore_norm, 2)
 
         else:
             # Train a random forest model with just that feature and the target variable:
@@ -343,15 +340,17 @@ def calc_nonnumeric_features_target_corr(data_df, non_numeric_cols, target_col, 
 
             # Save the results as a new row in the dataframe for output:
             num_uniq = train_col_notnull[col].nunique()
-            non_numeric_df.loc[col] = len(train_col_notnull), num_uniq, round(rf_ck, 2), round(rf_ck, 2)
+            non_numeric_df.loc[col] = len(train_col_notnull), round(rf_ck, 2), round(rf_ck, 2)
+
+    master_columns_df.loc[non_numeric_df.index, non_numeric_df.columns] = non_numeric_df
 
     # The counts of NULL values and unique values should be integers:
-    non_numeric_df["Count not-Null"] = non_numeric_df["Count not-Null"].astype(int)
-    non_numeric_df["Num Unique"] = non_numeric_df["Num Unique"].astype(int)
+    # non_numeric_df["Count not-Null"] = non_numeric_df["Count not-Null"].astype(int)
+    # non_numeric_df["Num Unique"] = non_numeric_df["Num Unique"].astype(int)
 
     # Sort the dataframe by the adjusted Random Forest R^2 for each feature,
     # in descending order:
-    non_numeric_df = non_numeric_df.sort_values(by=["RF_norm"], ascending=False)
+    # non_numeric_df = non_numeric_df.sort_values(by=["RF_norm"], ascending=False)
 
-    return non_numeric_df
+    return master_columns_df
 

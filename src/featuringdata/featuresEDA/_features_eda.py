@@ -203,10 +203,7 @@ class FeaturesEDA:
         # TODO: Combine unique values and corr info into one DF
         self.numeric_cols = None
         self.non_numeric_cols = None
-        self.numeric_df = pd.DataFrame()
         self.numeric_collinear_df = pd.DataFrame()
-        self.numeric_collinear_summary_df = pd.DataFrame()
-        self.non_numeric_df = pd.DataFrame()
 
     def run_initial_eda(self, data_df, output=True):
         """
@@ -340,7 +337,7 @@ class FeaturesEDA:
         # Calculate feature correlations
 
         print('--- Feature Correlations ---')
-        
+
         self.numeric_cols = self.master_columns_df.loc[
             self.master_columns_df["Column Type"] == 'numeric'].index.to_list()
         self.non_numeric_cols = self.master_columns_df.loc[
@@ -362,11 +359,13 @@ class FeaturesEDA:
         # Calculate correlations between each categorical feature and the
         # target variable:
         if len(self.non_numeric_cols) > 0:
-            self.non_numeric_df = calc_nonnumeric_features_target_corr(data_df, self.non_numeric_cols, self.target_col,
-                                                                       self.target_type)
+            self.master_columns_df = calc_nonnumeric_features_target_corr(data_df, self.non_numeric_cols, self.master_columns_df,
+                                                                          self.target_col, self.target_type)
         
         # The counts of NULL values should be integers:
-        # self.master_columns_df["Count not-Null"] = self.master_columns_df["Count not-Null"].astype(int)
+        if self.target_col is not None:
+            self.master_columns_df.loc[self.target_col, "Count not-Null"] = data_df[self.target_col].notna().sum()
+        self.master_columns_df["Count not-Null"] = self.master_columns_df["Count not-Null"].astype('Int64')
         
         # --------------------------------------------------------------------
         # Generating PDF Document
@@ -382,16 +381,18 @@ class FeaturesEDA:
         #     filename='numeric_columns_target_correlation_ecdf', overplot=True, outfile=True, plots_folder=plots_folder)
 
         if len(self.numeric_cols) > 0:
-            rf_vals = self.master_columns_df.loc[self.master_columns_df["Column Type"] == 'numeric', "Random Forest"].values
+            rf_vals = self.master_columns_df.loc[
+                self.master_columns_df["Column Type"] == 'numeric', "Random Forest"].values
             if self.target_type == 'regression':
-                pearson_vals = self.master_columns_df.loc[self.master_columns_df["Column Type"] == 'numeric', "Pearson"].values
+                pearson_vals = self.master_columns_df.loc[
+                    self.master_columns_df["Column Type"] == 'numeric', "Pearson"].values
                 plot_hist(data_for_bins=np.abs(pearson_vals), label_bins='Pearson (abs)', data_for_line=rf_vals,
                           label_line="RF_corr", xlabel='Correlation Value', ylabel='Feature Count',
                           filename='numeric_columns_target_correlation_hist', plots_folder=plots_folder)
             else:
-                plot_hist(data_for_bins=rf_vals, label_bins='RF Cohen-Kappa',
-                          xlabel='Correlation Value', ylabel='Feature Count',
-                          filename='numeric_columns_target_correlation_hist', plots_folder=plots_folder)
+                plot_hist(data_for_bins=rf_vals, label_bins='RF Cohen-Kappa', xlabel='Correlation Value',
+                          ylabel='Feature Count', filename='numeric_columns_target_correlation_hist',
+                          plots_folder=plots_folder)
 
         if run_collinear:
             plot_hist(data_for_bins=np.abs(self.numeric_collinear_df["Pearson"].values), label_bins='Pearson (abs)',
@@ -399,14 +400,17 @@ class FeaturesEDA:
                       xlabel='Correlation Value', ylabel='Count of Numeric Feature Pairs',
                       filename='numeric_columns_collinear_correlation_hist', plots_folder=plots_folder)
 
-        if len(self.non_numeric_df) > 0:
-            plot_hist(data_for_bins=self.non_numeric_df["Random Forest"].values, label_bins='RF_corr',
-                      data_for_line=self.non_numeric_df["RF_norm"].values, label_line="RF_corr (norm)",
-                      xlabel='Correlation Value', ylabel='Feature Count',
+        if len(self.non_numeric_cols) > 0:
+            rf_vals = self.master_columns_df.loc[
+                self.master_columns_df["Column Type"] == 'non-numeric', "Random Forest"].values
+            rf_corr_vals = self.master_columns_df.loc[
+                self.master_columns_df["Column Type"] == 'non-numeric', "RF_norm"].values
+            plot_hist(data_for_bins=rf_vals, label_bins='RF_corr', data_for_line=rf_corr_vals,
+                      label_line="RF_corr (norm)", xlabel='Correlation Value', ylabel='Feature Count',
                       filename='non_numeric_columns_target_correlation_hist', plots_folder=plots_folder)
 
-        self.pdf = section_on_feature_corr(self.pdf, self.master_columns_df,
-                                           self.non_numeric_df, self.target_type, plots_folder=plots_folder)
+        self.pdf = section_on_feature_corr(self.pdf, self.master_columns_df, self.target_type,
+                                           plots_folder=plots_folder)
 
         # --------------------------------------------------------------------
         # Generate EDA plots
@@ -415,14 +419,16 @@ class FeaturesEDA:
             # ----------------------------------
             # Generate plots of numeric features
 
-            if len(self.numeric_df) > 0:
+            if len(self.numeric_cols) > 0:
                 # Order the features by correlation with target variable, in
                 # descending order:
-                columns_list_ordered = self.numeric_df.index
+                columns_list_ordered = self.master_columns_df.loc[
+                    self.master_columns_df["Column Type"] == 'numeric'].sort_values(
+                        by=["Random Forest"], ascending=False).index.to_list()
 
                 # Generate plots of numeric features, and save them to the
                 # timestamped directory defined above:
-                plot_feature_values(data_df, columns_list_ordered, self.numeric_df, target_col=self.target_col,
+                plot_feature_values(data_df, columns_list_ordered, self.master_columns_df, target_col=self.target_col,
                                     numeric=True, target_type=self.target_type, plots_folder=plots_folder)
 
                 # Add the plots to the PDF:
@@ -432,14 +438,16 @@ class FeaturesEDA:
             # ----------------------------------
             # Generate plots of non-numeric features
 
-            if len(self.non_numeric_df) > 0:
+            if len(self.non_numeric_cols) > 0:
                 # Order the features by correlation with target variable, in
                 # descending order:
-                columns_list_ordered = self.non_numeric_df.index
+                columns_list_ordered = self.master_columns_df.loc[
+                    self.master_columns_df["Column Type"] == 'non-numeric'].sort_values(
+                        by=["RF_norm"], ascending=False).index.to_list()
 
                 # Generate plots of non-numeric features, and save them to the
                 # timestamped directory defined above:
-                plot_feature_values(data_df, columns_list_ordered, self.non_numeric_df, target_col=self.target_col,
+                plot_feature_values(data_df, columns_list_ordered, self.master_columns_df, target_col=self.target_col,
                                     numeric=False, target_type=self.target_type, plots_folder=plots_folder)
                 
                 # Add the plots to the PDF:
