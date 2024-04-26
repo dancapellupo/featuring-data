@@ -317,12 +317,13 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
                     column, target_col, correlation_df.loc[column, "Pearson"],
                     correlation_df.loc[column, "Mutual Info"], correlation_df.loc[column, "Random Forest"]))
             else:
-                ax.set_title('{} vs {} : RF={}'.format(
-                    column, target_col, correlation_df.loc[column, "Random Forest"]))
+                ax.set_title('{} vs {} : MI={}, RF={}'.format(
+                    column, target_col, correlation_df.loc[column, "Mutual Info"],
+                    correlation_df.loc[column, "Random Forest"]))
         else:
-            ax.set_title('{} vs {} : RF={}, RF_norm={}'.format(
-                column, target_col, correlation_df.loc[column, "Random Forest"],
-                correlation_df.loc[column, "RF_norm"]))
+            ax.set_title('{} vs {} : MI={}, RF={}, RF_norm={}'.format(
+                column, target_col, correlation_df.loc[column, "Mutual Info"],
+                correlation_df.loc[column, "Random Forest"], correlation_df.loc[column, "RF_norm"]))
 
         plt.savefig('{}/{}_vs_{}.png'.format(plots_folder, column, target_col), bbox_inches='tight')
 

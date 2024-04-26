@@ -405,10 +405,15 @@ class FeaturesEDA:
                 self.master_columns_df["Column Type"] == 'non-numeric', "Random Forest"].values
             rf_corr_vals = self.master_columns_df.loc[
                 self.master_columns_df["Column Type"] == 'non-numeric', "RF_norm"].values
-            plot_hist(data_for_bins=rf_vals, label_bins='RF_corr', data_for_line=rf_corr_vals,
-                      label_line="RF_corr (norm)", xlabel='Correlation Value', ylabel='Feature Count',
-                      filename='non_numeric_columns_target_correlation_hist', plots_folder=plots_folder)
-
+            if self.target_type == 'regression':
+                plot_hist(data_for_bins=rf_vals, label_bins='RF_corr', data_for_line=rf_corr_vals,
+                          label_line="RF_corr (norm)", xlabel='Correlation Value', ylabel='Feature Count',
+                          filename='non_numeric_columns_target_correlation_hist', plots_folder=plots_folder)
+            else:
+                plot_hist(data_for_bins=rf_vals, label_bins='RF_corr', xlabel='Correlation Value',
+                          ylabel='Feature Count', filename='non_numeric_columns_target_correlation_hist',
+                          plots_folder=plots_folder)
+        
         self.pdf = section_on_feature_corr(self.pdf, self.master_columns_df, self.target_type,
                                            plots_folder=plots_folder)
 

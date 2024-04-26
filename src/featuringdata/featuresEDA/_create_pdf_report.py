@@ -311,8 +311,8 @@ def section_on_feature_corr(pdf, master_columns_df, target_type='regression', pl
         pdf.set_font('Arial', 'B', 12)
         pdf.cell(w=60, h=10, txt='Numeric Feature', border=1, ln=0, align='C')
         pdf.cell(w=35, h=10, txt='Count non-Null', border=1, ln=0, align='C')
-        if target_type == 'regression':
-            pdf.cell(w=35, h=10, txt='Pearson Corr', border=1, ln=0, align='C')
+        txt = 'Pearson Corr' if target_type == 'regression' else 'Mutual Info'
+        pdf.cell(w=35, h=10, txt=txt, border=1, ln=0, align='C')
         pdf.cell(w=35, h=10, txt='RF Corr', border=1, ln=1, align='C')
 
         # Table contents
@@ -320,10 +320,10 @@ def section_on_feature_corr(pdf, master_columns_df, target_type='regression', pl
         for ii in range(0, min(8, len(numeric_df))):
             pdf = adjust_fontsize_for_feature_names(pdf, numeric_df.index[ii])
             pdf.cell(w=35, h=10, txt=numeric_df["Count not-Null"].iloc[ii].astype(str), border=1, ln=0, align='R')
-            if target_type == 'regression':
-                pdf.cell(w=35, h=10, txt=numeric_df["Pearson"].iloc[ii].astype(str), border=1, ln=0, align='R')
+            cell = "Pearson" if target_type == 'regression' else "Mutual Info"
+            pdf.cell(w=35, h=10, txt=numeric_df[cell].iloc[ii].astype(str), border=1, ln=0, align='R')
             pdf.cell(w=35, h=10, txt=numeric_df["Random Forest"].iloc[ii].astype(str), border=1, ln=1, align='R')
-
+        
         pdf.ln(6)
         pdf.image('{}/numeric_columns_target_correlation_hist.png'.format(plots_folder),
                   x=10, y=None, w=160, h=0, type='PNG')
@@ -415,28 +415,36 @@ def section_on_feature_corr(pdf, master_columns_df, target_type='regression', pl
 
     # Table Header
     pdf.set_font('Arial', 'B', 12)
-    pdf.cell(w=60, h=10, txt='Non-Numeric Feature', border=1, ln=0, align='C')
-    pdf.cell(w=32, h=10, txt='Count non-Null', border=1, ln=0, align='C')
-    pdf.cell(w=28, h=10, txt='Num Unique', border=1, ln=0, align='C')
-    pdf.cell(w=30, h=10, txt='RF Corr', border=1, ln=0, align='C')
-    pdf.cell(w=30, h=10, txt='RF Corr (norm)', border=1, ln=1, align='C')
+    pdf.cell(w=60, h=6, txt='Non-Numeric Feature', border='LTR', ln=0, align='C')
+    pdf.cell(w=24, h=6, txt='Count', border='LTR', ln=0, align='C')
+    pdf.cell(w=24, h=6, txt='Num', border='LTR', ln=0, align='C')
+    pdf.cell(w=26, h=6, txt='Mutual', border='LTR', ln=0, align='C')
+    if target_type == 'regression':
+        pdf.cell(w=26, h=6, txt='RF Corr', border='LTR', ln=0, align='C')
+    pdf.cell(w=26, h=6, txt='RF Corr', border='LTR', ln=1, align='C')
+
+    pdf.cell(w=60, h=6, txt='', border='LBR', ln=0, align='C')
+    pdf.cell(w=24, h=6, txt='non-Null', border='LBR', ln=0, align='C')
+    pdf.cell(w=24, h=6, txt='Unique', border='LBR', ln=0, align='C')
+    pdf.cell(w=26, h=6, txt='Info', border='LBR', ln=0, align='C')
+    if target_type == 'regression':
+        pdf.cell(w=26, h=6, txt='', border='LBR', ln=0, align='C')
+        pdf.cell(w=26, h=6, txt='(norm)', border='LBR', ln=1, align='C')
+    else:
+        pdf.cell(w=26, h=6, txt='', border='LBR', ln=1, align='C')
 
     # Table contents
     pdf.set_font('Arial', '', 12)
     for ii in range(0, min(8, len(non_numeric_df))):
         pdf = adjust_fontsize_for_feature_names(pdf, non_numeric_df.index[ii])
-        pdf.cell(w=32, h=10,
-                 txt=non_numeric_df["Count not-Null"].iloc[ii].astype(str),
-                 border=1, ln=0, align='R')
-        pdf.cell(w=28, h=10,
-                 txt=non_numeric_df["Num Unique Values"].iloc[ii].astype(str),
-                 border=1, ln=0, align='R')
-        pdf.cell(w=30, h=10,
-                 txt=non_numeric_df["Random Forest"].iloc[ii].astype(str),
-                 border=1, ln=0, align='R')
-        pdf.cell(w=30, h=10,
-                 txt=non_numeric_df["RF_norm"].iloc[ii].astype(str),
-                 border=1, ln=1, align='R')
+        pdf.cell(w=24, h=10, txt=non_numeric_df["Count not-Null"].iloc[ii].astype(str), border=1, ln=0, align='R')
+        pdf.cell(w=24, h=10, txt=non_numeric_df["Num Unique Values"].iloc[ii].astype(str), border=1, ln=0, align='R')
+        pdf.cell(w=26, h=10, txt=non_numeric_df["Mutual Info"].iloc[ii].astype(str), border=1, ln=0, align='R')
+        if target_type == 'regression':
+            pdf.cell(w=26, h=10, txt=non_numeric_df["Random Forest"].iloc[ii].astype(str), border=1, ln=0, align='R')
+            pdf.cell(w=26, h=10, txt=non_numeric_df["RF_norm"].iloc[ii].astype(str), border=1, ln=1, align='R')
+        else:
+            pdf.cell(w=26, h=10, txt=non_numeric_df["Random Forest"].iloc[ii].astype(str), border=1, ln=1, align='R')
 
     pdf.ln(6)
     pdf.image('{}/non_numeric_columns_target_correlation_hist.png'.format(plots_folder),

@@ -8,7 +8,8 @@ import numpy as np
 import pandas as pd
 
 from scipy.stats import pearsonr
-from sklearn.feature_selection import mutual_info_regression
+from sklearn.preprocessing import LabelEncoder
+from sklearn.feature_selection import mutual_info_regression, mutual_info_classif
 from sklearn.metrics import cohen_kappa_score
 
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
@@ -89,7 +90,7 @@ def calc_numeric_features_target_corr(data_df, numeric_cols, master_columns_df, 
     if target_type == 'regression':
         numeric_df = pd.DataFrame(columns=["Count not-Null", "Pearson", "Mutual Info", "Random Forest"])
     else:
-        numeric_df = pd.DataFrame(columns=["Count not-Null", "Random Forest"])
+        numeric_df = pd.DataFrame(columns=["Count not-Null", "Mutual Info", "Random Forest"])
 
     # Loop over each numeric feature:
     print('Running correlations of numeric features to target variable...')
@@ -113,6 +114,10 @@ def calc_numeric_features_target_corr(data_df, numeric_cols, master_columns_df, 
             numeric_df.loc[col] = len(data_df_col_notnull), round(pcorr, 2), round(minfo, 2), round(max(rfscore, 0), 2)
 
         else:
+            # Calculate the Mutual Information for feature and target:
+            minfo = mutual_info_classif(
+                data_df_col_notnull[col].values.reshape(-1, 1), data_df_col_notnull[target_col].values)[0]
+
             # Train a random forest model with just that feature and the target variable:
             rf_class = RandomForestClassifier(n_estimators=rf_n_estimators, min_samples_leaf=min_samples_leaf)
             rf_class.fit(data_df_col_notnull[col].values.reshape(-1, 1), data_df_col_notnull[target_col].values)
@@ -120,7 +125,7 @@ def calc_numeric_features_target_corr(data_df, numeric_cols, master_columns_df, 
             rf_ck = max(cohen_kappa_score(data_df_col_notnull[target_col].values, y_train_pred), 0)
 
             # Save the results as a new row in the dataframe for output:
-            numeric_df.loc[col] = len(data_df_col_notnull), round(rf_ck, 2)
+            numeric_df.loc[col] = len(data_df_col_notnull), round(minfo, 2), round(rf_ck, 2)
 
     master_columns_df.loc[numeric_df.index, numeric_df.columns] = numeric_df
 
@@ -301,9 +306,9 @@ def calc_nonnumeric_features_target_corr(data_df, non_numeric_cols, master_colum
         rf_n_estimators, min_samples_leaf))
 
     if target_type == 'regression':
-        non_numeric_df = pd.DataFrame(columns=["Count not-Null", "Random Forest", "RF_norm"])
+        non_numeric_df = pd.DataFrame(columns=["Count not-Null", "Mutual Info", "Random Forest", "RF_norm"])
     else:
-        non_numeric_df = pd.DataFrame(columns=["Count not-Null", "Random Forest", "RF_norm"])
+        non_numeric_df = pd.DataFrame(columns=["Count not-Null", "Mutual Info", "Random Forest", "RF_norm"])
 
     # Loop over each categorical feature:
     print('Running correlations of non-numeric features to target variable...')
@@ -316,6 +321,11 @@ def calc_nonnumeric_features_target_corr(data_df, non_numeric_cols, master_colum
         X_col = pd.get_dummies(train_col_notnull[col], dtype=int)
 
         if target_type == 'regression':
+            # Calculate the Mutual Information for feature and target:
+            minfo = mutual_info_regression(
+                LabelEncoder().fit_transform(train_col_notnull[col]).reshape(-1, 1),
+                train_col_notnull[target_col].values, discrete_features=True)[0]
+
             # Train a random forest model:
             rf_reg = RandomForestRegressor(n_estimators=rf_n_estimators, min_samples_leaf=min_samples_leaf)
             rf_reg.fit(X_col, train_col_notnull[target_col].values)
@@ -329,9 +339,12 @@ def calc_nonnumeric_features_target_corr(data_df, non_numeric_cols, master_colum
             rfscore_norm = rfscore * (1 / calc_max_rfscore(num_uniq))
 
             # Save the results as a new row in the dataframe for output:
-            non_numeric_df.loc[col] = len(train_col_notnull), round(rfscore, 2), round(rfscore_norm, 2)
+            non_numeric_df.loc[col] = len(train_col_notnull), round(minfo, 2), round(rfscore, 2), round(rfscore_norm, 2)
 
         else:
+            minfo = mutual_info_classif(LabelEncoder().fit_transform(train_col_notnull[col]).reshape(-1, 1),
+                                        train_col_notnull[target_col].values, discrete_features=True)[0]
+
             # Train a random forest model with just that feature and the target variable:
             rf_class = RandomForestClassifier(n_estimators=rf_n_estimators, min_samples_leaf=min_samples_leaf)
             rf_class.fit(X_col, train_col_notnull[target_col].values)
@@ -340,7 +353,7 @@ def calc_nonnumeric_features_target_corr(data_df, non_numeric_cols, master_colum
 
             # Save the results as a new row in the dataframe for output:
             num_uniq = master_columns_df.loc[col, "Num Unique Values"]
-            non_numeric_df.loc[col] = len(train_col_notnull), round(rf_ck, 2), round(rf_ck, 2)
+            non_numeric_df.loc[col] = len(train_col_notnull), round(minfo, 2), round(rf_ck, 2), round(rf_ck, 2)
 
     master_columns_df.loc[non_numeric_df.index, non_numeric_df.columns] = non_numeric_df
 
