@@ -175,7 +175,7 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
             ymin = target_min - 0.025*max_minus_min
             ymax = target_max + 0.025*max_minus_min
             print('New target min/max values:', target_min, target_max)
-            print('Set y-axis limits (for display only):', ymin, ymax)
+            print('Set y-axis limits (for display only): {:.2f} {:.2f}.\n'.format(ymin, ymax))
             set_ylim = True
 
     sns.set_theme(style="ticks")
@@ -186,10 +186,20 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
         f, ax = plt.subplots(figsize=(9, 6))
 
         data_df_col_notnull = data_df[[column, target_col]].dropna().reset_index()
-        
+
         # TODO: User can define this value:
         num_uniq = correlation_df.loc[column, "Num Unique Values"]
         if (not numeric) or (num_uniq <= 10):
+
+            if num_uniq > 20:
+                orig_len = len(data_df_col_notnull)
+                value_counts_index = data_df_col_notnull[column].value_counts().index[0:20]
+                data_df_col_notnull = data_df_col_notnull.loc[data_df_col_notnull[column].isin(value_counts_index)]
+                print("For '{}', more than 20 unique values: Only plotting top 20, which is {} out of {} total data"
+                      "points.".format(column, len(data_df_col_notnull), orig_len))
+                anc = AnchoredText('Plotting top 20 out of {} total uniq vals'.format(num_uniq), loc="upper left",
+                                   frameon=False)
+                ax.add_artist(anc)
             
             if target_type == 'regression':
                 if not numeric:

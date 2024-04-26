@@ -454,6 +454,8 @@ class FeaturesEDA:
                 self.pdf = section_of_plots(self.pdf, columns_list_ordered, target_col=self.target_col, numeric=False,
                                             plots_folder=plots_folder)
 
+        print('\n--- Files Output ---')
         # Save PDF document to current working directory:
         save_pdf_doc(self.pdf, custom_filename=self.report_prefix, timestamp=timestamp)
+        print('All PNG files can be found in {}.'.format(plots_folder))
 

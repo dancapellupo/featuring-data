@@ -17,6 +17,7 @@ def initialize_pdf_doc():
 
 def save_pdf_doc(pdf, custom_filename='FeatureSelection', timestamp=''):
     pdf.output('./{}_EDA_Report_{}.pdf'.format(custom_filename, timestamp), 'F')
+    print("File '{}_EDA_Report_{}.pdf' has been saved in current working directory.".format(custom_filename, timestamp))
 
 
 def adjust_fontsize_for_feature_names(pdf, feature, box_width=60, start_fontsize=12):
