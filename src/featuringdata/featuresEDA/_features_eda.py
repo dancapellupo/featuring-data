@@ -27,7 +27,11 @@ from ._correlation import (
     calc_nonnumeric_features_target_corr
 )
 
-from ._generate_plots import plot_ecdf, plot_hist, plot_hist_target_col, plot_feature_values
+from ._generate_plots import (
+    plot_hist,
+    plot_hist_target_col,
+    plot_feature_values
+)
 
 
 class FeaturesEDA:
