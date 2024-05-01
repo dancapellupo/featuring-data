@@ -20,7 +20,7 @@ PyPI:
 
 [code here]
 
-## FeaturesEDA: A comprehensive EDA in two lines of code 
+## FeaturesEDA: A comprehensive EDA in two lines of code
 
 This class implements Exploratory Data Analysis (EDA) on an input dataset.
 
@@ -37,7 +37,13 @@ reference or sharing results with team members and even stakeholders.
 ```python
 eda.master_columns_df.head(5)
 ```
-[insert image of DF]
+
+![Housing Ames 'master_columns_df' dataframe](/tmp/housing_ames_master_columns_df_head5.png)
+*This is a truncated example of the main dataframe output of the EDA class,
+showing each column from the training dataset in the left-most column (the
+index of this dataframe), the number of Nulls in that column, the type of data
+in that column, the number of unique values, and information about correlation
+between each column of the dataset and the target column.*
 
 The functions within this class perform the following tasks:
 
@@ -89,7 +95,57 @@ The functions within this class perform the following tasks:
     swarm plot (but the box plot is calculated based on all points).
   - For typical numeric features, a standard scatter plot is generated.
 
+![Example visualizations of continuous and discrete variables](/tmp/example_feature_plots.png)
+*An example plot of a numeric/continuous variable versus a continuous target
+(left; the sale price of a house in Ames), and a discrete/categorical variable
+versus the same continuous target (right).*
 
-This is a simple example package. You can use
-[GitHub-flavored Markdown](https://guides.github.com/features/mastering-markdown/)
-to write your content.
+## FeatureSelector: Feature selection by recursive model training
+
+This class implements an iterative machine learning model training
+(currently using the xgboost algorithm) to help with feature selection and
+understanding the importance of the input features.
+
+The results of this iterative training are available within your Jupyter
+Notebook environment for further analysis and model training tasks. This
+code should be used with your training set, with your holdout/test set
+kept separate. This code will separate your training set into several
+training / validation set splits [currently set at two separate splits].
+
+Just as in the EDA class of this library, a (separate) nicely formatted
+PDF report is generated and saved in your current working directory - for
+easy reference or sharing results with team members and even stakeholders.
+The PDF report includes also explanations of the generated plots.
+
+The functions within this class perform the following tasks:
+- Data preparation tasks:
+    - Perform one-hot encoding on categorical features.
+    - Split the data into [at least] two training and validation splits.
+- Iterative / recursive model training:
+    - There are a number of feature selection techniques (see the Readme
+        for more details), but after some testing, this author recommends
+        the recursive technique where one starts training with all features,
+        and then removes the feature with the lowest feature importance at
+        each iteration. The relevant model metric (e.g., mean squared error
+        for regression) is saved at each iteration, and at the end we can
+        see how many, and which, features give as good, if not, better
+        results than using all features.
+    - Another important part of model training is selecting
+        hyperparameters. This code utilizes a grid search approach, and
+        performs this search a few times during the iterative training, to
+        take into account the possibility that a better set of
+        hyperparameters may exist when training with a smaller number of
+        features than with all features.
+    - This iterative training is performed on at least two different
+        random splits of the data.
+    - The following information is kept from every iteration:
+        - the feature importance values of every feature at every iteration
+        - performance metrics on both the training and validation set
+        - the number of features
+        - the features removed at the end of each iteration
+
+![](/tmp/housing_ames_num_features_vs_MAE.png)
+*This plot shows that as the number of features is reduced, the model
+performance stay fairly constant, until you go down to about 20 features
+(out of ~100 original features). The two colors represent two different
+train/validation data splits.*
