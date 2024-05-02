@@ -1,20 +1,21 @@
 [project]
 name = "featuring-data"
-version = "0.2.4"
+version = "0.2.5"
 authors = [
     { name="Daniel M. Capellupo", email="daniel@dmcdatascience.com" },
 ]
 description = "This package is designed to help anyone with a new dataset get started with EDA quickly."
 readme = "README.md"
 dependencies = [
-  "numpy",
-  "pandas",
-  "matplotlib",
-  "seaborn",
-  "scikit-learn>=0.22",
-  "xgboost",
-  "fpdf",
-  "tqdm"
+  "numpy>=1.22.0",
+  "pandas>=1.4.0",
+  "matplotlib>=3.6.0",
+  "seaborn>=0.13.0",
+  "scipy>=1.7.3",
+  "scikit-learn>=1.0.2",
+  "xgboost>=1.6.0",
+  "fpdf>=1.7.2",
+  "tqdm>=4.40.0"
 ]
 requires-python = ">=3.8"
 classifiers = [

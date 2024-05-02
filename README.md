@@ -95,7 +95,7 @@ The functions within this class perform the following tasks:
     swarm plot (but the box plot is calculated based on all points).
   - For typical numeric features, a standard scatter plot is generated.
 
-![Example visualizations of continuous and discrete variables](/tmp/example_feature_plots.png)
+![Example visualizations of continuous and discrete variables](/tmp/housing_ames_example_feature_plots.png)
 *An example plot of a numeric/continuous variable versus a continuous target
 (left; the sale price of a house in Ames), and a discrete/categorical variable
 versus the same continuous target (right).*
