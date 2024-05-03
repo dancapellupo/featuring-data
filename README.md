@@ -29,16 +29,17 @@ Excel or CSV file - and you just want to do a quick EDA and get a quick
 sense of the dataset before proceeding?
 
 Do you find that your Jupyter notebook gets very long and very messy, very
-quickly when going through the different columns of a pandas dataframe,
+quickly, when going through the different columns of a pandas dataframe,
 creating plots, identifying how many unique values a particular column has,
 etc.?
 
 This package allows you to do this fast, so you quickly have a strong
 starting point for further exploration.
 
-Plus, you get a nicely formatted PDF, with all the usual, important
-details of a dataset layed out, for future reference as you continue to
-work with a dataset.
+Plus, you get
+[a nicely formatted PDF](https://github.com/dancapellupo/featuring-data/blob/6efc4b54c65f8a2f38b498a01f569ad25bf2eb23/examples/Housing_Ames_EDA_Report_20240503_164941.pdf),
+with all the usual, important details of a dataset layed out, for future
+reference as you continue to work with a dataset.
 
 Another bonus is that in creating this package, I have carefully researched
 different methods and metrics. So, you won't be getting just the usual
@@ -53,10 +54,15 @@ uncover which features are driving the results.
 
 ## Get Started Quickly
 
-After installing the package, open [this Jupyter notebook] and run with the
-provided dataset or read in your own CSV or pandas dataframe.
+After installing the package, open
+[this Jupyter notebook](https://github.com/dancapellupo/featuring-data/blob/6efc4b54c65f8a2f38b498a01f569ad25bf2eb23/examples/featuring_data_regression_example.ipynb)
+for a regression example or
+[this Jupyter notebook](https://github.com/dancapellupo/featuring-data/blob/6efc4b54c65f8a2f38b498a01f569ad25bf2eb23/examples/featuring_data_classification_example.ipynb)
+for a classification example, and run with the provided dataset (or read in
+your own CSV or pandas dataframe).
 
-This PDF shows an example output of the `FeaturesEDA` functionality.
+[This PDF](https://github.com/dancapellupo/featuring-data/blob/6efc4b54c65f8a2f38b498a01f569ad25bf2eb23/examples/Housing_Ames_EDA_Report_20240503_164941.pdf)
+shows an example output of the `FeaturesEDA` functionality.
 
 ## FeaturesEDA: A comprehensive EDA in two lines of code
 
@@ -128,10 +134,10 @@ The functions within this class perform the following tasks:
   - The code automatically selects the type of plot based on the number
     of unique values of that feature. For up to 10 unique values in a
     numeric feature, and for all categorical features, a box plot with a
-    swarm plot is generated. If there are more than 1,000 data points,
-    then only a random selection of 1,000 points are plotted on the
-    swarm plot (but the box plot is calculated based on all points).
-  - For typical numeric features, a standard scatter plot is generated.
+    scatter density plot (the points are artificially spread for visual
+    purposes) overplotted is generated.
+  - For typical numeric features, a scatter density plot is generated. A color
+    scale indicates how many overlapping points there are in a given location.
 
 ![Example visualizations of continuous and discrete variables](/tmp/housing_ames_example_feature_plots.png)
 *An example plot of a numeric/continuous variable versus a continuous target
@@ -184,7 +190,7 @@ The functions within this class perform the following tasks:
 
 ![](/tmp/housing_ames_num_features_vs_MAE.png)
 *This plot shows that as the number of features is reduced, the model
-performance stay fairly constant, until you go down to about 20 features
+performance stays fairly constant, until you go down to about 20 features
 (out of ~100 original features). The two colors represent two different
 train/validation data splits.*
 
