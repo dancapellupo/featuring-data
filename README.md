@@ -12,13 +12,46 @@ plots and a full PDF report in two lines of code.
 
 ## Installation and Dependencies
 
-The Featuring Data library requires Python 3+, numpy , Pandas , matplotlib ,
-seaborn, and scikit-learn.
+The Featuring Data library requires Python>=3.8, numpy, pandas, matplotlib,
+seaborn, scikit-learn, and xgboost.
 
 The latest stable release (and required dependencies) can be installed from
 PyPI:
 
-[code here]
+```
+pip install featuring-data
+```
+
+## Why Install this Package?
+
+How many times do you have a new dataset - maybe someone sends you a new
+Excel or CSV file - and you just want to do a quick EDA and get a quick
+sense of the dataset before proceeding?
+
+Do you find that your Jupyter notebook gets very long and very messy, very
+quickly when going through the different columns of a pandas dataframe,
+creating plots, identifying how many unique values a particular column has,
+etc.?
+
+This package allows you to do this fast, so you quickly have a strong
+starting point for further exploration.
+
+Plus, you get a nicely formatted PDF, with all the usual, important
+details of a dataset layed out, for future reference as you continue to
+work with a dataset.
+
+Another bonus is that in creating this package, I have carefully researched
+different methods and metrics. So, you won't be getting just the usual
+Pearson correlation metrics or standard scatterplots.
+
+Beyond EDA, there is a function to aid in feature selection. Going beyond
+some of the usual feature selection techniques, this function performs an
+iterative xgboost training, starting with all features and removing the
+least "important" feature one-by-one. A nicely formatted PDF with different
+plots helps visualize what is going on during the training and can help
+uncover which features are driving the results.
+
+
 
 ## FeaturesEDA: A comprehensive EDA in two lines of code
 
