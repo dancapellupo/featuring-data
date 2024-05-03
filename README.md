@@ -51,7 +51,12 @@ least "important" feature one-by-one. A nicely formatted PDF with different
 plots helps visualize what is going on during the training and can help
 uncover which features are driving the results.
 
+## Get Started Quickly
 
+After installing the package, open [this Jupyter notebook] and run with the
+provided dataset or read in your own CSV or pandas dataframe.
+
+This PDF shows an example output of the `FeaturesEDA` functionality.
 
 ## FeaturesEDA: A comprehensive EDA in two lines of code
 
@@ -182,3 +187,15 @@ The functions within this class perform the following tasks:
 performance stay fairly constant, until you go down to about 20 features
 (out of ~100 original features). The two colors represent two different
 train/validation data splits.*
+
+## Credits
+
+[1] Inspiration for the density scatterplots comes primarily from this
+[StackOverflow post](https://stackoverflow.com/a/64105308).
+
+[2] The example data set for regression comes from this
+[Kaggle competition](https://www.kaggle.com/competitions/house-prices-advanced-regression-techniques/data).
+
+[3] The example data set for classification comes from this
+[Kaggle competition](https://www.kaggle.com/competitions/titanic/data).
+
