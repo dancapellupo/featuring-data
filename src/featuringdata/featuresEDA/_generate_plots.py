@@ -1,7 +1,7 @@
 
-import time
 from tqdm.auto import tqdm
 
+import math
 import numpy as np
 
 import matplotlib as mpl
@@ -10,6 +10,7 @@ from matplotlib.offsetbox import AnchoredText
 import seaborn as sns
 from scipy.interpolate import interpn
 from scipy.stats import gaussian_kde
+from sklearn.preprocessing import MinMaxScaler
 
 
 def plot_ecdf(data_col, data_label='', xlabel='Data Values', filename='ecdf', overplot=False, outfile=True,
@@ -94,7 +95,10 @@ def plot_scatter_density(x, y, fig=None, ax=None, sort=True, bins=20, **kwargs):
     if sort:
         idx = z.argsort()
         x, y, z = x[idx], y[idx], z[idx]
-
+    
+    # z = MinMaxScaler(feature_range=(0, 1)).fit_transform(z.reshape(-1, 1))
+    z /= 10**(math.floor(math.log10(abs(z.max()))))
+    
     plt.scatter(x, y, c=z, **kwargs)
     plt.colorbar()
 

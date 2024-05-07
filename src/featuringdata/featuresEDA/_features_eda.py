@@ -204,7 +204,7 @@ class FeaturesEDA:
 
         self.pdf = None
         self.null_count_by_row_series = None
-        # TODO: Combine unique values and corr info into one DF
+        self.master_columns_df = pd.DataFrame()
         self.numeric_cols = None
         self.non_numeric_cols = None
         self.numeric_collinear_df = pd.DataFrame()
