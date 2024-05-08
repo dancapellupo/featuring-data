@@ -355,9 +355,9 @@ class FeatureSelector:
         self.pdf = add_plot_pdf(self.pdf, file_path=plots_folder+f'/num_features_vs_{primary_metric}'+'.png',
                                 new_page=False)
         if start_ii > 0:
-            out_txt = (f"Note: The point from the first iteration with {num_features_start} features and a"
+            out_txt = (f"Note: The point from the first iteration with {num_features_start} features and a "
                        f"{primary_metric} of {training_results_df[f'{primary_metric}_test_{data_ind+1}'].iloc[0]} was "
-                       f"removed fromthis plot.")
+                       f"removed from this plot.")
             self.pdf = add_text_pdf(self.pdf, txt=out_txt)
             out_txt = ("Normally, the way this recursive model training works is that it removes the feature with the "
                        "lowest importance at each iteration. However, if there are multiple features that have exactly "
@@ -438,7 +438,7 @@ class FeatureSelector:
             self.pdf, txt=f"{training_results_df['num_features_{}'.format(data_ind+1)].iloc[best_ind]} features",
             style='B', space_below=0)
         self.pdf = add_text_pdf(self.pdf, txt=f".")
-        
+
         # ----------------------------------------------
         # Collect and examine feature importance values:
         self.feat_import_bycol_df = pd.DataFrame(columns=["max_feat_imp", "best_feat_imp", "num_iters"])
