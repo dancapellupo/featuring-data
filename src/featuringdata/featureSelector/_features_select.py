@@ -19,7 +19,7 @@ from ._create_pdf_report import (
 
 from ._recursive_fit import recursive_fit, calc_model_metric
 
-from ._generate_plots import plot_inline_scatter, plot_xy, plot_horizontal_line, plot_vertical_line, save_fig, plot_xy_splitaxis
+from ._generate_plots import plot_inline_scatter, plot_xy, convert_title_to_filename, plot_horizontal_line, plot_vertical_line, save_fig, plot_xy_splitaxis
 
 
 class FeatureSelector:
@@ -330,16 +330,17 @@ class FeatureSelector:
             np.diff(training_results_df["num_features_{}".format(data_ind+1)].values)[0:5] < -0.2*num_features_start)[0]
         start_ii = gap_loc[-1] + 1 if gap_loc.size > 0 else 0
 
-        # Creat the plot:
+        # Create the plot:
         f, ax = plot_inline_scatter(training_results_df.iloc[start_ii:], x_col="num_features_{}".format(1),
-                                    y_col="MAE_test_{}".format(1), outfile=False)
+                                    y_col="MAE_test_{}".format(1), leg_label='Data Split {}'.format(1), outfile=False)
         best_mae = training_results_df["MAE_test_{}".format(data_ind+1)].iloc[best_ind]
         plot_inline_scatter(training_results_df.iloc[start_ii:], f=f, ax=ax, x_col="num_features_{}".format(2),
-                                    y_col="MAE_test_{}".format(2), xlabel='Number of Features in Iteration',
-                                    ylabel='Mean Average Error (MAE) for Val Set',
-                                    hline=best_mae,
-                                    vline=training_results_df["num_features_{}".format(data_ind+1)].iloc[best_ind],
-                                    overplot=True, outfile=True, plots_folder=plots_folder, title='num_features_vs_MAE')
+                            y_col="MAE_test_{}".format(2), leg_label='Data Split {}'.format(2),
+                            xlabel='Number of Features in Iteration', ylabel='Mean Average Error (MAE) for Val Set',
+                            hline=best_mae,
+                            vline=training_results_df["num_features_{}".format(data_ind+1)].iloc[best_ind],
+                            reverse_x=True, overplot=True, outfile=True, plots_folder=plots_folder,
+                            title='num_features_vs_MAE')
         # ax = plot_horizontal_line(ax, y_loc=best_mae)
         # ax = plot_vertical_line(ax, x_loc=training_results_df["num_features_{}".format(data_ind+1)].iloc[best_ind])
         # save_fig(f, ax, plots_folder=plots_folder, title='num_features_vs_MAE')
@@ -413,15 +414,15 @@ class FeatureSelector:
 
                 # If this is the first feature for this plot panel:
                 if jjj == 0:
-                    f, ax = plot_xy(x, y, xlabel='num_features_{}'.format(data_ind+1), ylabel='feature importance',
-                                    leg_label=col, overplot=False, outfile=False)
+                    f, ax = plot_xy(x, y, xlabel='Number of Features (Data Split {})'.format(data_ind+1),
+                                    ylabel='Feature Importance', overplot=False, outfile=False, markersize=5, label=col)
                 elif jjj < num_feat_per_plot-1:
-                    f, ax = plot_xy(x, y, f=f, ax=ax, leg_label=col, overplot=True, outfile=False)
+                    f, ax = plot_xy(x, y, f=f, ax=ax, overplot=True, outfile=False, markersize=5, label=col)
                 # If this is the last feature for this plot panel, save the
                 #  plot to disk:
                 else:
-                    plot_xy(x, y, f=f, ax=ax, leg_label=col, overplot=True, outfile=True, plots_folder=plots_folder,
-                            title='feature_importance_vs_number_features_{}'.format(jj))
+                    plot_xy(x, y, f=f, ax=ax, overplot=True, outfile=True, plots_folder=plots_folder, reverse_x=True,
+                            title='feature_importance_vs_number_features_{}'.format(jj), markersize=5, label=col)
 
             # Create a new PDF page for every 2 plots:
             new_page = True if (jj % 2) == 0 else False
@@ -437,6 +438,8 @@ class FeatureSelector:
         # This plot can only be generated if a dataframe with feature
         #  correlations is passed to the function:
         if master_columns_df is not None:
+            plot_title = 'Target Correlation vs Feature Importance'
+
             # Get a list of features that are both numeric and are part of the
             #  "best" training iteration:
             numeric_df = master_columns_df.loc[master_columns_df["Column Type"] == 'numeric']
@@ -450,8 +453,8 @@ class FeatureSelector:
                     y.append(self.feat_import_bycol_df.loc[feat, "best_feat_imp"])
 
                 f, ax = plot_xy(x, y, xlabel='RF Correlation between Feature and Target', ylabel='Feature Importance',
-                                leg_label='Numeric Feature', overplot=False, outfile=False, plots_folder=plots_folder,
-                                title='target_correlation_vs_feature_importance')
+                                overplot=False, outfile=False, plots_folder=plots_folder, title=plot_title,
+                                markersize=5, label='Numeric Feature')
 
             non_numeric_df = master_columns_df.loc[master_columns_df["Column Type"] == 'non-numeric']
             if len(non_numeric_df) > 0:
@@ -475,10 +478,10 @@ class FeatureSelector:
                             y.append(feat_df["best_feat_imp"].sum())
 
                 print('Number of non-numeric features in best iteration: {}'.format(len(y)))
-                plot_xy(x, y, f=f, ax=ax, leg_label='Non-Numeric Feature', overplot=True, outfile=True,
-                        plots_folder=plots_folder, title='target_correlation_vs_feature_importance')
-
-            self.pdf = add_plot_pdf(self.pdf, file_path=plots_folder+'/target_correlation_vs_feature_importance'+'.png',
+                plot_xy(x, y, f=f, ax=ax, overplot=True, outfile=True, plots_folder=plots_folder, title=plot_title,
+                        markersize=5, label='Non-Numeric Feature')
+            
+            self.pdf = add_plot_pdf(self.pdf, file_path=plots_folder+'/'+convert_title_to_filename(plot_title)+'.png',
                                     new_page=True)
 
         # Save PDF document to current working directory

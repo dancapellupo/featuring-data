@@ -3,15 +3,20 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 
+def convert_title_to_filename(title):
+    return title.lower().replace(' ', '_')
+
+
 def plot_inline_scatter(data_df, x_col, y_col, f=None, ax=None, xlabel=None, ylabel=None, title='', overplot=False,
-                        hline=None, vline=None, outfile=True, plots_folder='./'):
+                        leg_label='', hline=None, vline=None, reverse_x=False, outfile=True, plots_folder='./'):
 
     if not overplot:
-        sns.set_theme(style="whitegrid")
+        sns.set_theme(style="ticks", font_scale=1.2)
         f, ax = plt.subplots(figsize=(9, 6))
         ax.set_title(title)
 
-    sns.scatterplot(data_df, x=x_col, y=y_col, size=3, legend=False)
+    # sns.scatterplot(data_df, x=x_col, y=y_col, size=3, legend=False)
+    plt.plot(data_df[x_col], data_df[y_col], 'o', markersize=6, label=leg_label)
 
     if xlabel is not None:
         plt.xlabel(xlabel)
@@ -28,10 +33,13 @@ def plot_inline_scatter(data_df, x_col, y_col, f=None, ax=None, xlabel=None, yla
         if vline is not None:
             ax.vlines(vline, ymin, ymax, color='black', linestyles=':')
 
-        ax.set_xlim(xmin, xmax)
+        ax.set_xlim(xmax, xmin) if reverse_x else ax.set_xlim(xmin, xmax)
         ax.set_ylim(ymin, ymax)
 
     if outfile:
+        if leg_label != '':
+            plt.legend()
+        plt.grid()
         plt.savefig('{}/{}.png'.format(plots_folder, title), bbox_inches='tight')
         # *** Close for now ***
         # plt.close(f)
@@ -39,17 +47,17 @@ def plot_inline_scatter(data_df, x_col, y_col, f=None, ax=None, xlabel=None, yla
         return f, ax
 
 
-def plot_xy(x, y, f=None, ax=None, xlabel=None, ylabel=None, leg_label='', title='', overplot=False, outfile=True,
-            plots_folder='./'):
+def plot_xy(x, y, f=None, ax=None, xlabel=None, ylabel=None, title='', reverse_x=False, overplot=False, outfile=True,
+            plots_folder='./', **kwargs):
 
     if not overplot:
-        sns.set_theme(style="whitegrid")
+        sns.set_theme(style="ticks", font_scale=1.1)
         f, ax = plt.subplots(figsize=(9, 6))
         ax.set_title(title)
 
     # sns.lineplot(x=x, y=y, size=3, legend='auto')
     # sns.scatterplot(x=x, y=y, size=3, label=leg_label)
-    plt.plot(x, y, 'o', markersize=3, label=leg_label)
+    plt.plot(x, y, 'o', **kwargs)
 
     if xlabel is not None:
         plt.xlabel(xlabel)
@@ -59,8 +67,12 @@ def plot_xy(x, y, f=None, ax=None, xlabel=None, ylabel=None, leg_label='', title
     plt.legend()
 
     if outfile:
-        # TODO Take title, lowercase and replace spaces with underscores
-        plt.savefig('{}/{}.png'.format(plots_folder, title), bbox_inches='tight')
+        if reverse_x:
+            xmin, xmax = ax.get_xlim()
+            ax.set_xlim(xmax, xmin)
+        plt.grid()
+        # DONE Take title, lowercase and replace spaces with underscores
+        plt.savefig('{}/{}.png'.format(plots_folder, convert_title_to_filename(title)), bbox_inches='tight')
         plt.close(f)
     else:
         return f, ax
