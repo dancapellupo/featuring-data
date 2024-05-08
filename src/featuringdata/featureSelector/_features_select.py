@@ -312,7 +312,7 @@ class FeatureSelector:
         else:
             sec_metric_final = calc_model_metric(y_test_comb[data_ind], y_test_pred, target_type=self.target_type,
                                           metric_type='easy')
-        print(f'\nFinal {secondary_metric}: {sec_metric_final}\n')
+        print(f'\nFinal {secondary_metric}: {sec_metric_final:.3f}\n')
 
         # --------------------
         # Save results to CSV:
@@ -324,7 +324,7 @@ class FeatureSelector:
         self.pdf = initialize_pdf_doc()
 
         # --------------------------------------------------------------------
-        # PLOT #1 - Plot of model metric vs iteration
+        # PLOTS #1 and #2 - Plot of model metric vs iteration
 
         # First look for large gaps along x-axis:
         num_features_start = training_results_df["num_features_{}".format(data_ind+1)].iloc[0]
@@ -332,26 +332,32 @@ class FeatureSelector:
             np.diff(training_results_df["num_features_{}".format(data_ind+1)].values)[0:5] < -0.2*num_features_start)[0]
         start_ii = gap_loc[-1] + 1 if gap_loc.size > 0 else 0
 
-        # Create the plot:
+        # ---
+        # PLOT #1 - Primary metric used in xgboost training:
+
+        # Create the plots:
         f, ax = plot_inline_scatter(training_results_df.iloc[start_ii:], x_col=f"num_features_{1}",
-                                    y_col=f"{secondary_metric}_test_{1}", leg_label=f'Data Split {1}', outfile=False)
-        best_sec_metric = training_results_df[f"{secondary_metric}_test_{data_ind+1}"].iloc[best_ind]
+                                    y_col=f"{primary_metric}_test_{1}", leg_label=f'Data Split {1}', outfile=False)
+        best_prim_metric = training_results_df[f"{primary_metric}_test_{data_ind+1}"].iloc[best_ind]
+        if primary_metric == 'RMSE':
+            ylabel = 'RMSE for Val Set'
+        else:
+            ylabel = 'Logloss for Val Set'
         plot_inline_scatter(training_results_df.iloc[start_ii:], f=f, ax=ax, x_col=f"num_features_{2}",
-                            y_col=f"{secondary_metric}_test_{2}", leg_label=f'Data Split {2}',
-                            xlabel='Number of Features in Iteration', ylabel='Mean Average Error (MAE) for Val Set',
-                            hline=best_sec_metric,
+                            y_col=f"{primary_metric}_test_{2}", leg_label=f'Data Split {2}',
+                            xlabel='Number of Features in Iteration', ylabel=ylabel, hline=best_prim_metric,
                             vline=training_results_df[f"num_features_{data_ind+1}"].iloc[best_ind],
                             reverse_x=True, overplot=True, outfile=True, plots_folder=plots_folder,
-                            title=f'num_features_vs_{secondary_metric}')
+                            title=f'num_features_vs_{primary_metric}')
 
         # Add plot and informative text to PDF:
-        self.pdf = add_text_pdf(self.pdf, txt="Recursive Training Results", bold=True, space_below=10)
-        self.pdf = add_plot_pdf(self.pdf, file_path=plots_folder+f'/num_features_vs_{secondary_metric}'+'.png',
+        self.pdf = add_text_pdf(self.pdf, txt="Recursive Training Results", style='B', space_below=10)
+        self.pdf = add_plot_pdf(self.pdf, file_path=plots_folder+f'/num_features_vs_{primary_metric}'+'.png',
                                 new_page=False)
         if start_ii > 0:
-            out_txt = ("Note: The point from the first iteration with {} features and an MAE of {} was removed from "
-                       "this plot.").format(num_features_start,
-                                            training_results_df[f"{secondary_metric}_test_{data_ind+1}"].iloc[0])
+            out_txt = (f"Note: The point from the first iteration with {num_features_start} features and a"
+                       f"{primary_metric} of {training_results_df[f'{primary_metric}_test_{data_ind+1}'].iloc[0]} was "
+                       f"removed fromthis plot.")
             self.pdf = add_text_pdf(self.pdf, txt=out_txt)
             out_txt = ("Normally, the way this recursive model training works is that it removes the feature with the "
                        "lowest importance at each iteration. However, if there are multiple features that have exactly "
@@ -361,19 +367,65 @@ class FeatureSelector:
                    "training iteration on the x-axis. In other words, each dot here represents an iteration of the "
                    "recursive model training.")
         self.pdf = add_text_pdf(self.pdf, txt=out_txt)
-        out_txt = ("As the number of features is reduced, eventually the model will start to perform much more poorly. "
-                   "The vertical line is the location with the best value of the evaluation metric, which is an MAE of "
-                   "{}), compared to the starting MAE of {}.").format(
-                       best_sec_metric, training_results_df[f"{secondary_metric}_test_{data_ind+1}"].iloc[0])
+        out_txt = "As the number of features is reduced, eventually the model will start to perform much more poorly."
         self.pdf = add_text_pdf(self.pdf, txt=out_txt)
-        out_txt = ("The model training started with {} features (after one-hot encoding any categorical "
-                   "features), and achieved the best model training results with {} features.").format(
-            num_features_start, training_results_df["num_features_{}".format(data_ind+1)].iloc[best_ind])
+        # TODO: Put metric values in boldface:
+        out_txt = (f"This plot shows the primary metric that was used in model training, which is {primary_metric}. "
+                   f"The vertical line is the location with the best value of this metric, which is a {primary_metric} "
+                   f"of {best_prim_metric}, compared to the starting {primary_metric} of "
+                   f"{training_results_df[f'{primary_metric}_test_{data_ind+1}'].iloc[0]}.")
         self.pdf = add_text_pdf(self.pdf, txt=out_txt)
+        # TODO: Make italic:
+        out_txt = f"Note that lower values of {primary_metric} indicate better model performance."
+        self.pdf = add_text_pdf(self.pdf, style='I', txt=out_txt)
+        out_txt = (f"The model training started with {num_features_start} features (after one-hot encoding any "
+                   f"categorical features), and achieved the best model training results with "
+                   f"{training_results_df['num_features_{}'.format(data_ind+1)].iloc[best_ind]} features.")
+        self.pdf = add_text_pdf(self.pdf, txt=out_txt)
+        # TODO: Add baseline for logloss - random assignment based on fraction with each label
         # TODO: Assess how low, in terms of number of features, one could go without drastically decreasing the
         #  performance
-        # TODO: Print MAE compared to range of y_val values
+        # TODO: Print MAE compared to range of y_val valuee
+        
+        # ---
+        # PLOT #2 - Secondary evaluation metric:
 
+        if secondary_metric == 'MAE':
+            best_sec_metric_ind = np.argmin(training_results_df[f"{secondary_metric}_test_{data_ind+1}"].values)
+        else:
+            best_sec_metric_ind = np.argmax(training_results_df[f"{secondary_metric}_test_{data_ind+1}"].values)
+        best_sec_metric = training_results_df[f"{secondary_metric}_test_{data_ind+1}"].iloc[best_sec_metric_ind]
+
+        f, ax = plot_inline_scatter(training_results_df.iloc[start_ii:], x_col=f"num_features_{1}",
+                                    y_col=f"{secondary_metric}_test_{1}", leg_label=f'Data Split {1}', outfile=False)
+        if secondary_metric == 'MAE':
+            ylabel = 'Mean Average Error (MAE) for Val Set'
+        else:
+            ylabel = 'Cohen-Kappa for Val Set'
+        plot_inline_scatter(training_results_df.iloc[start_ii:], f=f, ax=ax, x_col=f"num_features_{2}",
+                            y_col=f"{secondary_metric}_test_{2}", leg_label=f'Data Split {2}',
+                            xlabel='Number of Features in Iteration', ylabel=ylabel, hline=best_sec_metric,
+                            vline=training_results_df[f"num_features_{data_ind+1}"].iloc[best_sec_metric_ind],
+                            reverse_x=True, overplot=True, outfile=True, plots_folder=plots_folder,
+                            title=f'num_features_vs_{secondary_metric}')
+        
+        self.pdf = add_plot_pdf(self.pdf, file_path=plots_folder+f'/num_features_vs_{secondary_metric}'+'.png',
+                                new_page=True)
+        out_txt = f"This plot is the same as the previous page, except with the secondary metric, {secondary_metric}."
+        self.pdf = add_text_pdf(self.pdf, txt=out_txt)
+        out_txt = "It is therefore possible that the 'best' iteration will be different in this plot."
+        self.pdf = add_text_pdf(self.pdf, style='I', txt=out_txt)
+        out_txt = (f"The best value of {secondary_metric} is {best_sec_metric}, compared to the starting value of "
+                   f"{training_results_df[f'{secondary_metric}_test_{data_ind+1}'].iloc[0]}.")
+        self.pdf = add_text_pdf(self.pdf, txt=out_txt)
+        if secondary_metric == 'CohKap':
+            out_txt = (f"Note that with the Cohen-Kappa score, the possible range is 0 to 1, with 0 meaning that the "
+                       f"model has no predictive power and 1 is the best it could be.")
+            self.pdf = add_text_pdf(self.pdf, style='I', txt=out_txt)
+        out_txt = (f"With this metric, the best model training result occurred with "
+                   f"{training_results_df['num_features_{}'.format(data_ind+1)].iloc[best_sec_metric_ind]} features.")
+        self.pdf = add_text_pdf(self.pdf, txt=out_txt)
+        
         # ----------------------------------------------
         # Collect and examine feature importance values:
         self.feat_import_bycol_df = pd.DataFrame(columns=["max_feat_imp", "best_feat_imp", "num_iters"])
@@ -389,7 +441,7 @@ class FeatureSelector:
         # PLOT #2 - Generate plots showing how the feature importance of the
         #  top features changes depending on the number of total features used
 
-        self.pdf = add_text_pdf(self.pdf, txt="Exploring Feature Importance during Iterative Training", bold=True,
+        self.pdf = add_text_pdf(self.pdf, txt="Exploring Feature Importance during Iterative Training", style='B',
                                 new_page=True, space_below=10)
 
         num_features = training_results_df["num_features_{}".format(data_ind+1)].values
@@ -439,7 +491,7 @@ class FeatureSelector:
         #  correlations is passed to the function:
         if master_columns_df is not None:
             self.pdf = add_text_pdf(
-                self.pdf, txt="Exploring Feature Importance Compared to Individual Feature Correlations", bold=True,
+                self.pdf, txt="Exploring Feature Importance Compared to Individual Feature Correlations", style='B',
                 new_page=True, space_below=10)
             plot_title = 'Target Correlation vs Feature Importance'
 

@@ -13,14 +13,14 @@ def initialize_pdf_doc():
     return pdf
 
 
-def add_text_pdf(pdf, txt, bold=False, fontsize=12, new_page=False, space_below=7):
-    
+def add_text_pdf(pdf, txt, style='', fontsize=12, new_page=False, space_below=7):
+
     if new_page:
         pdf.add_page()
 
-    style = 'B' if bold else ''
+    # style = 'B' if bold else ''
     pdf.set_font('Arial', style, fontsize)
-
+    
     pdf.write(5, txt)
 
     pdf.ln(space_below)
