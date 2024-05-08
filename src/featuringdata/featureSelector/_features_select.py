@@ -17,7 +17,7 @@ from ._create_pdf_report import (
     save_pdf_doc
 )
 
-from ._recursive_fit import recursive_fit, calc_model_metric
+from ._recursive_fit import recursive_fit, calc_model_metric, get_metric_names
 
 from ._generate_plots import plot_inline_scatter, plot_xy, convert_title_to_filename, plot_horizontal_line, plot_vertical_line, save_fig, plot_xy_splitaxis
 
@@ -264,12 +264,14 @@ class FeatureSelector:
         # --------------------------------------------------------------------
         # Identify Best Results
 
-        # TODO: Identify best run based on metric out to certain number [3?] of decimal points
-        best_result_ind_1 = np.argmin(training_results_df["RMSE_test_1"].values)
-        best_result_ind_2 = np.argmin(training_results_df["RMSE_test_2"].values)
+        primary_metric, secondary_metric = get_metric_names(target_type=self.target_type)
 
-        best_result_1 = training_results_df["RMSE_test_1"].values[best_result_ind_1]
-        best_result_2 = training_results_df["RMSE_test_2"].values[best_result_ind_2]
+        # TODO: Identify best run based on metric out to certain number [3?] of decimal points
+        best_result_ind_1 = np.argmin(training_results_df[f"{primary_metric}_test_1"].values)
+        best_result_ind_2 = np.argmin(training_results_df[f"{primary_metric}_test_2"].values)
+
+        best_result_1 = training_results_df[f"{primary_metric}_test_1"].values[best_result_ind_1]
+        best_result_2 = training_results_df[f"{primary_metric}_test_2"].values[best_result_ind_2]
 
         print('Best results: (1) {} [{}], (2) {} [{}]\n'.format(
             best_result_1, best_result_ind_1, best_result_2, best_result_ind_2))
@@ -305,12 +307,12 @@ class FeatureSelector:
         y_test_pred = xgb_reg.predict(X_test_best)
         
         if self.target_log:
-            mae_final = calc_model_metric(np.expm1(y_test_comb[data_ind]), np.expm1(y_test_pred),
+            sec_metric_final = calc_model_metric(np.expm1(y_test_comb[data_ind]), np.expm1(y_test_pred),
                                           target_type=self.target_type, metric_type='easy')
         else:
-            mae_final = calc_model_metric(y_test_comb[data_ind], y_test_pred, target_type=self.target_type,
+            sec_metric_final = calc_model_metric(y_test_comb[data_ind], y_test_pred, target_type=self.target_type,
                                           metric_type='easy')
-        print('\nFinal MAE: {}\n'.format(mae_final))
+        print(f'\nFinal {secondary_metric}: {sec_metric_final}\n')
 
         # --------------------
         # Save results to CSV:
@@ -331,30 +333,25 @@ class FeatureSelector:
         start_ii = gap_loc[-1] + 1 if gap_loc.size > 0 else 0
 
         # Create the plot:
-        f, ax = plot_inline_scatter(training_results_df.iloc[start_ii:], x_col="num_features_{}".format(1),
-                                    y_col="MAE_test_{}".format(1), leg_label='Data Split {}'.format(1), outfile=False)
-        best_mae = training_results_df["MAE_test_{}".format(data_ind+1)].iloc[best_ind]
-        plot_inline_scatter(training_results_df.iloc[start_ii:], f=f, ax=ax, x_col="num_features_{}".format(2),
-                            y_col="MAE_test_{}".format(2), leg_label='Data Split {}'.format(2),
+        f, ax = plot_inline_scatter(training_results_df.iloc[start_ii:], x_col=f"num_features_{1}",
+                                    y_col=f"{secondary_metric}_test_{1}", leg_label=f'Data Split {1}', outfile=False)
+        best_sec_metric = training_results_df[f"{secondary_metric}_test_{data_ind+1}"].iloc[best_ind]
+        plot_inline_scatter(training_results_df.iloc[start_ii:], f=f, ax=ax, x_col=f"num_features_{2}",
+                            y_col=f"{secondary_metric}_test_{2}", leg_label=f'Data Split {2}',
                             xlabel='Number of Features in Iteration', ylabel='Mean Average Error (MAE) for Val Set',
-                            hline=best_mae,
-                            vline=training_results_df["num_features_{}".format(data_ind+1)].iloc[best_ind],
+                            hline=best_sec_metric,
+                            vline=training_results_df[f"num_features_{data_ind+1}"].iloc[best_ind],
                             reverse_x=True, overplot=True, outfile=True, plots_folder=plots_folder,
-                            title='num_features_vs_MAE')
-        # ax = plot_horizontal_line(ax, y_loc=best_mae)
-        # ax = plot_vertical_line(ax, x_loc=training_results_df["num_features_{}".format(data_ind+1)].iloc[best_ind])
-        # save_fig(f, ax, plots_folder=plots_folder, title='num_features_vs_MAE')
-
-        # plot_xy_splitaxis(x=training_results_df["num_features_1"].values, y=training_results_df["MAE_test_1"].values,
-        #                   plots_folder=plots_folder, title='num_features_vs_MAE')
+                            title=f'num_features_vs_{secondary_metric}')
 
         # Add plot and informative text to PDF:
-        self.pdf = add_text_pdf(self.pdf, txt="Recursive Training Results", bold=True)
-        self.pdf = add_plot_pdf(self.pdf, file_path=plots_folder+'/num_features_vs_MAE'+'.png', new_page=False)
+        self.pdf = add_text_pdf(self.pdf, txt="Recursive Training Results", bold=True, space_below=10)
+        self.pdf = add_plot_pdf(self.pdf, file_path=plots_folder+f'/num_features_vs_{secondary_metric}'+'.png',
+                                new_page=False)
         if start_ii > 0:
             out_txt = ("Note: The point from the first iteration with {} features and an MAE of {} was removed from "
                        "this plot.").format(num_features_start,
-                                            training_results_df["MAE_test_{}".format(data_ind+1)].iloc[0])
+                                            training_results_df[f"{secondary_metric}_test_{data_ind+1}"].iloc[0])
             self.pdf = add_text_pdf(self.pdf, txt=out_txt)
             out_txt = ("Normally, the way this recursive model training works is that it removes the feature with the "
                        "lowest importance at each iteration. However, if there are multiple features that have exactly "
@@ -367,7 +364,7 @@ class FeatureSelector:
         out_txt = ("As the number of features is reduced, eventually the model will start to perform much more poorly. "
                    "The vertical line is the location with the best value of the evaluation metric, which is an MAE of "
                    "{}), compared to the starting MAE of {}.").format(
-            best_mae, training_results_df["MAE_test_{}".format(data_ind+1)].iloc[0])
+                       best_sec_metric, training_results_df[f"{secondary_metric}_test_{data_ind+1}"].iloc[0])
         self.pdf = add_text_pdf(self.pdf, txt=out_txt)
         out_txt = ("The model training started with {} features (after one-hot encoding any categorical "
                    "features), and achieved the best model training results with {} features.").format(
@@ -391,6 +388,9 @@ class FeatureSelector:
         # --------------------------------------------------------------------
         # PLOT #2 - Generate plots showing how the feature importance of the
         #  top features changes depending on the number of total features used
+
+        self.pdf = add_text_pdf(self.pdf, txt="Exploring Feature Importance during Iterative Training", bold=True,
+                                new_page=True, space_below=10)
 
         num_features = training_results_df["num_features_{}".format(data_ind+1)].values
         # Set the number of features to show on each plot:
@@ -425,7 +425,7 @@ class FeatureSelector:
                             title='feature_importance_vs_number_features_{}'.format(jj), markersize=5, label=col)
 
             # Create a new PDF page for every 2 plots:
-            new_page = True if (jj % 2) == 0 else False
+            new_page = True if (jj != 0) and ((jj % 2) == 0) else False
             self.pdf = add_plot_pdf(
                 self.pdf, file_path=plots_folder+'/feature_importance_vs_number_features_{}'.format(jj)+'.png',
                 new_page=new_page)
@@ -438,6 +438,9 @@ class FeatureSelector:
         # This plot can only be generated if a dataframe with feature
         #  correlations is passed to the function:
         if master_columns_df is not None:
+            self.pdf = add_text_pdf(
+                self.pdf, txt="Exploring Feature Importance Compared to Individual Feature Correlations", bold=True,
+                new_page=True, space_below=10)
             plot_title = 'Target Correlation vs Feature Importance'
 
             # Get a list of features that are both numeric and are part of the
@@ -482,7 +485,7 @@ class FeatureSelector:
                         markersize=5, label='Non-Numeric Feature')
             
             self.pdf = add_plot_pdf(self.pdf, file_path=plots_folder+'/'+convert_title_to_filename(plot_title)+'.png',
-                                    new_page=True)
+                                    new_page=False)
 
         # Save PDF document to current working directory
         save_pdf_doc(self.pdf, custom_filename=self.report_prefix, timestamp=timestamp)

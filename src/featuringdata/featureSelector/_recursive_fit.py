@@ -18,6 +18,17 @@ from sklearn.metrics import (
 from xgboost.sklearn import XGBRegressor, XGBClassifier
 
 
+def get_metric_names(target_type='regression'):
+    if target_type == 'regression':
+        primary_metric = 'RMSE'
+        secondary_metric = 'MAE'
+    else:
+        primary_metric = 'logloss'
+        secondary_metric = 'CohKap'
+
+    return primary_metric, secondary_metric
+
+
 def round_to_n_sigfig(x, n=3):
     """
     Round a number to 'n' significant digits.
@@ -145,9 +156,10 @@ def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, paramete
     print('Starting number of feature columns: {}\n'.format(num_columns_orig))
 
     # Set-up training results dataframe:
-    training_results_cols_prefix = ["RMSE_train_", "RMSE_test_", "MAE_test_", "num_features_", "feature_list_",
-                                    "feat_high_import_name_", "feat_high_import_val_",
-                                    "features_to_remove_"]
+    primary_metric, secondary_metric = get_metric_names(target_type)
+    training_results_cols_prefix = [
+        f"{primary_metric}_train_", f"{primary_metric}_test_", f"{secondary_metric}_test_", "num_features_",
+        "feature_list_", "feat_high_import_name_", "feat_high_import_val_", "features_to_remove_"]
     training_results_cols = []
     for ii in range(1, len(X_train_comb)+1):
         training_results_cols.extend([x + str(ii) for x in training_results_cols_prefix])
@@ -302,7 +314,8 @@ def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, paramete
             out_row.append(col_to_drop)
 
         training_results_df.loc[jj] = out_row
-        print('Iter', jj, training_results_df.loc[jj, "num_features_1"], training_results_df.loc[jj, "RMSE_test_1"],
+        print('Iter', jj, training_results_df.loc[jj, "num_features_1"],
+              training_results_df.loc[jj, f"{primary_metric}_test_1"],
               training_results_df.loc[jj, "feat_high_import_name_1"],
               training_results_df.loc[jj, "feat_high_import_val_1"])
 
