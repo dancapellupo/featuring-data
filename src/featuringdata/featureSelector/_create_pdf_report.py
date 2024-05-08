@@ -20,11 +20,12 @@ def add_text_pdf(pdf, txt, style='', fontsize=12, new_page=False, space_below=7)
 
     # style = 'B' if bold else ''
     pdf.set_font('Arial', style, fontsize)
-    
+
     pdf.write(5, txt)
 
-    pdf.ln(space_below)
-
+    if space_below > 0:
+        pdf.ln(space_below)
+    
     return pdf
 
 

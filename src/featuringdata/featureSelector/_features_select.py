@@ -372,16 +372,23 @@ class FeatureSelector:
         # TODO: Put metric values in boldface:
         out_txt = (f"This plot shows the primary metric that was used in model training, which is {primary_metric}. "
                    f"The vertical line is the location with the best value of this metric, which is a {primary_metric} "
-                   f"of {best_prim_metric}, compared to the starting {primary_metric} of "
-                   f"{training_results_df[f'{primary_metric}_test_{data_ind+1}'].iloc[0]}.")
-        self.pdf = add_text_pdf(self.pdf, txt=out_txt)
-        # TODO: Make italic:
+                   f"of ")
+        self.pdf = add_text_pdf(self.pdf, txt=out_txt, space_below=0)
+        self.pdf = add_text_pdf(self.pdf, style='B', txt=f"{best_prim_metric}", space_below=0)
+        self.pdf = add_text_pdf(self.pdf, txt=f", compared to the starting {primary_metric} of ", space_below=0)
+        self.pdf = add_text_pdf(self.pdf, style='B', space_below=0,
+                                txt=f"{training_results_df[f'{primary_metric}_test_{data_ind+1}'].iloc[0]}")
+        self.pdf = add_text_pdf(self.pdf, txt=f".")
+        # DONE: Make italic:
         out_txt = f"Note that lower values of {primary_metric} indicate better model performance."
         self.pdf = add_text_pdf(self.pdf, style='I', txt=out_txt)
         out_txt = (f"The model training started with {num_features_start} features (after one-hot encoding any "
-                   f"categorical features), and achieved the best model training results with "
-                   f"{training_results_df['num_features_{}'.format(data_ind+1)].iloc[best_ind]} features.")
-        self.pdf = add_text_pdf(self.pdf, txt=out_txt)
+                   f"categorical features), and achieved the best model training results with ")
+        self.pdf = add_text_pdf(self.pdf, txt=out_txt, space_below=0)
+        self.pdf = add_text_pdf(
+            self.pdf, txt=f"{training_results_df['num_features_{}'.format(data_ind+1)].iloc[best_ind]} features",
+            style='B', space_below=0)
+        self.pdf = add_text_pdf(self.pdf, txt=f".")
         # TODO: Add baseline for logloss - random assignment based on fraction with each label
         # TODO: Assess how low, in terms of number of features, one could go without drastically decreasing the
         #  performance
@@ -415,16 +422,22 @@ class FeatureSelector:
         self.pdf = add_text_pdf(self.pdf, txt=out_txt)
         out_txt = "It is therefore possible that the 'best' iteration will be different in this plot."
         self.pdf = add_text_pdf(self.pdf, style='I', txt=out_txt)
-        out_txt = (f"The best value of {secondary_metric} is {best_sec_metric}, compared to the starting value of "
-                   f"{training_results_df[f'{secondary_metric}_test_{data_ind+1}'].iloc[0]}.")
-        self.pdf = add_text_pdf(self.pdf, txt=out_txt)
+        self.pdf = add_text_pdf(self.pdf, txt=f"The best value of {secondary_metric} is ", space_below=0)
+        self.pdf = add_text_pdf(self.pdf, style='B', txt=f"{best_sec_metric}", space_below=0)
+        self.pdf = add_text_pdf(self.pdf, txt=f", compared to the starting value of ", space_below=0)
+        self.pdf = add_text_pdf(self.pdf, style='B', space_below=0,
+                                txt=f"{training_results_df[f'{secondary_metric}_test_{data_ind+1}'].iloc[0]}")
+        self.pdf = add_text_pdf(self.pdf, txt=f".")
         if secondary_metric == 'CohKap':
             out_txt = (f"Note that with the Cohen-Kappa score, the possible range is 0 to 1, with 0 meaning that the "
                        f"model has no predictive power and 1 is the best it could be.")
             self.pdf = add_text_pdf(self.pdf, style='I', txt=out_txt)
-        out_txt = (f"With this metric, the best model training result occurred with "
-                   f"{training_results_df['num_features_{}'.format(data_ind+1)].iloc[best_sec_metric_ind]} features.")
-        self.pdf = add_text_pdf(self.pdf, txt=out_txt)
+        self.pdf = add_text_pdf(
+            self.pdf, txt="With this metric, the best model training result occurred with ", space_below=0)
+        self.pdf = add_text_pdf(
+            self.pdf, txt=f"{training_results_df['num_features_{}'.format(data_ind+1)].iloc[best_ind]} features",
+            style='B', space_below=0)
+        self.pdf = add_text_pdf(self.pdf, txt=f".")
         
         # ----------------------------------------------
         # Collect and examine feature importance values:
