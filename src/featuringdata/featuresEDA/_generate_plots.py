@@ -110,7 +110,7 @@ def plot_scatter_density(x, y, fig=None, ax=None, sort=True, bins=20, **kwargs):
 
 
 def plot_feature_values(data_df, columns_list, correlation_df, target_col, numeric=True, target_type='regression',
-                        catplot_style='scatterdense', plots_folder='./plots'):
+                        plot_style='scatterdense', plots_folder='./plots'):
     """
     Generate EDA plots that show each feature versus the target variable.
 
@@ -143,6 +143,9 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
     numeric : bool
 
     catplot_style : str
+        The options are:
+        - 'scatterdense' for density scatterplots with the matplotlib viridis color palette
+        - 'swarm' or 'strip' for default seaborn colors and style
 
     plots_folder : str
 
@@ -158,7 +161,7 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
     # print('*** {} ***'.format(mpl.get_backend()))
 
     # Set box plot display parameters:
-    if catplot_style != 'scatterdense':
+    if plot_style != 'scatterdense':
         box_params = {'whis': [0, 100], 'width': 0.6}
     else:
         box_params = {'whis': [0, 100], 'width': 0.6, 'fill': False, 'color': 'black'}
@@ -218,16 +221,16 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
                     sns.boxplot(data_df_col_notnull, x=column, y=target_col, **box_params)  # hue="method", palette="vlag"
 
                 # Add in points to show each observation
-                if (catplot_style != 'scatterdense') and (len(data_df_col_notnull) > 1000):
+                if (plot_style != 'scatterdense') and (len(data_df_col_notnull) > 1000):
                     data_df_col_notnull = data_df_col_notnull.sample(n=1000, replace=False)
 
-                if catplot_style == 'swarm':
+                if plot_style in ('swarm', 'seaborn'):
                     sns.swarmplot(data_df_col_notnull, x=column, y=target_col, size=2, color=".3", warn_thresh=0.4)
 
-                elif catplot_style == 'strip':
+                elif plot_style == 'strip':
                     sns.stripplot(data_df_col_notnull, x=column, y=target_col, jitter=0.25, size=2, color=".3")
 
-                elif catplot_style == 'scatterdense':
+                elif plot_style == 'scatterdense':
                     x_all, y_all = np.array([]), np.array([])
 
                     for cat in ax.get_xticklabels():
@@ -248,7 +251,13 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
                     ax = plot_scatter_density(x_all, y_all, fig=f, ax=ax, bins=100, s=3, cmap='viridis')
                 
             else:
-                sns.histplot(data_df_col_notnull, x=column, hue=target_col, discrete=True, shrink=0.6, multiple="dodge")  # "stack"
+                if plot_style == 'seaborn':
+                    sns.histplot(data_df_col_notnull, x=column, hue=target_col, discrete=True, shrink=0.6,
+                                 multiple="dodge")  # "stack"
+                else:
+                    with sns.color_palette('viridis'):
+                        sns.histplot(data_df_col_notnull, x=column, hue=target_col, discrete=True, shrink=0.6,
+                                     multiple="dodge")  # "stack"
                 ax.set_xticks(data_df_col_notnull[column].unique())
 
             if (not numeric) and num_uniq >= 10:
@@ -271,41 +280,52 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
                 ax.add_artist(anc)
 
             if target_type == 'regression':
-                # sns.scatterplot(train_data_mod, x=column, y=target_col, hue="OverallQual")
-                # sns.scatterplot(data_df, x=column, y=target_col, size=2, legend=False)
+                if plot_style == 'seaborn':
+                    sns.scatterplot(data_df_col_notnull, x=column, y=target_col, size=2, legend=False)
 
-                ax = plot_scatter_density(data_df_col_notnull[column].values, data_df_col_notnull[target_col].values,
-                                        fig=f, ax=ax, bins=100, s=3, cmap='viridis')
+                else:
+                    ax = plot_scatter_density(data_df_col_notnull[column].values, data_df_col_notnull[target_col].values,
+                                            fig=f, ax=ax, bins=100, s=3, cmap='viridis')
 
-                # plt.hist2d(data_df_col_notnull[column], data_df_col_notnull[target_col], bins=(100, 100),
-                #            cmap='viridis', cmin=1)  # BuPu
-                # plt.colorbar()
+                    # plt.hist2d(data_df_col_notnull[column], data_df_col_notnull[target_col], bins=(100, 100),
+                    #            cmap='viridis', cmin=1)  # BuPu
+                    # plt.colorbar()
 
-                # ax.scatter(x, y, c=z, s=100, edgecolor='')
-                # ax.scatter(x, y, c=z, s=50)
+                    # ax.scatter(x, y, c=z, s=100, edgecolor='')
+                    # ax.scatter(x, y, c=z, s=50)
             
             else:
                 sns.boxplot(data_df_col_notnull, x=column, y=target_col, orient='y', **box_params)
 
-                x_all, y_all = np.array([]), np.array([])
+                if (plot_style != 'scatterdense') and (len(data_df_col_notnull) > 1000):
+                    data_df_col_notnull = data_df_col_notnull.sample(n=1000, replace=False)
 
-                for cat in ax.get_yticklabels():
-                    # print(cat, cat.get_text(), cat.get_position(), cat.get_position()[0])
+                if plot_style in ('swarm', 'seaborn'):
+                    sns.swarmplot(data_df_col_notnull, x=column, y=target_col, orient='y', size=2, color=".3", warn_thresh=0.4)
 
-                    try:
-                        data_df_cat = data_df_col_notnull.loc[
-                            (data_df_col_notnull[target_col] == cat.get_text()) | (
-                                        data_df_col_notnull[target_col] == float(cat.get_text()))]
-                    except ValueError:
-                        data_df_cat = data_df_col_notnull.loc[data_df_col_notnull[target_col] == cat.get_text()]
-                    # print(len(data_df_cat))
+                elif plot_style == 'strip':
+                    sns.stripplot(data_df_col_notnull, x=column, y=target_col, orient='y', jitter=0.25, size=2, color=".3")
+                
+                elif plot_style == 'scatterdense':
+                    x_all, y_all = np.array([]), np.array([])
 
-                    y = (np.zeros(len(data_df_cat)) + cat.get_position()[1] +
-                        np.random.normal(scale=0.06, size=len(data_df_cat)))
-                    x = data_df_cat[column].values
-                    x_all, y_all = np.append(x_all, x), np.append(y_all, y)
+                    for cat in ax.get_yticklabels():
+                        # print(cat, cat.get_text(), cat.get_position(), cat.get_position()[0])
 
-                ax = plot_scatter_density(x_all, y_all, fig=f, ax=ax, bins=100, s=3, cmap='viridis')
+                        try:
+                            data_df_cat = data_df_col_notnull.loc[
+                                (data_df_col_notnull[target_col] == cat.get_text()) | (
+                                            data_df_col_notnull[target_col] == float(cat.get_text()))]
+                        except ValueError:
+                            data_df_cat = data_df_col_notnull.loc[data_df_col_notnull[target_col] == cat.get_text()]
+                        # print(len(data_df_cat))
+
+                        y = (np.zeros(len(data_df_cat)) + cat.get_position()[1] +
+                            np.random.normal(scale=0.06, size=len(data_df_cat)))
+                        x = data_df_cat[column].values
+                        x_all, y_all = np.append(x_all, x), np.append(y_all, y)
+
+                    ax = plot_scatter_density(x_all, y_all, fig=f, ax=ax, bins=100, s=3, cmap='viridis')
 
             plt.grid()
 

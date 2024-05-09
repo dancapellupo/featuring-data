@@ -295,7 +295,7 @@ class FeaturesEDA:
             custom_filename = self.report_prefix + '_Initial'
             save_pdf_doc(self.pdf, custom_filename=custom_filename, timestamp=timestamp)
 
-    def run_full_eda(self, data_df, run_collinear=True, generate_plots=True):
+    def run_full_eda(self, data_df, run_collinear=True, generate_plots=True, plot_style='scatterdense'):
         """
         Run a comprehensive exploratory data analysis (EDA) on a given dataset.
 
@@ -438,7 +438,8 @@ class FeaturesEDA:
                 # Generate plots of numeric features, and save them to the
                 # timestamped directory defined above:
                 plot_feature_values(data_df, columns_list_ordered, self.master_columns_df, target_col=self.target_col,
-                                    numeric=True, target_type=self.target_type, plots_folder=plots_folder)
+                                    numeric=True, plot_style=plot_style, target_type=self.target_type,
+                                    plots_folder=plots_folder)
 
                 # Add the plots to the PDF:
                 self.pdf = section_of_plots(self.pdf, columns_list_ordered, target_col=self.target_col, numeric=True,
@@ -457,7 +458,8 @@ class FeaturesEDA:
                 # Generate plots of non-numeric features, and save them to the
                 # timestamped directory defined above:
                 plot_feature_values(data_df, columns_list_ordered, self.master_columns_df, target_col=self.target_col,
-                                    numeric=False, target_type=self.target_type, plots_folder=plots_folder)
+                                    numeric=False, plot_style=plot_style, target_type=self.target_type,
+                                    plots_folder=plots_folder)
                 
                 # Add the plots to the PDF:
                 self.pdf = section_of_plots(self.pdf, columns_list_ordered, target_col=self.target_col, numeric=False,
