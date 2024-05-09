@@ -314,10 +314,17 @@ def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, paramete
             out_row.append(col_to_drop)
 
         training_results_df.loc[jj] = out_row
-        print('Iter', jj, training_results_df.loc[jj, "num_features_1"],
-              training_results_df.loc[jj, f"{primary_metric}_test_1"],
-              training_results_df.loc[jj, "feat_high_import_name_1"],
-              training_results_df.loc[jj, "feat_high_import_val_1"])
+        if jj == 0:
+            print(f'         NumFeats(1) {primary_metric}(1)   TopFeat(1) TopFeatImp(1)'
+                  f'  NumFeats(2) {primary_metric}(2)   TopFeat(2) TopFeatImp(2)')
+        print(f'Iter {jj:4} : {training_results_df.loc[jj, "num_features_1"]:5}  '
+              f'{training_results_df.loc[jj, f"{primary_metric}_test_1"]:.5f} '
+              f'{training_results_df.loc[jj, "feat_high_import_name_1"]:>20} '
+              f'{training_results_df.loc[jj, "feat_high_import_val_1"]:.2f}  :  '
+              f'{training_results_df.loc[jj, "num_features_2"]:5} '
+              f'{training_results_df.loc[jj, f"{primary_metric}_test_2"]:.5f}  '
+              f'{training_results_df.loc[jj, "feat_high_import_name_2"]:>20} '
+              f'{training_results_df.loc[jj, "feat_high_import_val_2"]:.2f}')
 
         # Stop running the iterative training once all features have been
         #  removed from at least one of the data splits:

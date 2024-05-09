@@ -17,7 +17,7 @@ from ._create_pdf_report import (
     save_pdf_doc
 )
 
-from ._recursive_fit import recursive_fit, calc_model_metric, get_metric_names
+from ._recursive_fit import recursive_fit, calc_model_metric, get_metric_names, round_to_n_sigfig
 
 from ._generate_plots import plot_inline_scatter, plot_xy, convert_title_to_filename, plot_horizontal_line, plot_vertical_line, save_fig, plot_xy_splitaxis
 
@@ -423,10 +423,13 @@ class FeatureSelector:
         out_txt = "It is therefore possible that the 'best' iteration will be different in this plot."
         self.pdf = add_text_pdf(self.pdf, style='I', txt=out_txt)
         self.pdf = add_text_pdf(self.pdf, txt=f"The best value of {secondary_metric} is ", space_below=0)
-        self.pdf = add_text_pdf(self.pdf, style='B', txt=f"{best_sec_metric}", space_below=0)
+        self.pdf = add_text_pdf(self.pdf, style='B', txt=f"{best_sec_metric:,}", space_below=0)
         self.pdf = add_text_pdf(self.pdf, txt=f", compared to the starting value of ", space_below=0)
         self.pdf = add_text_pdf(self.pdf, style='B', space_below=0,
-                                txt=f"{training_results_df[f'{secondary_metric}_test_{data_ind+1}'].iloc[0]}")
+                                txt=f"{training_results_df[f'{secondary_metric}_test_{data_ind+1}'].iloc[0]:,}")
+        if self.target_type == 'regression':
+            out_txt = f" (the average {self.target_col} is {round_to_n_sigfig(data_df[self.target_col].mean(), 5):,})"
+            self.pdf = add_text_pdf(self.pdf, txt=out_txt, space_below=0)
         self.pdf = add_text_pdf(self.pdf, txt=f".")
         if secondary_metric == 'CohKap':
             out_txt = (f"Note that with the Cohen-Kappa score, the possible range is 0 to 1, with 0 meaning that the "
