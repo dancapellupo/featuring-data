@@ -1,4 +1,8 @@
 
+<img src="https://raw.githubusercontent.com/dancapellupo/featuring-data/main/tmp/featuring-data-logo-md.png"><br>
+
+-------------------------------------------------------------------------------
+
 # Featuring Data: Exploratory Data Analysis (EDA) and Feature Selection
 
 Featuring Data is a Python library that builds on the well-known Pandas,
