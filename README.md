@@ -5,6 +5,9 @@
 
 # Featuring Data: Exploratory Data Analysis (EDA) and Feature Selection
 
+[![PyPI Version](https://img.shields.io/pypi/v/featuring-data
+)](https://pypi.org/project/featuring-data/)
+
 Featuring Data is a Python library that builds on the well-known Pandas,
 matplotlib, and scikit-learn libraries to provide an easy starting point for
 EDA and feature selection on any structured dataset that is in the form of a
@@ -143,7 +146,14 @@ The functions within this class perform the following tasks:
   - For typical numeric features, a scatter density plot is generated. A color
     scale indicates how many overlapping points there are in a given location.
 
-<img src="https://raw.githubusercontent.com/dancapellupo/featuring-data/main/tmp/housing_ames_example_feature_plots.png" alt="Example visualizations of continuous and discrete variables"><br>
+ <div style='display: flex;'>
+  <div style='flex: 50%; padding: 5px;'>
+    <img src="https://raw.githubusercontent.com/dancapellupo/featuring-data/main/tmp/housing_ames_GrLivArea_vs_SalePrice.png" alt="Example visualization of continuous variable." style="width:100%">
+  </div>
+  <div style='flex: 50%; padding: 5px;'>
+    <img src="https://raw.githubusercontent.com/dancapellupo/featuring-data/main/tmp/housing_ames_ExterQual_vs_SalePrice.png" alt="Example visualization of discrete variable." style="width:100%">
+  </div>
+</div>
 *An example plot of a numeric/continuous variable versus a continuous target
 (left; the sale price of a house in Ames), and a discrete/categorical variable
 versus the same continuous target (right).*
