@@ -86,7 +86,7 @@ reference or sharing results with team members and even stakeholders.
 eda.master_columns_df.head(5)
 ```
 
-![Housing Ames 'master_columns_df' dataframe](/tmp/housing_ames_master_columns_df_head5.png)
+<img src="https://raw.githubusercontent.com/dancapellupo/featuring-data/main/tmp/housing_ames_master_columns_df_head5.png" alt="Housing Ames 'master_columns_df' dataframe"><br>
 *This is a truncated example of the main dataframe output of the EDA class,
 showing each column from the training dataset in the left-most column (the
 index of this dataframe), the number of Nulls in that column, the type of data
@@ -143,7 +143,7 @@ The functions within this class perform the following tasks:
   - For typical numeric features, a scatter density plot is generated. A color
     scale indicates how many overlapping points there are in a given location.
 
-![Example visualizations of continuous and discrete variables](/tmp/housing_ames_example_feature_plots.png)
+<img src="https://raw.githubusercontent.com/dancapellupo/featuring-data/main/tmp/housing_ames_example_feature_plots.png" alt="Example visualizations of continuous and discrete variables"><br>
 *An example plot of a numeric/continuous variable versus a continuous target
 (left; the sale price of a house in Ames), and a discrete/categorical variable
 versus the same continuous target (right).*
@@ -192,7 +192,7 @@ The functions within this class perform the following tasks:
         - the number of features
         - the features removed at the end of each iteration
 
-![](/tmp/housing_ames_num_features_vs_MAE.png)
+<img src="https://raw.githubusercontent.com/dancapellupo/featuring-data/main/tmp/housing_ames_num_features_vs_MAE.png" width=500><br>
 *This plot shows that as the number of features is reduced, the model
 performance stays fairly constant, until you go down to about 20 features
 (out of ~100 original features). The two colors represent two different
