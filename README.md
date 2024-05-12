@@ -146,14 +146,9 @@ The functions within this class perform the following tasks:
   - For typical numeric features, a scatter density plot is generated. A color
     scale indicates how many overlapping points there are in a given location.
 
- <div style='display: flex;'>
-  <div style='flex: 50%; padding: 5px;'>
-    <img src="https://raw.githubusercontent.com/dancapellupo/featuring-data/main/tmp/housing_ames_GrLivArea_vs_SalePrice.png" alt="Example visualization of continuous variable." style="width:100%">
-  </div>
-  <div style='flex: 50%; padding: 5px;'>
-    <img src="https://raw.githubusercontent.com/dancapellupo/featuring-data/main/tmp/housing_ames_ExterQual_vs_SalePrice.png" alt="Example visualization of discrete variable." style="width:100%">
-  </div>
-</div>
+|   |   |
+|---|---|
+| <img src="https://raw.githubusercontent.com/dancapellupo/featuring-data/main/tmp/housing_ames_GrLivArea_vs_SalePrice.png" alt="Example visualization of continuous variable."> | <img src="https://raw.githubusercontent.com/dancapellupo/featuring-data/main/tmp/housing_ames_ExterQual_vs_SalePrice.png" alt="Example visualization of discrete variable."> |
 
 *An example plot of a numeric/continuous variable versus a continuous target
 (left; the sale price of a house in Ames), and a discrete/categorical variable
