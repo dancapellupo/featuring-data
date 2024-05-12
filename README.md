@@ -154,6 +154,7 @@ The functions within this class perform the following tasks:
     <img src="https://raw.githubusercontent.com/dancapellupo/featuring-data/main/tmp/housing_ames_ExterQual_vs_SalePrice.png" alt="Example visualization of discrete variable." style="width:100%">
   </div>
 </div>
+
 *An example plot of a numeric/continuous variable versus a continuous target
 (left; the sale price of a house in Ames), and a discrete/categorical variable
 versus the same continuous target (right).*
