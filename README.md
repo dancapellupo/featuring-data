@@ -44,7 +44,7 @@ This package allows you to do this fast, so you quickly have a strong
 starting point for further exploration.
 
 Plus, you get
-[a nicely formatted PDF](https://github.com/dancapellupo/featuring-data/blob/6efc4b54c65f8a2f38b498a01f569ad25bf2eb23/examples/Housing_Ames_EDA_Report_20240503_164941.pdf),
+[a nicely formatted PDF](https://github.com/dancapellupo/featuring-data/blob/4b57e045df68efe75b4a3b9116a32dfd2cd7ef59/examples/Housing_Ames_EDA_Report_20240512_220339.pdf),
 with all the usual, important details of a dataset layed out, for future
 reference as you continue to work with a dataset.
 
@@ -68,7 +68,7 @@ for a regression example or
 for a classification example, and run with the provided dataset (or read in
 your own CSV or pandas dataframe).
 
-[This PDF](https://github.com/dancapellupo/featuring-data/blob/6efc4b54c65f8a2f38b498a01f569ad25bf2eb23/examples/Housing_Ames_EDA_Report_20240503_164941.pdf)
+[This PDF](https://github.com/dancapellupo/featuring-data/blob/4b57e045df68efe75b4a3b9116a32dfd2cd7ef59/examples/Housing_Ames_EDA_Report_20240512_220339.pdf)
 shows an example output of the `FeaturesEDA` functionality.
 
 ## FeaturesEDA: A comprehensive EDA in two lines of code
