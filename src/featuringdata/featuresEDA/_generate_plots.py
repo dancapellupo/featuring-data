@@ -3,6 +3,7 @@ from tqdm.auto import tqdm
 
 import math
 import numpy as np
+import pandas as pd
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -52,7 +53,7 @@ def plot_hist(data_for_bins, label_bins='', data_for_line=None, label_line='', x
     plt.close()
 
 
-def plot_hist_target_col(target_col_vals, target_type='regression', plots_folder='./'):
+def plot_hist_target_col(target_col_vals, target_type='regression', set_plot_order=None, plots_folder='./'):
 
     sns.set_theme(style="ticks", font_scale=1.2)
     f, ax = plt.subplots(figsize=(9, 6))
@@ -62,9 +63,16 @@ def plot_hist_target_col(target_col_vals, target_type='regression', plots_folder
         plt.grid()
         plt.xlim(target_col_vals.min(), target_col_vals.max())
     else:
-        sns.histplot(data=target_col_vals, discrete=True, shrink=0.6)
-        ax.set_xticks(target_col_vals.unique())
+        if set_plot_order is not None:
+            target_col_vals_cat = pd.Categorical(target_col_vals, set_plot_order)
+            sns.histplot(data=target_col_vals_cat, discrete=True, shrink=0.6)
+        else:
+            sns.histplot(data=target_col_vals, discrete=True, shrink=0.6)
+            # ax.set_xticks(target_col_vals.unique())
         plt.grid(axis='y')
+        
+        if target_col_vals.nunique() > 5:
+            plt.xticks(rotation=45)
 
     plt.savefig('{}/target_data_distribution.png'.format(plots_folder), bbox_inches='tight')
     plt.close()
@@ -110,7 +118,7 @@ def plot_scatter_density(x, y, fig=None, ax=None, sort=True, bins=20, **kwargs):
 
 
 def plot_feature_values(data_df, columns_list, correlation_df, target_col, numeric=True, target_type='regression',
-                        plot_style='scatterdense', plots_folder='./plots'):
+                        plot_style='scatterdense', set_plot_order=None, plots_folder='./plots'):
     """
     Generate EDA plots that show each feature versus the target variable.
 
@@ -165,6 +173,12 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
         box_params = {'whis': [0, 100], 'width': 0.6}
     else:
         box_params = {'whis': [0, 100], 'width': 0.6, 'fill': False, 'color': 'black'}
+    
+    hist_params = {"discrete": True, "shrink": 0.6, "multiple": "dodge"}
+
+    if set_plot_order is not None:
+        box_params["order"] = set_plot_order
+        hist_params["hue_order"] = set_plot_order
 
     set_ylim = False
     if target_type == 'regression':
@@ -209,6 +223,8 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
                 ax.add_artist(anc)
             
             if target_type == 'regression':
+                # Regression -- Discrete variable
+
                 if not numeric:
                     # Standard Box Plot with X-axis ordered by median value in each category
                     xaxis_order = data_df_col_notnull.groupby(
@@ -251,13 +267,12 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
                     ax = plot_scatter_density(x_all, y_all, fig=f, ax=ax, bins=100, s=3, cmap='viridis')
                 
             else:
+                # Classification -- Continuous Variable
                 if plot_style == 'seaborn':
-                    sns.histplot(data_df_col_notnull, x=column, hue=target_col, discrete=True, shrink=0.6,
-                                 multiple="dodge")  # "stack"
+                    sns.histplot(data_df_col_notnull, x=column, hue=target_col, **hist_params)  # "stack"
                 else:
                     with sns.color_palette('viridis'):
-                        sns.histplot(data_df_col_notnull, x=column, hue=target_col, discrete=True, shrink=0.6,
-                                     multiple="dodge")  # "stack"
+                        sns.histplot(data_df_col_notnull, x=column, hue=target_col, **hist_params)  # "stack"
                 ax.set_xticks(data_df_col_notnull[column].unique())
 
             if (not numeric) and num_uniq >= 10:
@@ -280,6 +295,7 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
                 ax.add_artist(anc)
 
             if target_type == 'regression':
+                # Regression -- Continuous variable
                 if plot_style == 'seaborn':
                     sns.scatterplot(data_df_col_notnull, x=column, y=target_col, size=2, legend=False)
 
@@ -295,6 +311,7 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
                     # ax.scatter(x, y, c=z, s=50)
             
             else:
+                # Classification -- Continuous variable
                 sns.boxplot(data_df_col_notnull, x=column, y=target_col, orient='y', **box_params)
 
                 if (plot_style != 'scatterdense') and (len(data_df_col_notnull) > 1000):
