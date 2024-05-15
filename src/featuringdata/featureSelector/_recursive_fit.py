@@ -83,7 +83,7 @@ def calc_model_metric(y, y_pred, target_type='regression', metric_type='regular'
                 return cohen_kappa_score(y, y_pred)
 
 
-def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, parameter_dict, target_type='regression',
+def recursive_fit(X_train_comb, y_train_comb, X_val_comb, y_val_comb, parameter_dict, target_type='regression',
                   use_gridsearchcv=False, target_log=False):
     """
     This is the core function that performs the iterative model training.
@@ -96,10 +96,10 @@ def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, paramete
     y_train_comb : list
         A list of y_train target values.
 
-    X_test_comb : list
+    X_val_comb : list
         A list of validation data splits.
 
-    y_test_comb : list
+    y_val_comb : list
         A list of validation target value splits.
 
     parameter_dict : dict
@@ -121,8 +121,8 @@ def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, paramete
         starting from iteration 0 with all features included. The
         following columns are generated for each random data split:
         - "RMSE_train_":
-        - "RMSE_test_":
-        - "MAE_test_":
+        - "RMSE_val_":
+        - "MAE_val_":
         - "num_features_":
         - "feature_list_":
         - "feat_high_import_name_":
@@ -158,7 +158,7 @@ def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, paramete
     # Set-up training results dataframe:
     primary_metric, secondary_metric = get_metric_names(target_type)
     training_results_cols_prefix = [
-        f"{primary_metric}_train_", f"{primary_metric}_test_", f"{secondary_metric}_test_", "num_features_",
+        f"{primary_metric}_train_", f"{primary_metric}_val_", f"{secondary_metric}_val_", "num_features_",
         "feature_list_", "feat_high_import_name_", "feat_high_import_val_", "features_to_remove_"]
     training_results_cols = []
     for ii in range(1, len(X_train_comb)+1):
@@ -203,7 +203,7 @@ def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, paramete
                     grid_search = GridSearchCV(xgb_reg, param_grid=parameter_dict, cv=2)
 
                     grid_search.fit(X_train_comb[data_jj][feature_columns[data_jj]], y_train_comb[data_jj],
-                                    eval_set=[(X_test_comb[data_jj][feature_columns[data_jj]], y_test_comb[data_jj])],
+                                    eval_set=[(X_val_comb[data_jj][feature_columns[data_jj]], y_val_comb[data_jj])],
                                     verbose=False)
 
                     if data_jj == 0:
@@ -226,7 +226,7 @@ def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, paramete
                             xgb_reg = XGBClassifier(n_estimators=1000, early_stopping_rounds=20, random_state=42,
                                                     **parameter_dict_tmp)
                         xgb_reg.fit(X_train_comb[data_jj][feature_columns[data_jj]], y_train_comb[data_jj],
-                                    eval_set=[(X_test_comb[data_jj][feature_columns[data_jj]], y_test_comb[data_jj])],
+                                    eval_set=[(X_val_comb[data_jj][feature_columns[data_jj]], y_val_comb[data_jj])],
                                     verbose=False)
 
                         if (best_score is None) or (xgb_reg.best_score < best_score):
@@ -254,33 +254,33 @@ def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, paramete
                 xgb_reg = XGBClassifier(n_estimators=1000, early_stopping_rounds=20, random_state=42, **best_params_dict)
 
             xgb_reg.fit(X_train_comb[data_jj][feature_columns[data_jj]], y_train_comb[data_jj],
-                        eval_set=[(X_test_comb[data_jj][feature_columns[data_jj]], y_test_comb[data_jj])], verbose=False)
+                        eval_set=[(X_val_comb[data_jj][feature_columns[data_jj]], y_val_comb[data_jj])], verbose=False)
 
             if target_type == 'regression':
                 y_train_pred = xgb_reg.predict(X_train_comb[data_jj][feature_columns[data_jj]])
-                y_test_pred = xgb_reg.predict(X_test_comb[data_jj][feature_columns[data_jj]])
+                y_val_pred = xgb_reg.predict(X_val_comb[data_jj][feature_columns[data_jj]])
             else:
                 y_train_pred = xgb_reg.predict_proba(X_train_comb[data_jj][feature_columns[data_jj]])
-                y_test_pred = xgb_reg.predict_proba(X_test_comb[data_jj][feature_columns[data_jj]])
+                y_val_pred = xgb_reg.predict_proba(X_val_comb[data_jj][feature_columns[data_jj]])
 
             # TODO: Instead of rounding, go by significant digits [# of digits to be user-configurable]
             train_err = round_to_n_sigfig(calc_model_metric(y_train_comb[data_jj], y_train_pred, target_type=target_type), 5)
-            test_err = round_to_n_sigfig(calc_model_metric(y_test_comb[data_jj], y_test_pred, target_type=target_type), 5)
+            val_err = round_to_n_sigfig(calc_model_metric(y_val_comb[data_jj], y_val_pred, target_type=target_type), 5)
 
             # If the log of the training data was taken, then reverse the log
             #  to save an easier-to-follow MAE value for the user:
             if target_log:
-                test_mae = round_to_n_sigfig(
-                    calc_model_metric(np.expm1(y_test_comb[data_jj]), np.expm1(y_test_pred), target_type=target_type, metric_type='easy'), 5)
+                val_mae = round_to_n_sigfig(
+                    calc_model_metric(np.expm1(y_val_comb[data_jj]), np.expm1(y_val_pred), target_type=target_type, metric_type='easy'), 5)
             else:
                 if target_type == 'classification':
-                    y_test_pred = xgb_reg.predict(X_test_comb[data_jj][feature_columns[data_jj]])
-                test_mae = round_to_n_sigfig(calc_model_metric(y_test_comb[data_jj], y_test_pred, target_type=target_type, metric_type='easy'), 5)
+                    y_val_pred = xgb_reg.predict(X_val_comb[data_jj][feature_columns[data_jj]])
+                val_mae = round_to_n_sigfig(calc_model_metric(y_val_comb[data_jj], y_val_pred, target_type=target_type, metric_type='easy'), 5)
             
             # ----------------------------------------------------------------
             # Save information from this iteration to dataframe
             out_row.extend(
-                [train_err, test_err, test_mae, len(feature_columns[data_jj]), ', '.join(feature_columns[data_jj])])
+                [train_err, val_err, val_mae, len(feature_columns[data_jj]), ', '.join(feature_columns[data_jj])])
 
             max_feat_import_ind = np.argmax(xgb_reg.feature_importances_)
             out_row.extend([feature_columns[data_jj][max_feat_import_ind],
@@ -318,11 +318,11 @@ def recursive_fit(X_train_comb, y_train_comb, X_test_comb, y_test_comb, paramete
             print(f'         NumFeats(1) {primary_metric}(1)   TopFeat(1) TopFeatImp(1)'
                   f'  NumFeats(2) {primary_metric}(2)   TopFeat(2) TopFeatImp(2)')
         print(f'Iter {jj:4} : {training_results_df.loc[jj, "num_features_1"]:5}  '
-              f'{training_results_df.loc[jj, f"{primary_metric}_test_1"]:.5f} '
+              f'{training_results_df.loc[jj, f"{primary_metric}_val_1"]:.5f} '
               f'{training_results_df.loc[jj, "feat_high_import_name_1"]:>20} '
               f'{training_results_df.loc[jj, "feat_high_import_val_1"]:.2f}  :  '
               f'{training_results_df.loc[jj, "num_features_2"]:5} '
-              f'{training_results_df.loc[jj, f"{primary_metric}_test_2"]:.5f}  '
+              f'{training_results_df.loc[jj, f"{primary_metric}_val_2"]:.5f}  '
               f'{training_results_df.loc[jj, "feat_high_import_name_2"]:>20} '
               f'{training_results_df.loc[jj, "feat_high_import_val_2"]:.2f}')
 

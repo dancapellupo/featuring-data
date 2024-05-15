@@ -87,7 +87,7 @@ class FeatureSelector:
         Whether to take the log of the target variable for model training.
 
     TODO: Change name to 'val_size'
-    test_size : float, default=0.15
+    val_size : float, default=0.15
         Fraction of the input data to use for validation set.
 
     parameter_dict : dict, default=None
@@ -137,7 +137,7 @@ class FeatureSelector:
     """
 
     def __init__(self, numeric_cols, non_numeric_cols, report_prefix='FeatureSelection', target_col=None,
-                 target_log=False, target_type='regression', test_size=0.15, parameter_dict=None):
+                 target_log=False, target_type='regression', val_size=0.15, parameter_dict=None):
 
         self.numeric_cols = numeric_cols
         self.non_numeric_cols = non_numeric_cols
@@ -146,7 +146,7 @@ class FeatureSelector:
         self.target_log = target_log
         self.target_type = target_type
 
-        self.test_size = test_size
+        self.val_size = val_size
 
         if parameter_dict is None:
             self.parameter_dict = {'max_depth': [3, 4, 5, 6], 'gamma': [0, 1, 5],
@@ -241,24 +241,24 @@ class FeatureSelector:
 
         # TODO: Update this code for more than 2 splits
         # Perform random data splits:
-        X_train_42, X_test_42, y_train_42, y_test_42 = train_test_split(self.X, self.y, test_size=self.test_size,
+        X_train_42, X_val_42, y_train_42, y_val_42 = train_test_split(self.X, self.y, test_size=self.val_size,
                                                                         random_state=42)
-        X_train_46, X_test_46, y_train_46, y_test_46 = train_test_split(self.X, self.y, test_size=self.test_size,
+        X_train_46, X_val_46, y_train_46, y_val_46 = train_test_split(self.X, self.y, test_size=self.val_size,
                                                                         random_state=46)
         # TODO Allow user to set max/min values of the hyperparam ranges, as well as number of total iterations,
         #  which would define how many values to consider per hyperparam
 
         X_train_comb = [X_train_42, X_train_46]
-        X_test_comb = [X_test_42, X_test_46]
+        X_val_comb = [X_val_42, X_val_46]
 
         y_train_comb = [y_train_42, y_train_46]
-        y_test_comb = [y_test_42, y_test_46]
+        y_val_comb = [y_val_42, y_val_46]
 
         # --------------------------------------------------------------------
         # Run Recursive Training
 
         training_results_df, self.hyperparams_df, self.feature_importance_dict_list = recursive_fit(
-            X_train_comb, y_train_comb, X_test_comb, y_test_comb, target_log=self.target_log,
+            X_train_comb, y_train_comb, X_val_comb, y_val_comb, target_log=self.target_log,
             target_type=self.target_type, parameter_dict=self.parameter_dict)
 
         # --------------------------------------------------------------------
@@ -285,7 +285,7 @@ class FeatureSelector:
 
         X_train_best = X_train_comb[data_ind][training_results_df.loc[
             best_ind, "feature_list_{}".format(data_ind+1)].split(', ')]
-        X_test_best = X_test_comb[data_ind][training_results_df.loc[
+        X_val_best = X_val_comb[data_ind][training_results_df.loc[
             best_ind, "feature_list_{}".format(data_ind+1)].split(', ')]
 
         # Find the best hyperparameters relevant to the "best" iteration:
@@ -302,15 +302,15 @@ class FeatureSelector:
             xgb_reg = XGBRegressor(n_estimators=1000, early_stopping_rounds=20, random_state=42, **hyperparams_dict)
         else:
             xgb_reg = XGBClassifier(n_estimators=1000, early_stopping_rounds=20, random_state=42, **hyperparams_dict)
-        xgb_reg.fit(X_train_best, y_train_comb[data_ind], eval_set=[(X_test_best, y_test_comb[data_ind])], verbose=True)
+        xgb_reg.fit(X_train_best, y_train_comb[data_ind], eval_set=[(X_val_best, y_val_comb[data_ind])], verbose=True)
 
-        y_test_pred = xgb_reg.predict(X_test_best)
+        y_val_pred = xgb_reg.predict(X_val_best)
         
         if self.target_log:
-            sec_metric_final = calc_model_metric(np.expm1(y_test_comb[data_ind]), np.expm1(y_test_pred),
+            sec_metric_final = calc_model_metric(np.expm1(y_val_comb[data_ind]), np.expm1(y_val_pred),
                                           target_type=self.target_type, metric_type='easy')
         else:
-            sec_metric_final = calc_model_metric(y_test_comb[data_ind], y_test_pred, target_type=self.target_type,
+            sec_metric_final = calc_model_metric(y_val_comb[data_ind], y_val_pred, target_type=self.target_type,
                                           metric_type='easy')
         print(f'\nFinal {secondary_metric}: {sec_metric_final:.3f}\n')
 
@@ -369,7 +369,7 @@ class FeatureSelector:
         self.pdf = add_text_pdf(self.pdf, txt=out_txt)
         out_txt = "As the number of features is reduced, eventually the model will start to perform much more poorly."
         self.pdf = add_text_pdf(self.pdf, txt=out_txt)
-        # TODO: Put metric values in boldface:
+        # DONE: Put metric values in boldface:
         out_txt = (f"This plot shows the primary metric that was used in model training, which is {primary_metric}. "
                    f"The vertical line is the location with the best value of this metric, which is a {primary_metric} "
                    f"of ")
@@ -392,7 +392,7 @@ class FeatureSelector:
         # TODO: Add baseline for logloss - random assignment based on fraction with each label
         # TODO: Assess how low, in terms of number of features, one could go without drastically decreasing the
         #  performance
-        # TODO: Print MAE compared to range of y_val valuee
+        # TODO: Print MAE compared to range of y_val values
         
         # ---
         # PLOT #2 - Secondary evaluation metric:
