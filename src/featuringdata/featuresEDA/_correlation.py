@@ -84,6 +84,7 @@ def calc_numeric_features_target_corr(data_df, numeric_cols, master_columns_df, 
 
     rf_n_estimators, min_samples_leaf = get_random_forest_hyperparams(len(data_df), rf_n_estimators=rf_n_estimators)
 
+    print('Running correlations of numeric features to target variable...')
     print('For random forest (RF) correlation measure, using {} trees and min_samples_leaf={}.\n'.format(
         rf_n_estimators, min_samples_leaf))
 
@@ -93,7 +94,6 @@ def calc_numeric_features_target_corr(data_df, numeric_cols, master_columns_df, 
         numeric_df = pd.DataFrame(columns=["Count not-Null", "Mutual Info", "Random Forest"])
 
     # Loop over each numeric feature:
-    print('Running correlations of numeric features to target variable...')
     for col in tqdm(numeric_cols):
         # Keep only rows that do not have NULL for that feature:
         data_df_col_notnull = data_df[[col, target_col]].dropna()
@@ -126,6 +126,7 @@ def calc_numeric_features_target_corr(data_df, numeric_cols, master_columns_df, 
 
             # Save the results as a new row in the dataframe for output:
             numeric_df.loc[col] = len(data_df_col_notnull), round(minfo, 2), round(rf_ck, 2)
+    print()
 
     master_columns_df.loc[numeric_df.index, numeric_df.columns] = numeric_df
 
@@ -302,6 +303,7 @@ def calc_nonnumeric_features_target_corr(data_df, non_numeric_cols, master_colum
     rf_n_estimators, min_samples_leaf = get_random_forest_hyperparams(len(data_df), rf_n_estimators='auto',
                                                                       numeric=False)
 
+    print('Running correlations of non-numeric features to target variable...')
     print('For random forest (RF) correlation measure, using {} trees and min_samples_leaf={}.\n'.format(
         rf_n_estimators, min_samples_leaf))
 
@@ -311,7 +313,6 @@ def calc_nonnumeric_features_target_corr(data_df, non_numeric_cols, master_colum
         non_numeric_df = pd.DataFrame(columns=["Count not-Null", "Mutual Info", "Random Forest", "RF_norm"])
 
     # Loop over each categorical feature:
-    print('Running correlations of non-numeric features to target variable...')
     for col in tqdm(non_numeric_cols):
         # Keep only rows that do not have NULL for that feature:
         train_col_notnull = data_df[[col, target_col]].dropna()
@@ -354,9 +355,10 @@ def calc_nonnumeric_features_target_corr(data_df, non_numeric_cols, master_colum
             # Save the results as a new row in the dataframe for output:
             num_uniq = master_columns_df.loc[col, "Num Unique Values"]
             non_numeric_df.loc[col] = len(train_col_notnull), round(minfo, 2), round(rf_ck, 2), round(rf_ck, 2)
+    print()
 
     master_columns_df.loc[non_numeric_df.index, non_numeric_df.columns] = non_numeric_df
-
+    
     # The counts of NULL values and unique values should be integers:
     # non_numeric_df["Count not-Null"] = non_numeric_df["Count not-Null"].astype(int)
     # non_numeric_df["Num Unique"] = non_numeric_df["Num Unique"].astype(int)

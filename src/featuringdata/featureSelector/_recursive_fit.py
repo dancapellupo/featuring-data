@@ -321,7 +321,7 @@ def recursive_fit(X_train_comb, y_train_comb, X_val_comb, y_val_comb, parameter_
               f'{training_results_df.loc[jj, f"{primary_metric}_val_1"]:.5f} '
               f'{training_results_df.loc[jj, "feat_high_import_name_1"]:>20} '
               f'{training_results_df.loc[jj, "feat_high_import_val_1"]:.2f}  :  '
-              f'{training_results_df.loc[jj, "num_features_2"]:5} '
+              f'{training_results_df.loc[jj, "num_features_2"]:5}  '
               f'{training_results_df.loc[jj, f"{primary_metric}_val_2"]:.5f}  '
               f'{training_results_df.loc[jj, "feat_high_import_name_2"]:>20} '
               f'{training_results_df.loc[jj, "feat_high_import_val_2"]:.2f}')

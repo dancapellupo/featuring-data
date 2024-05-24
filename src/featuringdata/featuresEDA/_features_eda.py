@@ -1,6 +1,7 @@
 
 from datetime import datetime
 from pathlib import Path
+import math
 
 import numpy as np
 import pandas as pd
@@ -349,14 +350,32 @@ class FeaturesEDA:
         self.non_numeric_cols = self.master_columns_df.loc[
             self.master_columns_df["Column Type"] == 'non-numeric'].index.to_list()
 
+        count_w = 1 + math.floor(math.log10(len(data_df)))
+        nlen = 34 - count_w
+
         # Calculate correlations between each numeric feature and the target
         # variable:
         if len(self.numeric_cols) > 0:
             self.master_columns_df = calc_numeric_features_target_corr(data_df, self.numeric_cols, self.master_columns_df,
                                                                        self.target_col, self.target_type, rf_n_estimators='auto')
+            
+            print('Numeric Features Correlations Summary  (Top-5 Correlated Features with Target)')
+            tmp_df = self.master_columns_df.loc[
+                self.master_columns_df["Column Type"] == 'numeric'].sort_values(by=["Random Forest"], ascending=False).iloc[0:5]
+            corrn = 'Pearson' if self.target_type == 'regression' else 'MutInfo'
+            col = "Pearson" if self.target_type == 'regression' else "Mutual Info"
+            print(f'|--------------------------------------------------------|')
+            print(f'| Numeric Feature        Count non-Null  {corrn}  RFcorr |')
+            print(f'|--------------------------------------------------------|')
+            for jj in range(len(tmp_df)):
+                feat_name = tmp_df.index[jj]
+                print(f'| {feat_name if len(feat_name) <= nlen else feat_name[0:nlen-3] + "...":<{nlen}}  '
+                      f'{tmp_df["Count not-Null"].iloc[jj]:>{count_w}.0f}    {tmp_df[col].iloc[jj]: .2f}    '
+                      f'{tmp_df["Random Forest"].iloc[jj]:.2f}  |')
+            print(f'|--------------------------------------------------------|\n')
         else:
             run_collinear = False
-
+        
         # Calculate correlations between numeric features:
         if run_collinear:
             self.numeric_collinear_df, self.master_columns_df = calc_corr_numeric_features(
@@ -367,6 +386,21 @@ class FeaturesEDA:
         if len(self.non_numeric_cols) > 0:
             self.master_columns_df = calc_nonnumeric_features_target_corr(data_df, self.non_numeric_cols, self.master_columns_df,
                                                                           self.target_col, self.target_type)
+            
+            print('Non-Numeric Features Correlations Summary  (Top-5 Correlated Features with Target)')
+            sort_col = "RF_norm" if "RF_norm" in self.master_columns_df.columns else "Random Forest"
+            tmp_df = self.master_columns_df.loc[
+                self.master_columns_df["Column Type"] == 'non-numeric'].sort_values(by=[sort_col], ascending=False).iloc[0:5]
+            print(f'|---------------------------------------------------------------------------------|')
+            print(f'| Non-Numeric Feature    Count non-Null  Num Uniq  Mut Info  RFcorr  RFcorr(norm) |')
+            print(f'|---------------------------------------------------------------------------------|')
+            for jj in range(len(tmp_df)):
+                feat_name = tmp_df.index[jj]
+                print(f'| {feat_name if len(feat_name) <= nlen else feat_name[0:nlen-3] + "...":<{nlen}}  '
+                      f'{tmp_df["Count not-Null"].iloc[jj]:>{count_w}.0f}       '
+                      f'{tmp_df["Num Unique Values"].iloc[jj]:>3.0f}      {tmp_df["Mutual Info"].iloc[jj]:.2f}    '
+                      f'{tmp_df["Random Forest"].iloc[jj]:.2f}          {tmp_df["RF_norm"].iloc[jj]:.2f}  |')
+            print(f'|---------------------------------------------------------------------------------|\n')
         
         # The counts of NULL values should be integers:
         if self.target_col is not None:
