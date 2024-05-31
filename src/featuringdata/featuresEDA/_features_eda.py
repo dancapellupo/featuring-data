@@ -334,6 +334,8 @@ class FeaturesEDA:
         # Run the initial EDA steps:
         self.run_initial_eda(data_df, output=False)
         
+        plot_hist_target_col(data_df[self.target_col].dropna(), target_type=self.target_type, inline=True,
+                             set_plot_order=set_plot_order)
         plot_hist_target_col(data_df[self.target_col].dropna(), target_type=self.target_type,
                              set_plot_order=set_plot_order, plots_folder=plots_folder)
         self.pdf = section_on_target_column_plot(self.pdf, plots_folder)
@@ -361,7 +363,7 @@ class FeaturesEDA:
             
             print('Numeric Features Correlations Summary  (Top-5 Correlated Features with Target)')
             tmp_df = self.master_columns_df.loc[
-                self.master_columns_df["Column Type"] == 'numeric'].sort_values(by=["Random Forest"], ascending=False).iloc[0:5]
+                self.master_columns_df["Column Type"] == 'numeric'].sort_values(by=["Random Forest"], ascending=False).iloc[0:6]
             corrn = 'Pearson' if self.target_type == 'regression' else 'MutInfo'
             col = "Pearson" if self.target_type == 'regression' else "Mutual Info"
             print(f'|--------------------------------------------------------|')
@@ -390,7 +392,7 @@ class FeaturesEDA:
             print('Non-Numeric Features Correlations Summary  (Top-5 Correlated Features with Target)')
             sort_col = "RF_norm" if "RF_norm" in self.master_columns_df.columns else "Random Forest"
             tmp_df = self.master_columns_df.loc[
-                self.master_columns_df["Column Type"] == 'non-numeric'].sort_values(by=[sort_col], ascending=False).iloc[0:5]
+                self.master_columns_df["Column Type"] == 'non-numeric'].sort_values(by=[sort_col], ascending=False).iloc[0:6]
             print(f'|---------------------------------------------------------------------------------|')
             print(f'| Non-Numeric Feature    Count non-Null  Num Uniq  Mut Info  RFcorr  RFcorr(norm) |')
             print(f'|---------------------------------------------------------------------------------|')
@@ -475,6 +477,10 @@ class FeaturesEDA:
                 # timestamped directory defined above:
                 plot_feature_values(data_df, columns_list_ordered, self.master_columns_df, target_col=self.target_col,
                                     numeric=True, plot_style=plot_style, target_type=self.target_type,
+                                    set_plot_order=set_plot_order, inline=True)
+                
+                plot_feature_values(data_df, columns_list_ordered, self.master_columns_df, target_col=self.target_col,
+                                    numeric=True, plot_style=plot_style, target_type=self.target_type,
                                     set_plot_order=set_plot_order, plots_folder=plots_folder)
 
                 # Add the plots to the PDF:
@@ -495,6 +501,10 @@ class FeaturesEDA:
                 # timestamped directory defined above:
                 plot_feature_values(data_df, columns_list_ordered, self.master_columns_df, target_col=self.target_col,
                                     numeric=False, plot_style=plot_style, target_type=self.target_type,
+                                    set_plot_order=set_plot_order, inline=True)
+                
+                plot_feature_values(data_df, columns_list_ordered, self.master_columns_df, target_col=self.target_col,
+                                    numeric=False, plot_style=plot_style, target_type=self.target_type,
                                     set_plot_order=set_plot_order, plots_folder=plots_folder)
                 
                 # Add the plots to the PDF:
@@ -504,5 +514,5 @@ class FeaturesEDA:
         print('\n--- Files Output ---')
         # Save PDF document to current working directory:
         save_pdf_doc(self.pdf, custom_filename=self.report_prefix, timestamp=timestamp)
-        print('All PNG files can be found in {}.'.format(plots_folder))
+        print(f'All PNG files can be found in {plots_folder}.\n')
 

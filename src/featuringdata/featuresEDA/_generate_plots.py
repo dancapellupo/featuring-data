@@ -53,10 +53,15 @@ def plot_hist(data_for_bins, label_bins='', data_for_line=None, label_line='', x
     plt.close()
 
 
-def plot_hist_target_col(target_col_vals, target_type='regression', set_plot_order=None, plots_folder='./'):
+def plot_hist_target_col(target_col_vals, target_type='regression', inline=False, set_plot_order=None, plots_folder='./'):
 
-    sns.set_theme(style="ticks", font_scale=1.2)
-    f, ax = plt.subplots(figsize=(9, 6))
+    if inline:
+        sns.set_theme(style="ticks", font_scale=0.8)
+        f, ax = plt.subplots(figsize=(3, 2))
+        plt.title('Target Column Distribution')
+    else:
+        sns.set_theme(style="ticks", font_scale=1.2)
+        f, ax = plt.subplots(figsize=(9, 6))
 
     if target_type == 'regression':
         sns.histplot(data=target_col_vals)
@@ -74,11 +79,14 @@ def plot_hist_target_col(target_col_vals, target_type='regression', set_plot_ord
         if target_col_vals.nunique() > 5:
             plt.xticks(rotation=45)
 
-    plt.savefig('{}/target_data_distribution.png'.format(plots_folder), bbox_inches='tight')
-    plt.close()
+    if inline:
+        plt.show()
+    else:
+        plt.savefig('{}/target_data_distribution.png'.format(plots_folder), bbox_inches='tight')
+        plt.close()
 
 
-def plot_scatter_density(x, y, fig=None, ax=None, sort=True, bins=20, **kwargs):
+def plot_scatter_density(x, y, fig=None, ax=None, sort=True, bins=20, inline=None, **kwargs):
     """
     Scatter plot colored by 2d histogram
     """
@@ -107,18 +115,22 @@ def plot_scatter_density(x, y, fig=None, ax=None, sort=True, bins=20, **kwargs):
     # z = MinMaxScaler(feature_range=(0, 1)).fit_transform(z.reshape(-1, 1))
     z /= 10**(math.floor(math.log10(abs(z.max()))))
     
-    plt.scatter(x, y, c=z, **kwargs)
-    plt.colorbar()
-
-    # norm = mpl.colors.Normalize(vmin=np.min(z), vmax=np.max(z))
-    # cbar = fig.colorbar(mpl.cm.ScalarMappable(norm=norm), ax=ax, cmap='viridis')
-    # cbar.ax.set_ylabel('Density')
+    # plt.scatter(x, y, c=z, **kwargs)
+    ax.scatter(x, y, c=z, **kwargs)
+    
+    # plt.colorbar(ax=ax)
+    norm = mpl.colors.Normalize(vmin=np.min(z), vmax=np.max(z))
+    if inline is None:
+        cbar = fig.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap='viridis'), ax=ax)
+        # cbar.ax.set_ylabel('Density')
+    # elif inline == 'end':
+    #     cbar = fig.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap='viridis'), ax=ax, ticks=[])
 
     return ax
 
 
 def plot_feature_values(data_df, columns_list, correlation_df, target_col, numeric=True, target_type='regression',
-                        plot_style='scatterdense', set_plot_order=None, plots_folder='./plots'):
+                        plot_style='scatterdense', inline=False, set_plot_order=None, plots_folder='./plots'):
     """
     Generate EDA plots that show each feature versus the target variable.
 
@@ -199,12 +211,38 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
             print('Set y-axis limits (for display only): {:.2f} {:.2f}.\n'.format(ymin, ymax))
             set_ylim = True
 
-    sns.set_theme(style="ticks")
+    if inline:
+        sns.set_theme(style="ticks", font_scale=0.8)
+        num_rows = 1 if len(columns_list) <= 3 else 2
+        
+        if plot_style == 'scatterdense':
+            f, axs = plt.subplots(num_rows, 4, figsize=(8.2, 2.8*num_rows), gridspec_kw={'width_ratios': [12, 12, 12, 1]})
+            for row in range(num_rows):
+                cax = axs[row, 3] if num_rows > 1 else axs[3]
+                norm = mpl.colors.Normalize(vmin=0, vmax=1)
+                cbar = f.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap='viridis'), cax=cax, ticks=[])
+        else:
+            f, axs = plt.subplots(num_rows, 3, figsize=(8.2, 2.8*num_rows))
+        
+        f.subplots_adjust(wspace=0.15, hspace=0.25)
 
+    else:
+        sns.set_theme(style="ticks")
+    
     print('Generating plots of {} features...'.format('numeric' if numeric else 'non-numeric/categorical'))
     for jj, column in enumerate(tqdm(columns_list)):
 
-        f, ax = plt.subplots(figsize=(9, 6))
+        if inline:
+            if jj >= 6:
+                break
+            num_row = int(np.floor(jj / 3))
+            num_col = jj - (num_row * 3)
+            ax = axs[num_row, num_col] if num_rows > 1 else axs[num_col]
+            print(jj, column, num_row, num_col, ax)
+            inline_scat = 'end' if num_col == 2 else 'inner'
+        else:
+            f, ax = plt.subplots(figsize=(9, 6))
+            inline_scat = None
 
         data_df_col_notnull = data_df[[column, target_col]].dropna().reset_index()
 
@@ -230,21 +268,21 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
                     xaxis_order = data_df_col_notnull.groupby(
                         by=[column]).median().sort_values(by=[target_col]).index.tolist()
 
-                    sns.boxplot(data_df_col_notnull, x=column, y=target_col, order=xaxis_order, **box_params)
+                    ax = sns.boxplot(data_df_col_notnull, x=column, y=target_col, order=xaxis_order, ax=ax, **box_params)
 
                 else:
                     # Standard Box Plot
-                    sns.boxplot(data_df_col_notnull, x=column, y=target_col, **box_params)  # hue="method", palette="vlag"
+                    ax = sns.boxplot(data_df_col_notnull, x=column, y=target_col, ax=ax, **box_params)  # hue="method", palette="vlag"
 
                 # Add in points to show each observation
                 if (plot_style != 'scatterdense') and (len(data_df_col_notnull) > 1000):
                     data_df_col_notnull = data_df_col_notnull.sample(n=1000, replace=False)
 
                 if plot_style in ('swarm', 'seaborn'):
-                    sns.swarmplot(data_df_col_notnull, x=column, y=target_col, size=2, color=".3", warn_thresh=0.4)
+                    ax = sns.swarmplot(data_df_col_notnull, x=column, y=target_col, ax=ax, size=2, color=".3", warn_thresh=0.4)
 
                 elif plot_style == 'strip':
-                    sns.stripplot(data_df_col_notnull, x=column, y=target_col, jitter=0.25, size=2, color=".3")
+                    ax = sns.stripplot(data_df_col_notnull, x=column, y=target_col, ax=ax, jitter=0.25, size=2, color=".3")
 
                 elif plot_style == 'scatterdense':
                     x_all, y_all = np.array([]), np.array([])
@@ -264,25 +302,26 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
                         y = data_df_cat[target_col].values
                         x_all, y_all = np.append(x_all, x), np.append(y_all, y)
 
-                    ax = plot_scatter_density(x_all, y_all, fig=f, ax=ax, bins=100, s=3, cmap='viridis')
+                    ax = plot_scatter_density(x_all, y_all, fig=f, ax=ax, bins=100, inline=inline_scat, s=3, cmap='viridis')
                 
             else:
                 # Classification -- Continuous Variable
                 if plot_style == 'seaborn':
-                    sns.histplot(data_df_col_notnull, x=column, hue=target_col, **hist_params)  # "stack"
+                    ax = sns.histplot(data_df_col_notnull, x=column, hue=target_col, ax=ax, **hist_params)  # "stack"
                 else:
                     with sns.color_palette('viridis'):
-                        sns.histplot(data_df_col_notnull, x=column, hue=target_col, **hist_params)  # "stack"
+                        ax = sns.histplot(data_df_col_notnull, x=column, hue=target_col, ax=ax, **hist_params)  # "stack"
                 ax.set_xticks(data_df_col_notnull[column].unique())
 
-            if (not numeric) and num_uniq >= 10:
+            if (not numeric) and (num_uniq >= 10) and (not inline):
                 plt.xticks(rotation=45)
                 plt.grid(axis='x')
 
-            plt.grid(axis='y')
+            if not inline:
+                plt.grid(axis='y')
 
         else:
-
+            
             med = data_df_col_notnull[column].median()
             std = data_df_col_notnull[column].std()
             xx = np.where(data_df_col_notnull[column].values > med + 10*std)[0]
@@ -297,11 +336,12 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
             if target_type == 'regression':
                 # Regression -- Continuous variable
                 if plot_style == 'seaborn':
-                    sns.scatterplot(data_df_col_notnull, x=column, y=target_col, size=2, legend=False)
+                    ax = sns.scatterplot(data_df_col_notnull, x=column, y=target_col, ax=ax, size=2, legend=False)
 
                 else:
-                    ax = plot_scatter_density(data_df_col_notnull[column].values, data_df_col_notnull[target_col].values,
-                                            fig=f, ax=ax, bins=100, s=3, cmap='viridis')
+                    ax = plot_scatter_density(data_df_col_notnull[column].values,
+                                              data_df_col_notnull[target_col].values, fig=f, ax=ax, bins=100,
+                                              inline=inline_scat, s=3, cmap='viridis')
 
                     # plt.hist2d(data_df_col_notnull[column], data_df_col_notnull[target_col], bins=(100, 100),
                     #            cmap='viridis', cmin=1)  # BuPu
@@ -312,16 +352,18 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
             
             else:
                 # Classification -- Continuous variable
-                sns.boxplot(data_df_col_notnull, x=column, y=target_col, orient='y', **box_params)
+                ax = sns.boxplot(data_df_col_notnull, x=column, y=target_col, orient='y', ax=ax, **box_params)
 
                 if (plot_style != 'scatterdense') and (len(data_df_col_notnull) > 1000):
                     data_df_col_notnull = data_df_col_notnull.sample(n=1000, replace=False)
 
                 if plot_style in ('swarm', 'seaborn'):
-                    sns.swarmplot(data_df_col_notnull, x=column, y=target_col, orient='y', size=2, color=".3", warn_thresh=0.4)
+                    ax = sns.swarmplot(data_df_col_notnull, x=column, y=target_col, orient='y', ax=ax, size=2,
+                                       color=".3", warn_thresh=0.4)
 
                 elif plot_style == 'strip':
-                    sns.stripplot(data_df_col_notnull, x=column, y=target_col, orient='y', jitter=0.25, size=2, color=".3")
+                    ax = sns.stripplot(data_df_col_notnull, x=column, y=target_col, orient='y', jitter=0.25, ax=ax,
+                                       size=2, color=".3")
                 
                 elif plot_style == 'scatterdense':
                     x_all, y_all = np.array([]), np.array([])
@@ -342,34 +384,42 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
                         x = data_df_cat[column].values
                         x_all, y_all = np.append(x_all, x), np.append(y_all, y)
 
-                    ax = plot_scatter_density(x_all, y_all, fig=f, ax=ax, bins=100, s=3, cmap='viridis')
+                    ax = plot_scatter_density(x_all, y_all, fig=f, ax=ax, bins=100, inline=inline_scat, s=3,
+                                              cmap='viridis')
 
-            plt.grid()
+            if not inline:
+                plt.grid()
 
-            plt.xlabel(column)
-            plt.ylabel(target_col)
+            # plt.xlabel(column)
+            ax.set_xlabel(column)
+        
+            if (not inline) or (num_col == 0):
+                ax.set_ylabel(target_col)
+        
+        if inline and (num_col > 0):
+            ax.set(ylabel=None)
 
         if set_ylim:
             plt.ylim(ymin, ymax)
 
-        if numeric:
-            if target_type == 'regression':
-                ax.set_title('{} vs {} : P={}, MI={}, RF={}'.format(
-                    column, target_col, correlation_df.loc[column, "Pearson"],
-                    correlation_df.loc[column, "Mutual Info"], correlation_df.loc[column, "Random Forest"]))
-            else:
-                ax.set_title('{} vs {} : MI={}, RF={}'.format(
-                    column, target_col, correlation_df.loc[column, "Mutual Info"],
-                    correlation_df.loc[column, "Random Forest"]))
-        else:
-            ax.set_title('{} vs {} : MI={}, RF={}, RF_norm={}'.format(
-                column, target_col, correlation_df.loc[column, "Mutual Info"],
-                correlation_df.loc[column, "Random Forest"], correlation_df.loc[column, "RF_norm"]))
+        title_txt = f'{column} vs {target_col} : '
+        if numeric and target_type == 'regression':
+            title_txt += f'P={correlation_df.loc[column, "Pearson"]}, '
+        title_txt += f'MI={correlation_df.loc[column, "Mutual Info"]}, RF={correlation_df.loc[column, "Random Forest"]}'
+        if not numeric:
+            title_txt += f', RF_norm={correlation_df.loc[column, "RF_norm"]}'
+        if not inline:
+            ax.set_title(title_txt)
 
-        plt.savefig('{}/{}_vs_{}.png'.format(plots_folder, column, target_col), bbox_inches='tight')
-
-        plt.close()
+        if ((target_type == 'regression') or (not numeric) or (num_uniq <= 10)) and inline:
+            ax.ticklabel_format(axis='y', scilimits=(0, 0))
+        if not inline:
+            plt.savefig('{}/{}_vs_{}.png'.format(plots_folder, column, target_col), bbox_inches='tight')
+            plt.close()
 
     # mpl.use(backend_)  # Reset backend
     # print('*** {} ***'.format(mpl.get_backend()))
+
+    if inline:
+        plt.show()
 
