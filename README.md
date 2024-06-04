@@ -62,9 +62,9 @@ uncover which features are driving the results.
 ## Get Started Quickly
 
 After installing the package, open
-[this Jupyter notebook](https://github.com/dancapellupo/featuring-data/blob/207f270302467a34d90cf496003223504e8c7f12/examples/featuring_data_regression_example.ipynb)
+[this Jupyter notebook](https://github.com/dancapellupo/featuring-data/blob/9ab8eb4895c1b48cdaf0b4b2609097919650781a/examples/featuring_data_regression_example.ipynb)
 for a regression example or
-[this Jupyter notebook](https://github.com/dancapellupo/featuring-data/blob/207f270302467a34d90cf496003223504e8c7f12/examples/featuring_data_classification_example.ipynb)
+[this Jupyter notebook](https://github.com/dancapellupo/featuring-data/blob/9ab8eb4895c1b48cdaf0b4b2609097919650781a/examples/featuring_data_classification_example.ipynb)
 for a classification example, and run with the provided dataset (or read in
 your own CSV or pandas dataframe).
 
