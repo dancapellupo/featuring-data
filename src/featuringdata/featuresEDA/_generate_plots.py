@@ -230,15 +230,13 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
         sns.set_theme(style="ticks")
     
     print('Generating plots of {} features...'.format('numeric' if numeric else 'non-numeric/categorical'))
-    for jj, column in enumerate(tqdm(columns_list)):
+    num_plots = 6 if inline else len(columns_list)
+    for jj, column in enumerate(tqdm(columns_list[0:num_plots])):
 
         if inline:
-            if jj >= 6:
-                break
             num_row = int(np.floor(jj / 3))
             num_col = jj - (num_row * 3)
             ax = axs[num_row, num_col] if num_rows > 1 else axs[num_col]
-            print(jj, column, num_row, num_col, ax)
             inline_scat = 'end' if num_col == 2 else 'inner'
         else:
             f, ax = plt.subplots(figsize=(9, 6))
@@ -250,14 +248,19 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
         num_uniq = correlation_df.loc[column, "Num Unique Values"]
         if (not numeric) or (num_uniq <= 10):
 
-            if num_uniq > 20:
+            num_cat_thresh = 10 if inline else 20
+            if num_uniq > num_cat_thresh:
                 orig_len = len(data_df_col_notnull)
-                value_counts_index = data_df_col_notnull[column].value_counts().index[0:20]
+                value_counts_index = data_df_col_notnull[column].value_counts().index[0:num_cat_thresh]
                 data_df_col_notnull = data_df_col_notnull.loc[data_df_col_notnull[column].isin(value_counts_index)]
-                print("For '{}', more than 20 unique values: Only plotting top 20, which is {} out of {} total data"
-                      "points.".format(column, len(data_df_col_notnull), orig_len))
-                anc = AnchoredText('Plotting top 20 out of {} total uniq vals'.format(num_uniq), loc="upper left",
-                                   frameon=False)
+                print(f"For '{column}', more than {num_cat_thresh} unique values: Only plotting top {num_cat_thresh}, "
+                      f"which is {len(data_df_col_notnull)} out of {orig_len} total datapoints.")
+                if inline:
+                    anc = AnchoredText(f'Plotting {num_cat_thresh} out of {num_uniq} uniq vals', loc="upper left",
+                                       pad=0.2, frameon=False, prop={'size': 'small'})
+                else:
+                    anc = AnchoredText(f'Plotting top {num_cat_thresh} out of {num_uniq} total uniq vals',
+                                       loc="upper left", frameon=False)
                 ax.add_artist(anc)
             
             if target_type == 'regression':
@@ -289,7 +292,7 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
 
                     for cat in ax.get_xticklabels():
                         # print(cat, cat.get_text(), cat.get_position(), cat.get_position()[0])
-
+                        
                         try:
                             data_df_cat = data_df_col_notnull.loc[
                                 (data_df_col_notnull[column] == cat.get_text()) | (data_df_col_notnull[column] == float(cat.get_text()))]
@@ -304,6 +307,13 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
 
                     ax = plot_scatter_density(x_all, y_all, fig=f, ax=ax, bins=100, inline=inline_scat, s=3, cmap='viridis')
                 
+                if (not numeric) and inline and (num_uniq >= 3):
+                    xticks_loc, xticks_lab = [], []
+                    for cat in ax.get_xticklabels():
+                        xticks_loc.append(cat.get_position()[0])
+                        xticks_lab.append(cat.get_text()[0:2])
+                    ax.set_xticks(xticks_loc, xticks_lab)
+            
             else:
                 # Classification -- Continuous Variable
                 if plot_style == 'seaborn':
