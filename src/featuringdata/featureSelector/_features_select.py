@@ -267,11 +267,11 @@ class FeatureSelector:
         primary_metric, secondary_metric = get_metric_names(target_type=self.target_type)
 
         # TODO: Identify best run based on metric out to certain number [3?] of decimal points
-        best_result_ind_1 = np.argmin(training_results_df[f"{primary_metric}_test_1"].values)
-        best_result_ind_2 = np.argmin(training_results_df[f"{primary_metric}_test_2"].values)
+        best_result_ind_1 = np.argmin(training_results_df[f"{primary_metric}_val_1"].values)
+        best_result_ind_2 = np.argmin(training_results_df[f"{primary_metric}_val_2"].values)
 
-        best_result_1 = training_results_df[f"{primary_metric}_test_1"].values[best_result_ind_1]
-        best_result_2 = training_results_df[f"{primary_metric}_test_2"].values[best_result_ind_2]
+        best_result_1 = training_results_df[f"{primary_metric}_val_1"].values[best_result_ind_1]
+        best_result_2 = training_results_df[f"{primary_metric}_val_2"].values[best_result_ind_2]
 
         print('Best results: (1) {} [{}], (2) {} [{}]\n'.format(
             best_result_1, best_result_ind_1, best_result_2, best_result_ind_2))
@@ -337,14 +337,14 @@ class FeatureSelector:
 
         # Create the plots:
         f, ax = plot_inline_scatter(training_results_df.iloc[start_ii:], x_col=f"num_features_{1}",
-                                    y_col=f"{primary_metric}_test_{1}", leg_label=f'Data Split {1}', outfile=False)
-        best_prim_metric = training_results_df[f"{primary_metric}_test_{data_ind+1}"].iloc[best_ind]
+                                    y_col=f"{primary_metric}_val_{1}", leg_label=f'Data Split {1}', outfile=False)
+        best_prim_metric = training_results_df[f"{primary_metric}_val_{data_ind+1}"].iloc[best_ind]
         if primary_metric == 'RMSE':
             ylabel = 'RMSE for Val Set'
         else:
             ylabel = 'Logloss for Val Set'
         plot_inline_scatter(training_results_df.iloc[start_ii:], f=f, ax=ax, x_col=f"num_features_{2}",
-                            y_col=f"{primary_metric}_test_{2}", leg_label=f'Data Split {2}',
+                            y_col=f"{primary_metric}_val_{2}", leg_label=f'Data Split {2}',
                             xlabel='Number of Features in Iteration', ylabel=ylabel, hline=best_prim_metric,
                             vline=training_results_df[f"num_features_{data_ind+1}"].iloc[best_ind],
                             reverse_x=True, overplot=True, outfile=True, plots_folder=plots_folder,
@@ -356,7 +356,7 @@ class FeatureSelector:
                                 new_page=False)
         if start_ii > 0:
             out_txt = (f"Note: The point from the first iteration with {num_features_start} features and a "
-                       f"{primary_metric} of {training_results_df[f'{primary_metric}_test_{data_ind+1}'].iloc[0]} was "
+                       f"{primary_metric} of {training_results_df[f'{primary_metric}_val_{data_ind+1}'].iloc[0]} was "
                        f"removed from this plot.")
             self.pdf = add_text_pdf(self.pdf, txt=out_txt)
             out_txt = ("Normally, the way this recursive model training works is that it removes the feature with the "
@@ -377,7 +377,7 @@ class FeatureSelector:
         self.pdf = add_text_pdf(self.pdf, style='B', txt=f"{best_prim_metric}", space_below=0)
         self.pdf = add_text_pdf(self.pdf, txt=f", compared to the starting {primary_metric} of ", space_below=0)
         self.pdf = add_text_pdf(self.pdf, style='B', space_below=0,
-                                txt=f"{training_results_df[f'{primary_metric}_test_{data_ind+1}'].iloc[0]}")
+                                txt=f"{training_results_df[f'{primary_metric}_val_{data_ind+1}'].iloc[0]}")
         self.pdf = add_text_pdf(self.pdf, txt=f".")
         # DONE: Make italic:
         out_txt = f"Note that lower values of {primary_metric} indicate better model performance."
@@ -398,19 +398,19 @@ class FeatureSelector:
         # PLOT #2 - Secondary evaluation metric:
 
         if secondary_metric == 'MAE':
-            best_sec_metric_ind = np.argmin(training_results_df[f"{secondary_metric}_test_{data_ind+1}"].values)
+            best_sec_metric_ind = np.argmin(training_results_df[f"{secondary_metric}_val_{data_ind+1}"].values)
         else:
-            best_sec_metric_ind = np.argmax(training_results_df[f"{secondary_metric}_test_{data_ind+1}"].values)
-        best_sec_metric = training_results_df[f"{secondary_metric}_test_{data_ind+1}"].iloc[best_sec_metric_ind]
+            best_sec_metric_ind = np.argmax(training_results_df[f"{secondary_metric}_val_{data_ind+1}"].values)
+        best_sec_metric = training_results_df[f"{secondary_metric}_val_{data_ind+1}"].iloc[best_sec_metric_ind]
 
         f, ax = plot_inline_scatter(training_results_df.iloc[start_ii:], x_col=f"num_features_{1}",
-                                    y_col=f"{secondary_metric}_test_{1}", leg_label=f'Data Split {1}', outfile=False)
+                                    y_col=f"{secondary_metric}_val_{1}", leg_label=f'Data Split {1}', outfile=False)
         if secondary_metric == 'MAE':
             ylabel = 'Mean Average Error (MAE) for Val Set'
         else:
             ylabel = 'Cohen-Kappa for Val Set'
         plot_inline_scatter(training_results_df.iloc[start_ii:], f=f, ax=ax, x_col=f"num_features_{2}",
-                            y_col=f"{secondary_metric}_test_{2}", leg_label=f'Data Split {2}',
+                            y_col=f"{secondary_metric}_val_{2}", leg_label=f'Data Split {2}',
                             xlabel='Number of Features in Iteration', ylabel=ylabel, hline=best_sec_metric,
                             vline=training_results_df[f"num_features_{data_ind+1}"].iloc[best_sec_metric_ind],
                             reverse_x=True, overplot=True, outfile=True, plots_folder=plots_folder,
@@ -426,7 +426,7 @@ class FeatureSelector:
         self.pdf = add_text_pdf(self.pdf, style='B', txt=f"{best_sec_metric:,}", space_below=0)
         self.pdf = add_text_pdf(self.pdf, txt=f", compared to the starting value of ", space_below=0)
         self.pdf = add_text_pdf(self.pdf, style='B', space_below=0,
-                                txt=f"{training_results_df[f'{secondary_metric}_test_{data_ind+1}'].iloc[0]:,}")
+                                txt=f"{training_results_df[f'{secondary_metric}_val_{data_ind+1}'].iloc[0]:,}")
         if self.target_type == 'regression':
             out_txt = f" (the average {self.target_col} is {round_to_n_sigfig(data_df[self.target_col].mean(), 5):,})"
             self.pdf = add_text_pdf(self.pdf, txt=out_txt, space_below=0)
