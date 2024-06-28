@@ -86,7 +86,7 @@ class FeatureSelector:
     target_log : bool, default=False
         Whether to take the log of the target variable for model training.
 
-    TODO: Change name to 'val_size'
+    DONE: Change name to 'val_size'
     val_size : float, default=0.15
         Fraction of the input data to use for validation set.
 
@@ -162,6 +162,8 @@ class FeatureSelector:
         self.hyperparams_df = pd.DataFrame()
         self.feature_importance_dict_list = list()
         self.feat_import_bycol_df = pd.DataFrame()
+
+        # TODO: Add best model object here, encoder for class
 
     def run(self, data_df, master_columns_df=None, numeric_df=None, non_numeric_df=None):
         """
@@ -369,7 +371,6 @@ class FeatureSelector:
         self.pdf = add_text_pdf(self.pdf, txt=out_txt)
         out_txt = "As the number of features is reduced, eventually the model will start to perform much more poorly."
         self.pdf = add_text_pdf(self.pdf, txt=out_txt)
-        # DONE: Put metric values in boldface:
         out_txt = (f"This plot shows the primary metric that was used in model training, which is {primary_metric}. "
                    f"The vertical line is the location with the best value of this metric, which is a {primary_metric} "
                    f"of ")
@@ -379,7 +380,6 @@ class FeatureSelector:
         self.pdf = add_text_pdf(self.pdf, style='B', space_below=0,
                                 txt=f"{training_results_df[f'{primary_metric}_val_{data_ind+1}'].iloc[0]}")
         self.pdf = add_text_pdf(self.pdf, txt=f".")
-        # DONE: Make italic:
         out_txt = f"Note that lower values of {primary_metric} indicate better model performance."
         self.pdf = add_text_pdf(self.pdf, style='I', txt=out_txt)
         out_txt = (f"The model training started with {num_features_start} features (after one-hot encoding any "

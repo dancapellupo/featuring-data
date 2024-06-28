@@ -361,7 +361,7 @@ class FeaturesEDA:
             self.master_columns_df = calc_numeric_features_target_corr(data_df, self.numeric_cols, self.master_columns_df,
                                                                        self.target_col, self.target_type, rf_n_estimators='auto')
             
-            print('Numeric Features Correlations Summary  (Top-5 Correlated Features with Target)')
+            print('Numeric Features Correlations Summary  (Top-6 Correlated Features with Target)')
             tmp_df = self.master_columns_df.loc[
                 self.master_columns_df["Column Type"] == 'numeric'].sort_values(by=["Random Forest"], ascending=False).iloc[0:6]
             corrn = 'Pearson' if self.target_type == 'regression' else 'MutInfo'
@@ -389,7 +389,7 @@ class FeaturesEDA:
             self.master_columns_df = calc_nonnumeric_features_target_corr(data_df, self.non_numeric_cols, self.master_columns_df,
                                                                           self.target_col, self.target_type)
             
-            print('Non-Numeric Features Correlations Summary  (Top-5 Correlated Features with Target)')
+            print('Non-Numeric Features Correlations Summary  (Top-6 Correlated Features with Target)')
             sort_col = "RF_norm" if "RF_norm" in self.master_columns_df.columns else "Random Forest"
             tmp_df = self.master_columns_df.loc[
                 self.master_columns_df["Column Type"] == 'non-numeric'].sort_values(by=[sort_col], ascending=False).iloc[0:6]
