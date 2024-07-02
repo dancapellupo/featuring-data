@@ -159,11 +159,15 @@ class FeatureSelector:
         self.X = None
         self.y = None
 
+        # TODO: Add best model object here, encoder for class
+        self.enc = None
+
         self.hyperparams_df = pd.DataFrame()
         self.feature_importance_dict_list = list()
         self.feat_import_bycol_df = pd.DataFrame()
 
-        # TODO: Add best model object here, encoder for class
+        self.cols_best_iter = list()
+        self.xgb_best = None
 
     def run(self, data_df, master_columns_df=None, numeric_df=None, non_numeric_df=None):
         """
@@ -233,9 +237,9 @@ class FeatureSelector:
             self.X = self.X.merge(X_onehot, left_index=True, right_index=True)
 
         # Take the log of the target variable, if user chooses:
-        if self.target_type == 'classification':
-            enc = LabelEncoder()
-            self.y = enc.fit_transform(data_df[self.target_col].values)
+        if self.target_type == 'classification' and pd.api.types.is_string_dtype(data_df[self.target_col]):
+            self.enc = LabelEncoder()
+            self.y = self.enc.fit_transform(data_df[self.target_col].values)
         elif self.target_log:
             self.y = np.log1p(data_df[self.target_col].values)
         else:
@@ -244,9 +248,9 @@ class FeatureSelector:
         # TODO: Update this code for more than 2 splits
         # Perform random data splits:
         X_train_42, X_val_42, y_train_42, y_val_42 = train_test_split(self.X, self.y, test_size=self.val_size,
-                                                                        random_state=42)
+                                                                      random_state=42)
         X_train_46, X_val_46, y_train_46, y_val_46 = train_test_split(self.X, self.y, test_size=self.val_size,
-                                                                        random_state=46)
+                                                                      random_state=46)
         # TODO Allow user to set max/min values of the hyperparam ranges, as well as number of total iterations,
         #  which would define how many values to consider per hyperparam
 
@@ -285,10 +289,9 @@ class FeatureSelector:
             data_ind = 1
             best_ind = best_result_ind_2
 
-        X_train_best = X_train_comb[data_ind][training_results_df.loc[
-            best_ind, "feature_list_{}".format(data_ind+1)].split(', ')]
-        X_val_best = X_val_comb[data_ind][training_results_df.loc[
-            best_ind, "feature_list_{}".format(data_ind+1)].split(', ')]
+        self.cols_best_iter = training_results_df.loc[best_ind, "feature_list_{}".format(data_ind+1)].split(', ')
+        X_train_best = X_train_comb[data_ind][self.cols_best_iter]
+        X_val_best = X_val_comb[data_ind][self.cols_best_iter]
 
         # Find the best hyperparameters relevant to the "best" iteration:
         hyperparam_iters = self.hyperparams_df.index.values
@@ -301,12 +304,15 @@ class FeatureSelector:
         # XGBoost Training with "Best" Feature Selection
 
         if self.target_type == 'regression':
-            xgb_reg = XGBRegressor(n_estimators=1000, early_stopping_rounds=20, random_state=42, **hyperparams_dict)
+            self.xgb_best = XGBRegressor(n_estimators=1000, early_stopping_rounds=20, random_state=42,
+                                         **hyperparams_dict)
         else:
-            xgb_reg = XGBClassifier(n_estimators=1000, early_stopping_rounds=20, random_state=42, **hyperparams_dict)
-        xgb_reg.fit(X_train_best, y_train_comb[data_ind], eval_set=[(X_val_best, y_val_comb[data_ind])], verbose=True)
+            self.xgb_best = XGBClassifier(n_estimators=1000, early_stopping_rounds=20, random_state=42,
+                                          **hyperparams_dict)
+        self.xgb_best.fit(X_train_best, y_train_comb[data_ind], eval_set=[(X_val_best, y_val_comb[data_ind])],
+                          verbose=False)
 
-        y_val_pred = xgb_reg.predict(X_val_best)
+        y_val_pred = self.xgb_best.predict(X_val_best)
         
         if self.target_log:
             sec_metric_final = calc_model_metric(np.expm1(y_val_comb[data_ind]), np.expm1(y_val_pred),
