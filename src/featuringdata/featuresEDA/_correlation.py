@@ -15,11 +15,18 @@ from sklearn.metrics import cohen_kappa_score
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 
 
-def get_random_forest_hyperparams(n_samples, rf_n_estimators='auto', numeric=True):
+def get_random_forest_hyperparams(n_samples, rf_n_estimators='auto', numeric=True, collin=False):
 
     # For 3000 samples or less, use 50 trees. Otherwise, stick to 10:
     if rf_n_estimators == 'auto':
-        rf_n_estimators = 10 if n_samples >= 3000 else 50
+        if n_samples >= 1000000:
+            rf_n_estimators = 1 if collin else 2
+        elif n_samples >= 10000:
+            rf_n_estimators = 2 if collin else 5
+        elif n_samples >= 3000:
+            rf_n_estimators = 5 if collin else 10
+        else:
+            rf_n_estimators = 10 if collin else 50
 
     if numeric:
         if n_samples >= 5000:
@@ -148,7 +155,11 @@ def calc_corr_numeric_features(data_df, numeric_cols, master_columns_df):
     :return:
     """
 
-    rf_n_estimators, min_samples_leaf = get_random_forest_hyperparams(len(data_df))
+    rf_n_estimators, min_samples_leaf = get_random_forest_hyperparams(len(data_df), collin=True)
+
+    print('Running correlations between numeric features...')
+    print('For random forest (RF) correlation measure, using {} trees and min_samples_leaf={}.\n'.format(
+        rf_n_estimators, min_samples_leaf))
 
     numeric_collinear_df = pd.DataFrame(columns=["Feature1", "Feature2", "Count not-Null", "Pearson", "Random Forest"])
 
@@ -161,11 +172,11 @@ def calc_corr_numeric_features(data_df, numeric_cols, master_columns_df):
 
         pcorr = pearsonr(data_df_cols_notnull[col1].values, data_df_cols_notnull[col2].values)[0]
 
-        rf_reg = RandomForestRegressor(n_estimators=10, min_samples_leaf=min_samples_leaf)
+        rf_reg = RandomForestRegressor(n_estimators=rf_n_estimators, min_samples_leaf=min_samples_leaf)
         rf_reg.fit(data_df_cols_notnull[col1].values.reshape(-1, 1), data_df_cols_notnull[col2].values)
         rfscore1 = max(rf_reg.score(data_df_cols_notnull[col1].values.reshape(-1, 1), data_df_cols_notnull[col2]), 0)
 
-        rf_reg = RandomForestRegressor(n_estimators=10, min_samples_leaf=min_samples_leaf)
+        rf_reg = RandomForestRegressor(n_estimators=rf_n_estimators, min_samples_leaf=min_samples_leaf)
         rf_reg.fit(data_df_cols_notnull[col2].values.reshape(-1, 1), data_df_cols_notnull[col1].values)
         rfscore2 = max(rf_reg.score(data_df_cols_notnull[col2].values.reshape(-1, 1), data_df_cols_notnull[col1]), 0)
 
