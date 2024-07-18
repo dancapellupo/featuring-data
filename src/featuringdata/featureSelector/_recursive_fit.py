@@ -18,6 +18,14 @@ from sklearn.metrics import (
 from xgboost.sklearn import XGBRegressor, XGBClassifier
 
 
+def calc_rmse(y_true, y_pred):
+    try:
+        from sklearn.metrics import root_mean_squared_error
+        return root_mean_squared_error(y_true, y_pred)
+    except ImportError:
+        return mean_squared_error(y_true, y_pred, squared=False)
+
+
 def get_metric_names(target_type='regression'):
     if target_type == 'regression':
         primary_metric = 'RMSE'
@@ -73,7 +81,7 @@ def round_to_n_sigfig(x, n=3):
 def calc_model_metric(y, y_pred, target_type='regression', metric_type='regular'):
         if target_type == 'regression':
             if metric_type == 'regular':
-                return mean_squared_error(y, y_pred, squared=False)
+                return calc_rmse(y, y_pred)
             else:
                 return mean_absolute_error(y, y_pred)
         else:
