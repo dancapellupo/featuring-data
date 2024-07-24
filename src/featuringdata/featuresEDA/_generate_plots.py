@@ -86,39 +86,87 @@ def plot_hist_target_col(target_col_vals, target_type='regression', inline=False
         plt.close()
 
 
-def plot_scatter_density(x, y, fig=None, ax=None, sort=True, bins=20, inline=None, **kwargs):
+def plot_scatter_density(x, y, fig=None, ax=None, sort=True, bins=120, x_scale=120, y_scale=120, r2=0.8, inline=None, **kwargs):
     """
     Scatter plot colored by 2d histogram
     """
     if ax is None:
         fig, ax = plt.subplots()
 
-    try:
-        bins = [bins, bins]
-        data, x_e, y_e = np.histogram2d(x, y, bins=bins, density=True)
-        z = interpn((0.5 * (x_e[1:] + x_e[:-1]), 0.5 * (y_e[1:] + y_e[:-1])), data, np.vstack([x, y]).T,
-                    method="splinef2d", bounds_error=False)
+    if x.shape[0] <= 10000:
+        x_scaled = (x - x.min()) / (x.max() - x.min()) * x_scale
+        y_scaled = (y - y.min()) / (y.max() - y.min()) * y_scale
 
-        # To be sure to plot all data
-        z[np.where(np.isnan(z))] = 0.0
+        z = np.ones(x.size)
+        for ii in range(x.size):
+            z[ii] = np.where((x_scaled[ii] - x_scaled) ** 2 + (y_scaled[ii] - y_scaled) ** 2 <= r2)[0].size
 
-    except ValueError:
-        # Calculate the point density
-        xy = np.vstack([x, y])
-        z = gaussian_kde(xy)(xy)
+    else:
+        try:
+            bins = [bins, bins]
+            data, x_e, y_e = np.histogram2d(x, y, bins=bins, density=True)
+            z = interpn((0.5 * (x_e[1:] + x_e[:-1]), 0.5 * (y_e[1:] + y_e[:-1])), data, np.vstack([x, y]).T,
+                        method="splinef2d", bounds_error=False)
+
+            # To be sure to plot all data
+            z[np.where(np.isnan(z))] = 0.0
+
+        except ValueError:
+            # Calculate the point density
+            xy = np.vstack([x, y])
+            z = gaussian_kde(xy)(xy)
+
+        # z = MinMaxScaler(feature_range=(0, 1)).fit_transform(z.reshape(-1, 1))
+        z /= 10 ** (math.floor(math.log10(abs(z.max()))))
 
     # Sort the points by density, so that the densest points are plotted last
     if sort:
         idx = z.argsort()
         x, y, z = x[idx], y[idx], z[idx]
     
-    # z = MinMaxScaler(feature_range=(0, 1)).fit_transform(z.reshape(-1, 1))
-    z /= 10**(math.floor(math.log10(abs(z.max()))))
-    
     # plt.scatter(x, y, c=z, **kwargs)
     ax.scatter(x, y, c=z, **kwargs)
     
     # plt.colorbar(ax=ax)
+    norm = mpl.colors.Normalize(vmin=np.min(z), vmax=np.max(z))
+    if inline is None:
+        cbar = fig.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap='viridis'), ax=ax)
+        # cbar.ax.set_ylabel('Density')
+    # elif inline == 'end':
+    #     cbar = fig.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap='viridis'), ax=ax, ticks=[])
+
+    return ax
+
+
+def plot_scatter_density_v1(x, y, fig=None, ax=None, sort=True, bins=100, x_scale=100, y_scale=100, r2=0.8, inline=None, **kwargs):
+    """
+    Scatter plot colored by 2d histogram
+    """
+    if ax is None:
+        fig, ax = plt.subplots()
+
+    # x_range = x.max() - x.min()
+    # y_range = y.max() - y.min()
+    # xyp = x_range / y_range
+    # yxp = y_range / x_range
+    #
+    # r2p = (x_range + y_range) / 70
+
+    x_scaled = (x - x.min()) / (x.max() - x.min()) * x_scale
+    y_scaled = (y - y.min()) / (y.max() - y.min()) * y_scale
+
+    z = np.ones(x.size)
+    for ii in range(x.size):
+        # z[ii] = np.where(yxp * (x[ii] - x) ** 2 + xyp * (y[ii] - y) ** 2 <= r2p)[0].size
+        z[ii] = np.where((x_scaled[ii] - x_scaled)**2 + (y_scaled[ii] - y_scaled)**2 <= r2)[0].size
+
+    # Sort the points by density, so that the densest points are plotted last
+    if sort:
+        idx = z.argsort()
+        x, y, z = x[idx], y[idx], z[idx]
+
+    ax.scatter(x, y, c=z, **kwargs)
+
     norm = mpl.colors.Normalize(vmin=np.min(z), vmax=np.max(z))
     if inline is None:
         cbar = fig.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap='viridis'), ax=ax)
@@ -192,24 +240,27 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
         box_params["order"] = set_plot_order
         hist_params["hue_order"] = set_plot_order
 
+    data_df_reset = data_df.reset_index()
+
     set_ylim = False
     if target_type == 'regression':
         # Check for strong outliers in target column:
-        med = data_df[target_col].median()
-        std = data_df[target_col].std()
-        xx = np.where(data_df[target_col].values > med + 10*std)[0]
-        xx = np.append(xx, np.where(data_df[target_col].values < med - 10*std)[0])
+        med = data_df_reset[target_col].median()
+        std = data_df_reset[target_col].std()
+        xx = np.where(data_df_reset[target_col].values > med + 10*std)[0]
+        xx = np.append(xx, np.where(data_df_reset[target_col].values < med - 10*std)[0])
         if xx.size > 0:
-            print('Target outlier points:', data_df[target_col].values[xx])
+            print('Target outlier points:', data_df_reset[target_col].values[xx], f'({xx.size})')
+            data_df_reset = data_df_reset.drop(xx).reset_index()
 
-            target_col_vals = data_df.reset_index().drop(xx)[target_col].values
-            target_min, target_max = np.min(target_col_vals), np.max(target_col_vals)
-            max_minus_min = target_max - target_min
-            ymin = target_min - 0.025*max_minus_min
-            ymax = target_max + 0.025*max_minus_min
-            print('New target min/max values:', target_min, target_max)
-            print('Set y-axis limits (for display only): {:.2f} {:.2f}.\n'.format(ymin, ymax))
-            set_ylim = True
+            # target_col_vals = data_df.reset_index().drop(xx)[target_col].values
+            # target_min, target_max = np.min(target_col_vals), np.max(target_col_vals)
+            # max_minus_min = target_max - target_min
+            # ymin = target_min - 0.025*max_minus_min
+            # ymax = target_max + 0.025*max_minus_min
+            # print('New target min/max values:', target_min, target_max)
+            # print('Set y-axis limits (for display only): {:.2f} {:.2f}.\n'.format(ymin, ymax))
+            # set_ylim = True
 
     if inline:
         sns.set_theme(style="ticks", font_scale=0.8)
@@ -242,7 +293,7 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
             f, ax = plt.subplots(figsize=(9, 6))
             inline_scat = None
 
-        data_df_col_notnull = data_df[[column, target_col]].dropna().reset_index()
+        data_df_col_notnull = data_df_reset[[column, target_col]].dropna().reset_index()
 
         # TODO: User can define this value:
         num_uniq = correlation_df.loc[column, "Num Unique Values"]
@@ -305,7 +356,7 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
                         y = data_df_cat[target_col].values
                         x_all, y_all = np.append(x_all, x), np.append(y_all, y)
 
-                    ax = plot_scatter_density(x_all, y_all, fig=f, ax=ax, bins=100, inline=inline_scat, s=3, cmap='viridis')
+                    ax = plot_scatter_density(x_all, y_all, fig=f, ax=ax, bins=120, inline=inline_scat, s=3, cmap='viridis')
                 
                 if (not numeric) and inline and (num_uniq >= 3):
                     xticks_loc, xticks_lab = [], []
@@ -350,7 +401,7 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
 
                 else:
                     ax = plot_scatter_density(data_df_col_notnull[column].values,
-                                              data_df_col_notnull[target_col].values, fig=f, ax=ax, bins=100,
+                                              data_df_col_notnull[target_col].values, fig=f, ax=ax, bins=120,
                                               inline=inline_scat, s=3, cmap='viridis')
 
                     # plt.hist2d(data_df_col_notnull[column], data_df_col_notnull[target_col], bins=(100, 100),
@@ -394,7 +445,7 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
                         x = data_df_cat[column].values
                         x_all, y_all = np.append(x_all, x), np.append(y_all, y)
 
-                    ax = plot_scatter_density(x_all, y_all, fig=f, ax=ax, bins=100, inline=inline_scat, s=3,
+                    ax = plot_scatter_density(x_all, y_all, fig=f, ax=ax, bins=120, inline=inline_scat, s=3,
                                               cmap='viridis')
 
             if not inline:
