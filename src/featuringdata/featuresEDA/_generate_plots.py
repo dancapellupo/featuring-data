@@ -102,22 +102,39 @@ def plot_scatter_density(x, y, fig=None, ax=None, sort=True, bins=120, x_scale=1
             z[ii] = np.where((x_scaled[ii] - x_scaled) ** 2 + (y_scaled[ii] - y_scaled) ** 2 <= r2)[0].size
 
     else:
-        try:
-            bins = [bins, bins]
-            data, x_e, y_e = np.histogram2d(x, y, bins=bins, density=True)
-            z = interpn((0.5 * (x_e[1:] + x_e[:-1]), 0.5 * (y_e[1:] + y_e[:-1])), data, np.vstack([x, y]).T,
-                        method="splinef2d", bounds_error=False)
+        # try:
+        #     bins = [bins, bins]
+        #     data, x_e, y_e = np.histogram2d(x, y, bins=bins, density=True)
+        #     z = interpn((0.5 * (x_e[1:] + x_e[:-1]), 0.5 * (y_e[1:] + y_e[:-1])), data, np.vstack([x, y]).T,
+        #                 method="splinef2d", bounds_error=False)
+        #
+        #     # To be sure to plot all data
+        #     z[np.where(np.isnan(z))] = 0.0
+        #
+        # except ValueError:
+        #     # Calculate the point density
+        #     xy = np.vstack([x, y])
+        #     z = gaussian_kde(xy)(xy)
+        #
+        # # z = MinMaxScaler(feature_range=(0, 1)).fit_transform(z.reshape(-1, 1))
+        # z /= 10 ** (math.floor(math.log10(abs(z.max()))))
 
-            # To be sure to plot all data
-            z[np.where(np.isnan(z))] = 0.0
-
-        except ValueError:
-            # Calculate the point density
-            xy = np.vstack([x, y])
-            z = gaussian_kde(xy)(xy)
-
-        # z = MinMaxScaler(feature_range=(0, 1)).fit_transform(z.reshape(-1, 1))
-        z /= 10 ** (math.floor(math.log10(abs(z.max()))))
+        bins = 360
+        counts, x_hist, y_hist = np.histogram2d(x, y, bins=bins)
+        # print('counts shape', counts.shape)
+        x, y, z = np.zeros(bins*bins), np.zeros(bins*bins), np.zeros(bins*bins)
+        ii = 0
+        for xi in range(bins):
+            x_ii = (x_hist[xi] + x_hist[xi+1]) / 2.
+            for yi in range(bins):
+                if counts[xi, yi] > 0:
+                    x[ii], y[ii] = x_ii, (y_hist[yi] + y_hist[yi+1]) / 2.
+                    z[ii] = counts[
+                            max(0, xi-4):min(xi+5, counts.shape[0]), max(0, yi-4):min(yi+5, counts.shape[1])].sum()
+                ii += 1
+        # print(ii)
+        idx = np.where(z > 0)[0]
+        x, y, z = x[idx], y[idx], z[idx]
 
     # Sort the points by density, so that the densest points are plotted last
     if sort:
