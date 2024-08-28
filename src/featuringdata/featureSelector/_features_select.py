@@ -316,10 +316,10 @@ class FeatureSelector:
         
         if self.target_log:
             sec_metric_final = calc_model_metric(np.expm1(y_val_comb[data_ind]), np.expm1(y_val_pred),
-                                          target_type=self.target_type, metric_type='easy')
+                                                 target_type=self.target_type, metric_type='easy')
         else:
             sec_metric_final = calc_model_metric(y_val_comb[data_ind], y_val_pred, target_type=self.target_type,
-                                          metric_type='easy')
+                                                 metric_type='easy')
         print(f'\nFinal {secondary_metric}: {sec_metric_final:.3f}\n')
 
         # --------------------

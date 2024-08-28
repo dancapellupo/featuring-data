@@ -2,6 +2,8 @@
 import numpy as np
 import pandas as pd
 
+from ..utils import round_to_n_sigfig
+
 
 def count_null_values(data_df, master_columns_df):
     """
@@ -190,4 +192,27 @@ def count_nonnumeric_unique_values(data_df, non_numeric_cols, uniq_vals_thresh=5
 
     return non_numeric_uniq_vals_df
 
+
+def calc_column_summary_stats(data_df, master_columns_df):
+
+    for jj in range(len(master_columns_df)):
+        column = master_columns_df.index[jj]
+
+        if master_columns_df["Column Type"].iloc[jj] == 'numeric':
+            master_columns_df.loc[column, "Mean"] = round_to_n_sigfig(data_df[column].mean(), 4)
+            master_columns_df.loc[column, "STD"] = round_to_n_sigfig(data_df[column].std(), 4)
+
+            col_perc_tup = np.percentile(data_df[column].values, [0, 25, 50, 75, 100])
+            master_columns_df.loc[column, "Min"] = col_perc_tup[0]
+            master_columns_df.loc[column, "25th Perc"] = col_perc_tup[1]
+            master_columns_df.loc[column, "50th Perc"] = col_perc_tup[2]
+            master_columns_df.loc[column, "75th Perc"] = col_perc_tup[3]
+            master_columns_df.loc[column, "Max"] = col_perc_tup[4]
+
+        elif master_columns_df["Column Type"].iloc[jj] == 'non-numeric':
+            column_describe = data_df[column].describe()
+            master_columns_df.loc[column, "Most Frequent"] = column_describe.loc["top"]
+            master_columns_df.loc[column, "Most Frequent Count"] = column_describe.loc["freq"]
+
+    return master_columns_df
 

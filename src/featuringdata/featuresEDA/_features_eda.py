@@ -20,6 +20,7 @@ from ._create_pdf_report import (
 from ._initial_eda_functions import (
     count_null_values,
     sort_numeric_nonnumeric_columns,
+    calc_column_summary_stats
 )
 
 from ._correlation import (
@@ -268,6 +269,9 @@ class FeaturesEDA:
         self.pdf = section_on_unique_values(self.pdf, self.master_columns_df)
 
         # # Removing any columns with only a single unique value.
+
+        # ---
+        self.master_columns_df = calc_column_summary_stats(data_df, self.master_columns_df)
 
 
         # --------------------------------------------------------------------

@@ -53,14 +53,17 @@ def plot_hist(data_for_bins, label_bins='', data_for_line=None, label_line='', x
     plt.close()
 
 
-def plot_hist_target_col(target_col_vals, target_type='regression', inline=False, set_plot_order=None, plots_folder='./'):
+def plot_hist_target_col(target_col_vals, target_type='regression', inline=False, inweb=False, set_plot_order=None, plots_folder='./'):
 
     if inline:
         sns.set_theme(style="ticks", font_scale=0.8)
         f, ax = plt.subplots(figsize=(3, 2))
         plt.title('Target Column Distribution')
     else:
-        sns.set_theme(style="ticks", font_scale=1.2)
+        if inweb:
+            sns.set_theme(style="ticks", font_scale=1.6)
+        else:
+            sns.set_theme(style="ticks", font_scale=1.2)
         f, ax = plt.subplots(figsize=(9, 6))
 
     if target_type == 'regression':
@@ -81,7 +84,7 @@ def plot_hist_target_col(target_col_vals, target_type='regression', inline=False
 
     if inline:
         plt.show()
-    else:
+    elif not inweb:
         plt.savefig('{}/target_data_distribution.png'.format(plots_folder), bbox_inches='tight')
         plt.close()
 
@@ -195,7 +198,8 @@ def plot_scatter_density_v1(x, y, fig=None, ax=None, sort=True, bins=100, x_scal
 
 
 def plot_feature_values(data_df, columns_list, correlation_df, target_col, numeric=True, target_type='regression',
-                        plot_style='scatterdense', inline=False, set_plot_order=None, plots_folder='./plots'):
+                        plot_style='scatterdense', inline=False, inweb=False, set_plot_order=None,
+                        plots_folder='./plots'):
     """
     Generate EDA plots that show each feature versus the target variable.
 
@@ -295,7 +299,10 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
         f.subplots_adjust(wspace=0.15, hspace=0.25)
 
     else:
-        sns.set_theme(style="ticks")
+        if inweb:
+            sns.set_theme(style="ticks", font_scale=1.4)
+        else:
+            sns.set_theme(style="ticks")
     
     print('Generating plots of {} features...'.format('numeric' if numeric else 'non-numeric/categorical'))
     num_plots = 6 if inline else len(columns_list)
@@ -491,7 +498,7 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
 
         if ((target_type == 'regression') or (not numeric) or (num_uniq <= 10)) and inline:
             ax.ticklabel_format(axis='y', scilimits=(0, 0))
-        if not inline:
+        if (not inline) and (not inweb):
             plt.savefig('{}/{}_vs_{}.png'.format(plots_folder, column, target_col), bbox_inches='tight')
             plt.close()
 
