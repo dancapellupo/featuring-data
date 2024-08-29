@@ -199,10 +199,11 @@ def calc_column_summary_stats(data_df, master_columns_df):
         column = master_columns_df.index[jj]
 
         if master_columns_df["Column Type"].iloc[jj] == 'numeric':
-            master_columns_df.loc[column, "Mean"] = round_to_n_sigfig(data_df[column].mean(), 4)
-            master_columns_df.loc[column, "STD"] = round_to_n_sigfig(data_df[column].std(), 4)
+            data_df_col_notna = data_df[column].dropna()
+            master_columns_df.loc[column, "Mean"] = round_to_n_sigfig(np.mean(data_df_col_notna), 4)
+            master_columns_df.loc[column, "STD"] = round_to_n_sigfig(np.std(data_df_col_notna), 4)
 
-            col_perc_tup = np.percentile(data_df[column].values, [0, 25, 50, 75, 100])
+            col_perc_tup = np.percentile(data_df_col_notna, [0, 25, 50, 75, 100])
             master_columns_df.loc[column, "Min"] = col_perc_tup[0]
             master_columns_df.loc[column, "25th Perc"] = col_perc_tup[1]
             master_columns_df.loc[column, "50th Perc"] = col_perc_tup[2]
@@ -210,9 +211,14 @@ def calc_column_summary_stats(data_df, master_columns_df):
             master_columns_df.loc[column, "Max"] = col_perc_tup[4]
 
         elif master_columns_df["Column Type"].iloc[jj] == 'non-numeric':
-            column_describe = data_df[column].describe()
-            master_columns_df.loc[column, "Most Frequent"] = column_describe.loc["top"]
-            master_columns_df.loc[column, "Most Frequent Count"] = column_describe.loc["freq"]
+            # column_describe = data_df[column].describe()
+            values, counts = np.unique(data_df[column].dropna().values, return_counts=True)
+            xx = np.argmax(counts)
+
+            # master_columns_df.loc[column, "Most Frequent"] = column_describe.loc["top"]
+            # master_columns_df.loc[column, "Most Frequent Count"] = column_describe.loc["freq"]
+            master_columns_df.loc[column, "Most Frequent"] = values[xx]
+            master_columns_df.loc[column, "Most Frequent Count"] = counts[xx]
 
     return master_columns_df
 

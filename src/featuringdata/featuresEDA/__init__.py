@@ -1,9 +1,13 @@
 
 from ._features_eda import FeaturesEDA
 
-__all__ = ['FeaturesEDA']
+__all__ = ['FeaturesEDA', 'count_null_values', 'sort_numeric_nonnumeric_columns', 'calc_column_summary_stats']
 
-from ._initial_eda_functions import count_null_values, sort_numeric_nonnumeric_columns
+from ._initial_eda_functions import (
+    count_null_values,
+    sort_numeric_nonnumeric_columns,
+    calc_column_summary_stats
+)
 from ._correlation import (
     calc_numeric_features_target_corr,
     calc_corr_numeric_features,
