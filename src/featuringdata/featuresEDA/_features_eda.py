@@ -271,7 +271,7 @@ class FeaturesEDA:
         # # Removing any columns with only a single unique value.
 
         # ---
-        self.master_columns_df = calc_column_summary_stats(data_df, self.master_columns_df)
+        self.master_columns_df = calc_column_summary_stats(data_df, self.master_columns_df, self.target_type)
 
 
         # --------------------------------------------------------------------

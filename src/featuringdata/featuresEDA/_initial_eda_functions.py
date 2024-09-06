@@ -193,12 +193,13 @@ def count_nonnumeric_unique_values(data_df, non_numeric_cols, uniq_vals_thresh=5
     return non_numeric_uniq_vals_df
 
 
-def calc_column_summary_stats(data_df, master_columns_df):
+def calc_column_summary_stats(data_df, master_columns_df, target_type):
 
     for jj in range(len(master_columns_df)):
         column = master_columns_df.index[jj]
 
-        if master_columns_df["Column Type"].iloc[jj] == 'numeric':
+        if (master_columns_df["Column Type"].iloc[jj] == 'numeric') or (
+                master_columns_df["Column Type"].iloc[jj] == 'target' and target_type == 'regression'):
             data_df_col_notna = data_df[column].dropna()
             master_columns_df.loc[column, "Mean"] = round_to_n_sigfig(np.mean(data_df_col_notna), 4)
             master_columns_df.loc[column, "STD"] = round_to_n_sigfig(np.std(data_df_col_notna), 4)
@@ -210,7 +211,8 @@ def calc_column_summary_stats(data_df, master_columns_df):
             master_columns_df.loc[column, "75th Perc"] = col_perc_tup[3]
             master_columns_df.loc[column, "Max"] = col_perc_tup[4]
 
-        elif master_columns_df["Column Type"].iloc[jj] == 'non-numeric':
+        elif (master_columns_df["Column Type"].iloc[jj] == 'non-numeric') or (
+                master_columns_df["Column Type"].iloc[jj] == 'target' and target_type == 'classification'):
             # column_describe = data_df[column].describe()
             values, counts = np.unique(data_df[column].dropna().values, return_counts=True)
             xx = np.argmax(counts)
