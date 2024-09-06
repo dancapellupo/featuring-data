@@ -1,6 +1,6 @@
 [project]
 name = "featuring-data"
-version = "0.3.0"
+version = "0.3.1b"
 authors = [
     { name="Daniel M. Capellupo", email="daniel@dmcdatascience.com" },
 ]
