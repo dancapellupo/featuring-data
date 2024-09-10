@@ -9,9 +9,12 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.offsetbox import AnchoredText
 import seaborn as sns
-from scipy.interpolate import interpn
-from scipy.stats import gaussian_kde
-from sklearn.preprocessing import MinMaxScaler
+try:
+    from scipy.interpolate import interpn
+    from scipy.stats import gaussian_kde
+    from sklearn.preprocessing import MinMaxScaler
+except ImportError:
+    pass
 
 
 def plot_ecdf(data_col, data_label='', xlabel='Data Values', filename='ecdf', overplot=False, outfile=True,
