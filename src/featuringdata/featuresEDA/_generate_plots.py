@@ -200,9 +200,9 @@ def plot_scatter_density_v1(x, y, fig=None, ax=None, sort=True, bins=100, x_scal
     return ax
 
 
-def plot_feature_values(data_df, columns_list, correlation_df, target_col, numeric=True, target_type='regression',
+def plot_feature_values(data_df, columns_list, target_col, correlation_dict={}, numeric=True, target_type='regression',
                         plot_style='scatterdense', inline=False, inweb=False, set_plot_order=None,
-                        plots_folder='./plots'):
+                        plots_folder='./plots', verbose=True):
     """
     Generate EDA plots that show each feature versus the target variable.
 
@@ -306,10 +306,11 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
             sns.set_theme(style="ticks", font_scale=1.4)
         else:
             sns.set_theme(style="ticks")
-    
-    print('Generating plots of {} features...'.format('numeric' if numeric else 'non-numeric/categorical'))
+
+    if verbose:
+        print('Generating plots of {} features...'.format('numeric' if numeric else 'non-numeric/categorical'))
     num_plots = 6 if inline else len(columns_list)
-    for jj, column in enumerate(tqdm(columns_list[0:num_plots])):
+    for jj, column in enumerate(tqdm(columns_list[0:num_plots], disable=(not verbose))):
 
         if inline:
             num_row = int(np.floor(jj / 3))
@@ -323,7 +324,8 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
         data_df_col_notnull = data_df_reset[[column, target_col]].dropna().reset_index()
 
         # TODO: User can define this value:
-        num_uniq = correlation_df.loc[column, "Num Unique Values"]
+        # num_uniq = correlation_df.loc[column, "Num Unique Values"]
+        num_uniq = correlation_dict[column]["num_uniq"]
         if (not numeric) or (num_uniq <= 10):
 
             num_cat_thresh = 10 if inline else 20
@@ -490,12 +492,18 @@ def plot_feature_values(data_df, columns_list, correlation_df, target_col, numer
         if set_ylim:
             plt.ylim(ymin, ymax)
 
-        title_txt = f'{column} vs {target_col} : '
-        if numeric and target_type == 'regression':
-            title_txt += f'P={correlation_df.loc[column, "Pearson"]}, '
-        title_txt += f'MI={correlation_df.loc[column, "Mutual Info"]}, RF={correlation_df.loc[column, "Random Forest"]}'
-        if not numeric:
-            title_txt += f', RF_norm={correlation_df.loc[column, "RF_norm"]}'
+        title_txt = f'{column} vs {target_col}'
+        if 'corr_dict' in correlation_dict[column]:
+            title_txt += ' : '
+            for k, v in correlation_dict[column]["corr_dict"].items():
+                title_txt += f'{k}={v}, '
+            title_txt = title_txt[:-2]
+        # if numeric and target_type == 'regression':
+        #     title_txt += f'P={correlation_df.loc[column, "Pearson"]:.2f}, '
+        # title_txt += (f'MI={correlation_df.loc[column, "Mutual Info"]:.2f}, '
+        #               f'RF={correlation_df.loc[column, "Random Forest"]:.2f}')
+        # if not numeric:
+        #     title_txt += f', RF_norm={correlation_df.loc[column, "RF_norm"]:.2f}'
         if not inline:
             ax.set_title(title_txt)
 

@@ -193,7 +193,7 @@ def count_nonnumeric_unique_values(data_df, non_numeric_cols, uniq_vals_thresh=5
     return non_numeric_uniq_vals_df
 
 
-def calc_column_summary_stats(data_df, master_columns_df, target_type):
+def calc_column_summary_stats(data_df, master_columns_df, target_type='regression'):
 
     for jj in range(len(master_columns_df)):
         column = master_columns_df.index[jj]

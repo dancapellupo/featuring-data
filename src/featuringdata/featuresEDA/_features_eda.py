@@ -270,9 +270,6 @@ class FeaturesEDA:
 
         # # Removing any columns with only a single unique value.
 
-        # ---
-        self.master_columns_df = calc_column_summary_stats(data_df, self.master_columns_df, self.target_type)
-
 
         # --------------------------------------------------------------------
         # Target Column
@@ -292,8 +289,15 @@ class FeaturesEDA:
             else:
                 self.target_type = 'regression'
 
+            # ---
+            self.master_columns_df = calc_column_summary_stats(data_df, self.master_columns_df, self.target_type)
+
             self.pdf = section_on_target_column(self.pdf, self.target_col, self.target_type, target_num_null,
                                                 target_num_uniq)
+
+        else:
+            # ---
+            self.master_columns_df = calc_column_summary_stats(data_df, self.master_columns_df)
 
         # Save PDF document to current working directory:
         if output:
@@ -479,13 +483,28 @@ class FeaturesEDA:
 
                 # Generate plots of numeric features, and save them to the
                 # timestamped directory defined above:
-                plot_feature_values(data_df, columns_list_ordered, self.master_columns_df, target_col=self.target_col,
-                                    numeric=True, plot_style=plot_style, target_type=self.target_type,
-                                    set_plot_order=set_plot_order, inline=True)
+                correlation_dict = {}
+                for column in columns_list_ordered:
+                    correlation_dict[column] = {}
+                    correlation_dict[column]["num_uniq"] = self.master_columns_df.loc[column, "Num Unique Values"]
+                    if self.target_type == 'regression':
+                        correlation_dict[column]["corr_dict"] = {
+                            "P": f'{self.master_columns_df.loc[column, "Pearson"]:.2f}'}
+                    else:
+                        correlation_dict[column]["corr_dict"] = {}
+                    correlation_dict[column]["corr_dict"][
+                        "MI"] = f'{self.master_columns_df.loc[column, "Mutual Info"]:.2f}'
+                    correlation_dict[column]["corr_dict"][
+                        "RF"] = f'{self.master_columns_df.loc[column, "Random Forest"]:.2f}'
+
+                plot_feature_values(data_df, columns_list_ordered, target_col=self.target_col,
+                                    correlation_dict=correlation_dict, numeric=True, plot_style=plot_style,
+                                    target_type=self.target_type, set_plot_order=set_plot_order, inline=True)
                 
-                plot_feature_values(data_df, columns_list_ordered, self.master_columns_df, target_col=self.target_col,
-                                    numeric=True, plot_style=plot_style, target_type=self.target_type,
-                                    set_plot_order=set_plot_order, plots_folder=plots_folder)
+                plot_feature_values(data_df, columns_list_ordered, target_col=self.target_col,
+                                    correlation_dict=correlation_dict, numeric=True, plot_style=plot_style,
+                                    target_type=self.target_type, set_plot_order=set_plot_order,
+                                    plots_folder=plots_folder)
 
                 # Add the plots to the PDF:
                 self.pdf = section_of_plots(self.pdf, columns_list_ordered, target_col=self.target_col, numeric=True,
@@ -503,13 +522,24 @@ class FeaturesEDA:
 
                 # Generate plots of non-numeric features, and save them to the
                 # timestamped directory defined above:
-                plot_feature_values(data_df, columns_list_ordered, self.master_columns_df, target_col=self.target_col,
-                                    numeric=False, plot_style=plot_style, target_type=self.target_type,
-                                    set_plot_order=set_plot_order, inline=True)
+                correlation_dict = {}
+                for column in columns_list_ordered:
+                    correlation_dict[column] = {}
+                    correlation_dict[column]["num_uniq"] = self.master_columns_df.loc[column, "Num Unique Values"]
+                    correlation_dict[column]["corr_dict"] = {}
+                    correlation_dict[column]["corr_dict"][
+                        "MI"] = f'{self.master_columns_df.loc[column, "Mutual Info"]:.2f}'
+                    correlation_dict[column]["corr_dict"][
+                        "RF"] = f'{self.master_columns_df.loc[column, "Random Forest"]:.2f}'
+
+                plot_feature_values(data_df, columns_list_ordered, target_col=self.target_col,
+                                    correlation_dict=correlation_dict, numeric=False, plot_style=plot_style,
+                                    target_type=self.target_type, set_plot_order=set_plot_order, inline=True)
                 
-                plot_feature_values(data_df, columns_list_ordered, self.master_columns_df, target_col=self.target_col,
-                                    numeric=False, plot_style=plot_style, target_type=self.target_type,
-                                    set_plot_order=set_plot_order, plots_folder=plots_folder)
+                plot_feature_values(data_df, columns_list_ordered, target_col=self.target_col,
+                                    correlation_dict=correlation_dict, numeric=False, plot_style=plot_style,
+                                    target_type=self.target_type, set_plot_order=set_plot_order,
+                                    plots_folder=plots_folder)
                 
                 # Add the plots to the PDF:
                 self.pdf = section_of_plots(self.pdf, columns_list_ordered, target_col=self.target_col, numeric=False,
