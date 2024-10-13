@@ -195,6 +195,8 @@ def count_nonnumeric_unique_values(data_df, non_numeric_cols, uniq_vals_thresh=5
 
 def calc_column_summary_stats(data_df, master_columns_df, target_type='regression'):
 
+    non_numeric_counts_dict = {}
+
     for jj in range(len(master_columns_df)):
         column = master_columns_df.index[jj]
 
@@ -215,12 +217,16 @@ def calc_column_summary_stats(data_df, master_columns_df, target_type='regressio
                 master_columns_df["Column Type"].iloc[jj] == 'target' and target_type == 'classification'):
             # column_describe = data_df[column].describe()
             values, counts = np.unique(data_df[column].dropna().values, return_counts=True)
-            xx = np.argmax(counts)
 
+            xx = np.argmax(counts)
             # master_columns_df.loc[column, "Most Frequent"] = column_describe.loc["top"]
             # master_columns_df.loc[column, "Most Frequent Count"] = column_describe.loc["freq"]
             master_columns_df.loc[column, "Most Frequent"] = values[xx]
             master_columns_df.loc[column, "Most Frequent Count"] = counts[xx]
 
-    return master_columns_df
+            # sorted_list = sorted(data_df[column].dropna().unique().tolist())  # , key=str.lower)
+            non_numeric_counts = [list(values), [round(x / np.sum(counts) * 100) for x in counts]]
+            non_numeric_counts_dict[column] = non_numeric_counts
+
+    return master_columns_df, non_numeric_counts_dict
 

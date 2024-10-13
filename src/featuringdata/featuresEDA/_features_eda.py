@@ -270,7 +270,6 @@ class FeaturesEDA:
 
         # # Removing any columns with only a single unique value.
 
-
         # --------------------------------------------------------------------
         # Target Column
 
@@ -290,14 +289,15 @@ class FeaturesEDA:
                 self.target_type = 'regression'
 
             # ---
-            self.master_columns_df = calc_column_summary_stats(data_df, self.master_columns_df, self.target_type)
+            self.master_columns_df, non_numeric_counts_dict = calc_column_summary_stats(
+                data_df, self.master_columns_df, self.target_type)
 
             self.pdf = section_on_target_column(self.pdf, self.target_col, self.target_type, target_num_null,
                                                 target_num_uniq)
 
         else:
             # ---
-            self.master_columns_df = calc_column_summary_stats(data_df, self.master_columns_df)
+            self.master_columns_df, non_numeric_counts_dict = calc_column_summary_stats(data_df, self.master_columns_df)
 
         # Save PDF document to current working directory:
         if output:
