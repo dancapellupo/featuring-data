@@ -203,8 +203,9 @@ def calc_column_summary_stats(data_df, master_columns_df, target_type='regressio
         if (master_columns_df["Column Type"].iloc[jj] == 'numeric') or (
                 master_columns_df["Column Type"].iloc[jj] == 'target' and target_type == 'regression'):
             data_df_col_notna = data_df[column].dropna()
+            std = np.std(data_df_col_notna)
             master_columns_df.loc[column, "Mean"] = round_to_n_sigfig(np.mean(data_df_col_notna), 4)
-            master_columns_df.loc[column, "STD"] = round_to_n_sigfig(np.std(data_df_col_notna), 4)
+            master_columns_df.loc[column, "STD"] = round_to_n_sigfig(std, 4)
 
             col_perc_tup = np.percentile(data_df_col_notna, [0, 25, 50, 75, 100])
             master_columns_df.loc[column, "Min"] = col_perc_tup[0]
@@ -212,6 +213,9 @@ def calc_column_summary_stats(data_df, master_columns_df, target_type='regressio
             master_columns_df.loc[column, "50th Perc"] = col_perc_tup[2]
             master_columns_df.loc[column, "75th Perc"] = col_perc_tup[3]
             master_columns_df.loc[column, "Max"] = col_perc_tup[4]
+            max_std = (col_perc_tup[4] - col_perc_tup[2]) / std
+            min_std = (col_perc_tup[2] - col_perc_tup[0]) / std
+            master_columns_df.loc[column, "Max Outlier"] = max(max_std, min_std)
 
         elif (master_columns_df["Column Type"].iloc[jj] == 'non-numeric') or (
                 master_columns_df["Column Type"].iloc[jj] == 'target' and target_type == 'classification'):
