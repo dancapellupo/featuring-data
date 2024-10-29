@@ -1,5 +1,13 @@
 
-from ._features_select import FeatureSelector
+__all__ = ['FeatureSelector', 'recursive_fit']
 
-__all__ = ['FeatureSelector']
+try:
+    from ._features_select import FeatureSelector
+except ImportError:
+    pass
+
+try:
+    from ._recursive_fit import recursive_fit
+except ImportError:
+    pass
 
