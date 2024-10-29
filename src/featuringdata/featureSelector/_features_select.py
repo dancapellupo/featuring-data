@@ -297,7 +297,7 @@ class FeatureSelector:
         hyperparam_iters = self.hyperparams_df.index.values
         hyperparam_iter = hyperparam_iters[np.where((best_ind - hyperparam_iters) >= 0)[0][-1]]
 
-        hyperparams_dict = self.hyperparams_df.loc[hyperparam_iter].to_dict()
+        hyperparams_dict = self.hyperparams_df.loc[hyperparam_iter, self.hyperparams_df.columns[:-2]].astype(int).to_dict()
         print('Using Iter {} from data split {} with {}'.format(best_ind, data_ind+1, hyperparams_dict))
 
         # --------------------------------------------------------------------

@@ -184,6 +184,93 @@ def hyperparameter_search(X_train_comb, y_train_comb, X_val_comb, y_val_comb, fe
     return best_params_dict, best_score, worst_score
 
 
+def xgboost_training(X_train_comb, y_train_comb, X_val_comb, y_val_comb, data_jj, feature_columns, best_params_dict,
+                     target_type, target_log, out_row, feature_importance_dict_list):
+
+    if target_type == 'regression':
+        xgb_reg = XGBRegressor(n_estimators=1000, early_stopping_rounds=20, random_state=42, **best_params_dict)
+    else:
+        xgb_reg = XGBClassifier(n_estimators=1000, early_stopping_rounds=20, random_state=42, **best_params_dict)
+
+    xgb_reg.fit(X_train_comb[data_jj][feature_columns[data_jj]], y_train_comb[data_jj],
+                eval_set=[(X_val_comb[data_jj][feature_columns[data_jj]], y_val_comb[data_jj])], verbose=False)
+
+    if target_type == 'regression':
+        y_train_pred = xgb_reg.predict(X_train_comb[data_jj][feature_columns[data_jj]])
+        y_val_pred = xgb_reg.predict(X_val_comb[data_jj][feature_columns[data_jj]])
+    else:
+        y_train_pred = xgb_reg.predict_proba(X_train_comb[data_jj][feature_columns[data_jj]])
+        y_val_pred = xgb_reg.predict_proba(X_val_comb[data_jj][feature_columns[data_jj]])
+
+    # TODO: Instead of rounding, go by significant digits [# of digits to be user-configurable]
+    train_err = round_to_n_sigfig(calc_model_metric(y_train_comb[data_jj], y_train_pred, target_type=target_type), 5)
+    val_err = round_to_n_sigfig(calc_model_metric(y_val_comb[data_jj], y_val_pred, target_type=target_type), 5)
+
+    # If the log of the training data was taken, then reverse the log
+    #  to save an easier-to-follow MAE value for the user:
+    if target_log:
+        val_mae = round_to_n_sigfig(
+            calc_model_metric(np.expm1(y_val_comb[data_jj]), np.expm1(y_val_pred), target_type=target_type,
+                              metric_type='easy'), 5)
+    else:
+        if target_type == 'classification':
+            y_val_pred = xgb_reg.predict(X_val_comb[data_jj][feature_columns[data_jj]])
+        val_mae = round_to_n_sigfig(
+            calc_model_metric(y_val_comb[data_jj], y_val_pred, target_type=target_type, metric_type='easy'), 5)
+
+    # ----------------------------------------------------------------
+    # Save information from this iteration to dataframe
+    out_row.extend(
+        [train_err, val_err, val_mae, len(feature_columns[data_jj]), ', '.join(feature_columns[data_jj])])
+
+    max_feat_import_ind = np.argmax(xgb_reg.feature_importances_)
+    out_row.extend([feature_columns[data_jj][max_feat_import_ind],
+                    round(xgb_reg.feature_importances_[max_feat_import_ind], 2)])
+
+    # Save the feature importance values to the list of dictionaries:
+    for ii, col in enumerate(feature_columns[data_jj]):
+        feature_importance_dict_list[data_jj][col].append(xgb_reg.feature_importances_[ii])
+
+    # ----------------------------------------------------------------
+    # Determine which Features to Remove this Iteration
+
+    # First check if there are multiple features with an importance of
+    #  exactly zero:
+    xx = np.where(xgb_reg.feature_importances_ == 0)[0]
+    if xx.size > 0:
+        cols_zero_feat_import = [feature_columns[data_jj][x] for x in xx]
+        # Remove all features with an importance of exactly zero, if
+        #  there are any:
+        for col in cols_zero_feat_import:
+            feature_columns[data_jj].remove(col)
+        col_to_drop = ', '.join(cols_zero_feat_import)
+    else:
+        # In most cases, just remove the feature with the lowest, but
+        #  non-zero feature importance:
+        min_feat_import_ind = np.argmin(xgb_reg.feature_importances_)
+        col_to_drop = feature_columns[data_jj][min_feat_import_ind]
+        feature_columns[data_jj].remove(col_to_drop)
+
+    # Save to dataframe the name(s) of the dropped column(s):
+    out_row.append(col_to_drop)
+
+    return feature_columns, feature_importance_dict_list, out_row
+
+
+def print_results_to_console(primary_metric, training_results_df, jj):
+    if jj == 0:
+        print(f'         NumFeats(1) {primary_metric}(1)   TopFeat(1) TopFeatImp(1)'
+              f'  NumFeats(2) {primary_metric}(2)   TopFeat(2) TopFeatImp(2)')
+    print(f'Iter {jj:4} : {training_results_df.loc[jj, "num_features_1"]:5}  '
+          f'{training_results_df.loc[jj, f"{primary_metric}_val_1"]:.5f} '
+          f'{training_results_df.loc[jj, "feat_high_import_name_1"]:>20} '
+          f'{training_results_df.loc[jj, "feat_high_import_val_1"]:.2f}  :  '
+          f'{training_results_df.loc[jj, "num_features_2"]:5}  '
+          f'{training_results_df.loc[jj, f"{primary_metric}_val_2"]:.5f}  '
+          f'{training_results_df.loc[jj, "feat_high_import_name_2"]:>20} '
+          f'{training_results_df.loc[jj, "feat_high_import_val_2"]:.2f}')
+
+
 def recursive_fit(X_train_comb, y_train_comb, X_val_comb, y_val_comb, parameter_dict, target_type='regression',
                   use_gridsearchcv=False, target_log=False):
     """
@@ -279,85 +366,13 @@ def recursive_fit(X_train_comb, y_train_comb, X_val_comb, y_val_comb, parameter_
 
         # Loop over the two random data splits:
         for data_jj in range(2):
-
             # XGBoost Training:
-            if target_type == 'regression':
-                xgb_reg = XGBRegressor(n_estimators=1000, early_stopping_rounds=20, random_state=42, **best_params_dict)
-            else:
-                xgb_reg = XGBClassifier(n_estimators=1000, early_stopping_rounds=20, random_state=42, **best_params_dict)
-
-            xgb_reg.fit(X_train_comb[data_jj][feature_columns[data_jj]], y_train_comb[data_jj],
-                        eval_set=[(X_val_comb[data_jj][feature_columns[data_jj]], y_val_comb[data_jj])], verbose=False)
-
-            if target_type == 'regression':
-                y_train_pred = xgb_reg.predict(X_train_comb[data_jj][feature_columns[data_jj]])
-                y_val_pred = xgb_reg.predict(X_val_comb[data_jj][feature_columns[data_jj]])
-            else:
-                y_train_pred = xgb_reg.predict_proba(X_train_comb[data_jj][feature_columns[data_jj]])
-                y_val_pred = xgb_reg.predict_proba(X_val_comb[data_jj][feature_columns[data_jj]])
-
-            # TODO: Instead of rounding, go by significant digits [# of digits to be user-configurable]
-            train_err = round_to_n_sigfig(calc_model_metric(y_train_comb[data_jj], y_train_pred, target_type=target_type), 5)
-            val_err = round_to_n_sigfig(calc_model_metric(y_val_comb[data_jj], y_val_pred, target_type=target_type), 5)
-
-            # If the log of the training data was taken, then reverse the log
-            #  to save an easier-to-follow MAE value for the user:
-            if target_log:
-                val_mae = round_to_n_sigfig(
-                    calc_model_metric(np.expm1(y_val_comb[data_jj]), np.expm1(y_val_pred), target_type=target_type, metric_type='easy'), 5)
-            else:
-                if target_type == 'classification':
-                    y_val_pred = xgb_reg.predict(X_val_comb[data_jj][feature_columns[data_jj]])
-                val_mae = round_to_n_sigfig(calc_model_metric(y_val_comb[data_jj], y_val_pred, target_type=target_type, metric_type='easy'), 5)
-            
-            # ----------------------------------------------------------------
-            # Save information from this iteration to dataframe
-            out_row.extend(
-                [train_err, val_err, val_mae, len(feature_columns[data_jj]), ', '.join(feature_columns[data_jj])])
-
-            max_feat_import_ind = np.argmax(xgb_reg.feature_importances_)
-            out_row.extend([feature_columns[data_jj][max_feat_import_ind],
-                            round(xgb_reg.feature_importances_[max_feat_import_ind], 2)])
-
-            # Save the feature importance values to the list of dictionaries:
-            for ii, col in enumerate(feature_columns[data_jj]):
-                feature_importance_dict_list[data_jj][col].append(xgb_reg.feature_importances_[ii])
-
-            # ----------------------------------------------------------------
-            # Determine which Features to Remove this Iteration
-
-            # First check if there are multiple features with an importance of
-            #  exactly zero:
-            xx = np.where(xgb_reg.feature_importances_ == 0)[0]
-            if xx.size > 0:
-                cols_zero_feat_import = [feature_columns[data_jj][x] for x in xx]
-                # Remove all features with an importance of exactly zero, if
-                #  there are any:
-                for col in cols_zero_feat_import:
-                    feature_columns[data_jj].remove(col)
-                col_to_drop = ', '.join(cols_zero_feat_import)
-            else:
-                # In most cases, just remove the feature with the lowest, but
-                #  non-zero feature importance:
-                min_feat_import_ind = np.argmin(xgb_reg.feature_importances_)
-                col_to_drop = feature_columns[data_jj][min_feat_import_ind]
-                feature_columns[data_jj].remove(col_to_drop)
-
-            # Save to dataframe the name(s) of the dropped column(s):
-            out_row.append(col_to_drop)
+            feature_columns, feature_importance_dict_list, out_row = xgboost_training(
+                X_train_comb, y_train_comb, X_val_comb, y_val_comb, data_jj, feature_columns, best_params_dict,
+                target_type, target_log, out_row, feature_importance_dict_list)
 
         training_results_df.loc[jj] = out_row
-        if jj == 0:
-            print(f'         NumFeats(1) {primary_metric}(1)   TopFeat(1) TopFeatImp(1)'
-                  f'  NumFeats(2) {primary_metric}(2)   TopFeat(2) TopFeatImp(2)')
-        print(f'Iter {jj:4} : {training_results_df.loc[jj, "num_features_1"]:5}  '
-              f'{training_results_df.loc[jj, f"{primary_metric}_val_1"]:.5f} '
-              f'{training_results_df.loc[jj, "feat_high_import_name_1"]:>20} '
-              f'{training_results_df.loc[jj, "feat_high_import_val_1"]:.2f}  :  '
-              f'{training_results_df.loc[jj, "num_features_2"]:5}  '
-              f'{training_results_df.loc[jj, f"{primary_metric}_val_2"]:.5f}  '
-              f'{training_results_df.loc[jj, "feat_high_import_name_2"]:>20} '
-              f'{training_results_df.loc[jj, "feat_high_import_val_2"]:.2f}')
+        print_results_to_console(primary_metric, training_results_df, jj)
 
         # Stop running the iterative training once all features have been
         #  removed from at least one of the data splits:
