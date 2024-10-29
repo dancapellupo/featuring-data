@@ -91,6 +91,99 @@ def calc_model_metric(y, y_pred, target_type='regression', metric_type='regular'
                 return cohen_kappa_score(y, y_pred)
 
 
+def prepare_objects_for_training(X_train_comb, target_type, parameter_dict):
+    feature_columns_full = X_train_comb[0].columns.to_list()
+
+    # Prepare separate copies of the feature lists for each split of the data:
+    feature_columns = list()
+    feature_columns.append(feature_columns_full.copy())
+    feature_columns.append(feature_columns_full.copy())
+
+    num_columns_orig = len(feature_columns_full)
+    print('Starting number of feature columns: {}\n'.format(num_columns_orig))
+
+    # Set-up training results dataframe:
+    primary_metric, secondary_metric = get_metric_names(target_type)
+    training_results_cols_prefix = [
+        f"{primary_metric}_train_", f"{primary_metric}_val_", f"{secondary_metric}_val_", "num_features_",
+        "feature_list_", "feat_high_import_name_", "feat_high_import_val_", "features_to_remove_"]
+    training_results_cols = []
+    for ii in range(1, len(X_train_comb) + 1):
+        training_results_cols.extend([x + str(ii) for x in training_results_cols_prefix])
+    training_results_df = pd.DataFrame(columns=training_results_cols)
+
+    # Set-up dataframe to store results of hyperparameter search:
+    hyperparams_list = list(parameter_dict.keys())
+    hyperparams_df = pd.DataFrame(columns=hyperparams_list+["best_score", "worst_score"])
+
+    # Set-up list of dictionaries to store all the feature importance values
+    #  for every iteration of the model training:
+    feature_importance_dict_list = []
+    for ii in range(0, len(X_train_comb)):
+        feature_importance_dict = {}
+        for col in feature_columns_full:
+            feature_importance_dict[col] = []
+        feature_importance_dict_list.append(feature_importance_dict.copy())
+
+    return (num_columns_orig, primary_metric, training_results_df, hyperparams_df, hyperparams_list, feature_columns,
+            feature_importance_dict_list)
+
+
+def hyperparameter_search(X_train_comb, y_train_comb, X_val_comb, y_val_comb, feature_columns, target_type,
+                          parameter_dict, use_gridsearchcv=False, verbose=True):
+    best_score = None
+    worst_score = None
+
+    for data_jj in range(2):
+
+        if use_gridsearchcv:
+            # Hyperparameter search using GridSearchCV:
+            if target_type == 'regression':
+                xgb_reg = XGBRegressor(n_estimators=1000, early_stopping_rounds=20, random_state=42)
+            else:
+                xgb_reg = XGBClassifier(n_estimators=1000, early_stopping_rounds=20, random_state=42)
+
+            grid_search = GridSearchCV(xgb_reg, param_grid=parameter_dict, cv=2)
+
+            grid_search.fit(X_train_comb[data_jj][feature_columns[data_jj]], y_train_comb[data_jj],
+                            eval_set=[(X_val_comb[data_jj][feature_columns[data_jj]], y_val_comb[data_jj])],
+                            verbose=False)
+
+            if data_jj == 0:
+                best_params_dict = grid_search.best_params_
+                best_score = grid_search.best_score_
+
+            elif grid_search.best_score_ < best_score:
+                best_params_dict = grid_search.best_params_
+                best_score = grid_search.best_score_
+
+        else:
+            # Hyperparameter search using the train and validation sets already defined:
+            # print('Running grid search at Iteration {} on data split {}...'.format(jj, data_jj + 1))
+            for parameter_dict_tmp in iter(tqdm(ParameterGrid(parameter_dict), disable=(not verbose))):
+
+                if target_type == 'regression':
+                    xgb_reg = XGBRegressor(n_estimators=1000, early_stopping_rounds=20, random_state=42,
+                                           **parameter_dict_tmp)
+                else:
+                    xgb_reg = XGBClassifier(n_estimators=1000, early_stopping_rounds=20, random_state=42,
+                                            **parameter_dict_tmp)
+                xgb_reg.fit(X_train_comb[data_jj][feature_columns[data_jj]], y_train_comb[data_jj],
+                            eval_set=[(X_val_comb[data_jj][feature_columns[data_jj]], y_val_comb[data_jj])],
+                            verbose=False)
+
+                if best_score is None:
+                    best_score = xgb_reg.best_score
+                    worst_score = xgb_reg.best_score
+                elif xgb_reg.best_score < best_score:
+                    best_score = xgb_reg.best_score
+                    best_params_dict = parameter_dict_tmp
+                elif xgb_reg.best_score > worst_score:
+                    worst_score = xgb_reg.best_score
+
+    return best_params_dict, best_score, worst_score
+
+
 def recursive_fit(X_train_comb, y_train_comb, X_val_comb, y_val_comb, parameter_dict, target_type='regression',
                   use_gridsearchcv=False, target_log=False):
     """
@@ -153,38 +246,9 @@ def recursive_fit(X_train_comb, y_train_comb, X_val_comb, y_val_comb, parameter_
     """
 
     # ------------------------------------------------------------------------
-    feature_columns_full = X_train_comb[0].columns.to_list()
 
-    # Prepare separate copies of the feature lists for each split of the data:
-    feature_columns = list()
-    feature_columns.append(feature_columns_full.copy())
-    feature_columns.append(feature_columns_full.copy())
-
-    num_columns_orig = len(feature_columns_full)
-    print('Starting number of feature columns: {}\n'.format(num_columns_orig))
-
-    # Set-up training results dataframe:
-    primary_metric, secondary_metric = get_metric_names(target_type)
-    training_results_cols_prefix = [
-        f"{primary_metric}_train_", f"{primary_metric}_val_", f"{secondary_metric}_val_", "num_features_",
-        "feature_list_", "feat_high_import_name_", "feat_high_import_val_", "features_to_remove_"]
-    training_results_cols = []
-    for ii in range(1, len(X_train_comb)+1):
-        training_results_cols.extend([x + str(ii) for x in training_results_cols_prefix])
-    training_results_df = pd.DataFrame(columns=training_results_cols)
-
-    # Set-up dataframe to store results of hyperparameter search:
-    hyperparams_list = list(parameter_dict.keys())
-    hyperparams_df = pd.DataFrame(columns=hyperparams_list)
-
-    # Set-up list of dictionaries to store all the feature importance values
-    #  for every iteration of the model training:
-    feature_importance_dict_list = []
-    for ii in range(0, len(X_train_comb)):
-        feature_importance_dict = {}
-        for col in feature_columns_full:
-            feature_importance_dict[col] = []
-        feature_importance_dict_list.append(feature_importance_dict.copy())
+    (num_columns_orig, primary_metric, training_results_df, hyperparams_df, hyperparams_list, feature_columns,
+     feature_importance_dict_list) = prepare_objects_for_training(X_train_comb, target_type, parameter_dict)
 
     # ------------------------------------------------------------------------
     # Start the Iterative Model Training
@@ -197,53 +261,14 @@ def recursive_fit(X_train_comb, y_train_comb, X_val_comb, y_val_comb, parameter_
 
             # ----------------------------------------------------------------
             # Hyperparameter Search
-            best_score = None
-
-            for data_jj in range(2):
-
-                if use_gridsearchcv:
-                    # Hyperparameter search using GridSearchCV:
-                    if target_type == 'regression':
-                        xgb_reg = XGBRegressor(n_estimators=1000, early_stopping_rounds=20, random_state=42)
-                    else:
-                        xgb_reg = XGBClassifier(n_estimators=1000, early_stopping_rounds=20, random_state=42)
-
-                    grid_search = GridSearchCV(xgb_reg, param_grid=parameter_dict, cv=2)
-
-                    grid_search.fit(X_train_comb[data_jj][feature_columns[data_jj]], y_train_comb[data_jj],
-                                    eval_set=[(X_val_comb[data_jj][feature_columns[data_jj]], y_val_comb[data_jj])],
-                                    verbose=False)
-
-                    if data_jj == 0:
-                        best_params_dict = grid_search.best_params_
-                        best_score = grid_search.best_score_
-
-                    elif grid_search.best_score_ < best_score:
-                        best_params_dict = grid_search.best_params_
-                        best_score = grid_search.best_score_
-
-                else:
-                    # Hyperparameter search using the train and validation sets already defined:
-                    print('Running grid search at Iteration {} on data split {}...'.format(jj, data_jj+1))
-                    for parameter_dict_tmp in iter(tqdm(ParameterGrid(parameter_dict))):
-                        
-                        if target_type == 'regression':
-                            xgb_reg = XGBRegressor(n_estimators=1000, early_stopping_rounds=20, random_state=42,
-                                                   **parameter_dict_tmp)
-                        else:
-                            xgb_reg = XGBClassifier(n_estimators=1000, early_stopping_rounds=20, random_state=42,
-                                                    **parameter_dict_tmp)
-                        xgb_reg.fit(X_train_comb[data_jj][feature_columns[data_jj]], y_train_comb[data_jj],
-                                    eval_set=[(X_val_comb[data_jj][feature_columns[data_jj]], y_val_comb[data_jj])],
-                                    verbose=False)
-
-                        if (best_score is None) or (xgb_reg.best_score < best_score):
-                            best_score = xgb_reg.best_score
-                            best_params_dict = parameter_dict_tmp
+            best_params_dict, best_score, worst_score = hyperparameter_search(
+                X_train_comb, y_train_comb, X_val_comb, y_val_comb, feature_columns, target_type, parameter_dict,
+                use_gridsearchcv)
 
             out_row = []
             for hyperparam in hyperparams_list:
                 out_row.append(best_params_dict[hyperparam])
+            out_row.extend([round_to_n_sigfig(best_score, 5), round_to_n_sigfig(worst_score, 5)])
             hyperparams_df.loc[jj] = out_row
             print('\nIter {} -- New best params: {}\n'.format(jj, best_params_dict))
 
@@ -340,6 +365,11 @@ def recursive_fit(X_train_comb, y_train_comb, X_val_comb, y_val_comb, parameter_
             break
 
     print()
+
+    param_num_type = {}
+    for param in hyperparams_list:
+        param_num_type[param] = int
+    hyperparams_df = hyperparams_df.astype(param_num_type)
 
     return training_results_df, hyperparams_df, feature_importance_dict_list
 
