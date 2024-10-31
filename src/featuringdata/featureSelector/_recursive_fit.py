@@ -338,6 +338,18 @@ def recursive_fit(X_train_comb, y_train_comb, X_val_comb, y_val_comb, parameter_
     (num_columns_orig, primary_metric, training_results_df, hyperparams_df, hyperparams_list, feature_columns,
      feature_importance_dict_list) = prepare_objects_for_training(X_train_comb, target_type, parameter_dict)
 
+    if num_columns_orig >= 100:
+        num_hyper_tuning = 3
+    elif num_columns_orig >= 10:
+        num_hyper_tuning = 2
+    else:
+        num_hyper_tuning = 1
+
+    hyperparam_jj = [0]
+    for ii in range(num_hyper_tuning-1):
+        hyperparam_jj.append((ii+1)*int(num_columns_orig / num_hyper_tuning))
+    print(hyperparam_jj)
+
     # ------------------------------------------------------------------------
     # Start the Iterative Model Training
     for jj in range(num_columns_orig):
@@ -345,7 +357,17 @@ def recursive_fit(X_train_comb, y_train_comb, X_val_comb, y_val_comb, parameter_
         # As the number of features is reduced, perform hyperparameter search
         #  to find the best hyperparameters:
         # if jj % round(num_columns_orig / 5.) == 0:
-        if jj % 15 == 0:
+        # if jj % 15 == 0:
+
+        if (jj == 1) and (num_hyper_tuning > 1):
+            iter_1_num_features = len(feature_columns[0]) \
+                if len(feature_columns[0]) <= len(feature_columns[1]) else len(feature_columns[1])
+            if iter_1_num_features <= 0.9*num_columns_orig:
+                for ii in range(num_hyper_tuning-1):
+                    hyperparam_jj[ii+1] = (ii+1) * int(iter_1_num_features / num_hyper_tuning)
+            print(hyperparam_jj)
+
+        if jj in hyperparam_jj:
 
             # ----------------------------------------------------------------
             # Hyperparameter Search
