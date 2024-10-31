@@ -174,6 +174,7 @@ def hyperparameter_search(X_train_comb, y_train_comb, X_val_comb, y_val_comb, fe
 
                 if best_score is None:
                     best_score = xgb_reg.best_score
+                    best_params_dict = parameter_dict_tmp
                     worst_score = xgb_reg.best_score
                 elif xgb_reg.best_score < best_score:
                     best_score = xgb_reg.best_score
