@@ -159,7 +159,9 @@ class FeatureSelector:
         self.X = None
         self.y = None
 
-        # TODO: Add best model object here, encoder for class
+        # self.X_val_best = None
+        # self.y_val_best = None
+
         # DONE: Add best model object here, encoder for class
         self.enc = None
 
