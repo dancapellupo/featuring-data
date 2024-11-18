@@ -160,6 +160,7 @@ class FeatureSelector:
         self.y = None
 
         # TODO: Add best model object here, encoder for class
+        # DONE: Add best model object here, encoder for class
         self.enc = None
 
         self.hyperparams_df = pd.DataFrame()
@@ -344,8 +345,12 @@ class FeatureSelector:
         # PLOT #1 - Primary metric used in xgboost training:
 
         # Create the plots:
+        # overplot_cols = []
         f, ax = plot_inline_scatter(training_results_df.iloc[start_ii:], x_col=f"num_features_{1}",
                                     y_col=f"{primary_metric}_val_{1}", leg_label=f'Data Split {1}', outfile=False)
+        # for perc in [10, 25, 50, 75, 90]:
+        #     f, ax = plot_inline_scatter(training_results_df.iloc[start_ii:], x_col=f"num_features_{1}",
+        #                                 y_col=f"{primary_metric}_val_{1}", leg_label=f'Data Split {1}', outfile=False)
         best_prim_metric = training_results_df[f"{primary_metric}_val_{data_ind+1}"].iloc[best_ind]
         if primary_metric == 'RMSE':
             ylabel = 'RMSE for Val Set'
@@ -409,14 +414,22 @@ class FeatureSelector:
             best_sec_metric_ind = np.argmax(training_results_df[f"{secondary_metric}_val_{data_ind+1}"].values)
         best_sec_metric = training_results_df[f"{secondary_metric}_val_{data_ind+1}"].iloc[best_sec_metric_ind]
 
+        overplot_cols = [f"{secondary_metric}_val_extra_{perc}_{1}" for perc in [10, 25, 50, 75, 90]]
         f, ax = plot_inline_scatter(training_results_df.iloc[start_ii:], x_col=f"num_features_{1}",
-                                    y_col=f"{secondary_metric}_val_{1}", leg_label=f'Data Split {1}', outfile=False)
+                                    y_col=f"{secondary_metric}_val_{1}", overplot_cols=overplot_cols,
+                                    leg_label=f'Data Split {1}', outfile=False)
+        # for perc in [10, 25, 50, 75, 90]:
+        #     f, ax = plot_inline_scatter(training_results_df.iloc[start_ii:], x_col=f"num_features_{1}",
+        #                                 y_col=f"{secondary_metric}_val_extra_{perc}_{1}", leg_label=f'Data Split {1}',
+        #                                 overplot=True, outfile=False)
         if secondary_metric == 'MAE':
             ylabel = 'Mean Average Error (MAE) for Val Set'
         else:
             ylabel = 'Cohen-Kappa for Val Set'
+        overplot_cols = [f"{secondary_metric}_val_extra_{perc}_{2}" for perc in [10, 25, 50, 75, 90]]
         plot_inline_scatter(training_results_df.iloc[start_ii:], f=f, ax=ax, x_col=f"num_features_{2}",
                             y_col=f"{secondary_metric}_val_{2}", leg_label=f'Data Split {2}',
+                            overplot_cols=overplot_cols,
                             xlabel='Number of Features in Iteration', ylabel=ylabel, hline=best_sec_metric,
                             vline=training_results_df[f"num_features_{data_ind+1}"].iloc[best_sec_metric_ind],
                             reverse_x=True, overplot=True, outfile=True, plots_folder=plots_folder,

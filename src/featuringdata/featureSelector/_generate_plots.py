@@ -1,4 +1,5 @@
 
+import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -7,16 +8,43 @@ def convert_title_to_filename(title):
     return title.lower().replace(' ', '_')
 
 
-def plot_inline_scatter(data_df, x_col, y_col, f=None, ax=None, xlabel=None, ylabel=None, title='', overplot=False,
-                        leg_label='', hline=None, vline=None, reverse_x=False, outfile=True, plots_folder='./'):
+def plot_inline_scatter(data_df, x_col, y_col, overplot_cols=None, f=None, ax=None, xlabel=None, ylabel=None, title='',
+                        overplot=False, leg_label='', hline=None, vline=None, reverse_x=False, outfile=True,
+                        plots_folder='./'):
 
     if not overplot:
         sns.set_theme(style="ticks", font_scale=1.2)
         f, ax = plt.subplots(figsize=(9, 6))
         ax.set_title(title)
 
+        color = '#5D3A9B'  # '#40B0A6'  # '#E66100'
+    else:
+        color = '#E66100'  # '#E1BE6A'  # '#5D3A9B'
+
     # sns.scatterplot(data_df, x=x_col, y=y_col, size=3, legend=False)
-    plt.plot(data_df[x_col], data_df[y_col], 'o', markersize=6, label=leg_label)
+    plt.plot(data_df[x_col], data_df[y_col], 'o', markersize=6, color=color, label=leg_label)
+
+    if overplot_cols:
+        min_values = []
+        max_values = []
+
+        for col in overplot_cols:
+            plt.plot(data_df[x_col], data_df[col], '--', color=color, alpha=0.8)   # label=col)
+
+            min_values.append(data_df[col].min())
+            max_values.append(data_df[col].max())
+
+        overall_max_ind = np.argmax(max_values)
+        second_max_ind = np.argsort(max_values)[-2]
+
+        ymin, ymax = ax.get_ylim()
+        ymax = np.percentile(data_df[overplot_cols[overall_max_ind]].values, 85)
+        ax.set_ylim(ymin, ymax)
+
+        if min_values[overall_max_ind] > max_values[second_max_ind]:
+            ymax = np.median(data_df[overplot_cols[overall_max_ind]])
+
+
 
     if xlabel is not None:
         plt.xlabel(xlabel)

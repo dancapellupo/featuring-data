@@ -78,12 +78,29 @@ def round_to_n_sigfig(x, n=3):
     return x_round
 
 
-def calc_model_metric(y, y_pred, target_type='regression', metric_type='regular'):
+def calc_model_metric(y, y_pred, target_type='regression', metric_type='regular', mean_only=True):
         if target_type == 'regression':
+            y_diff = y_pred - y
+
             if metric_type == 'regular':
-                return calc_rmse(y, y_pred)
+                y_sq_err = y_diff ** 2
+                rmse = np.sqrt(np.mean(y_sq_err))
+
+                if mean_only:
+                    return rmse
+
+                return rmse, np.sqrt(np.percentile(y_sq_err, [10, 25, 50, 75, 90]))
+
+                # return calc_rmse(y, y_pred)
             else:
-                return mean_absolute_error(y, y_pred)
+                mae = np.mean(np.abs(y_diff))
+
+                if mean_only:
+                    return mae
+
+                return mae, np.percentile(np.abs(y_diff), [10, 25, 50, 75, 90])
+
+                # return mean_absolute_error(y, y_pred)
         else:
             if metric_type == 'regular':
                 return log_loss(y, y_pred)
@@ -107,6 +124,8 @@ def prepare_objects_for_training(X_train_comb, target_type, parameter_dict):
     training_results_cols_prefix = [
         f"{primary_metric}_train_", f"{primary_metric}_val_", f"{secondary_metric}_val_", "num_features_",
         "feature_list_", "feat_high_import_name_", "feat_high_import_val_", "features_to_remove_"]
+    if target_type == 'regression':
+        training_results_cols_prefix.extend([f"{secondary_metric}_val_extra_{x}_" for x in [10, 25, 50, 75, 90]])
     training_results_cols = []
     for ii in range(1, len(X_train_comb) + 1):
         training_results_cols.extend([x + str(ii) for x in training_results_cols_prefix])
@@ -205,17 +224,27 @@ def xgboost_training(X_train_comb, y_train_comb, X_val_comb, y_val_comb, data_jj
 
     # TODO: Instead of rounding, go by significant digits [# of digits to be user-configurable]
     train_err = round_to_n_sigfig(calc_model_metric(y_train_comb[data_jj], y_train_pred, target_type=target_type), 5)
-    val_err = round_to_n_sigfig(calc_model_metric(y_val_comb[data_jj], y_val_pred, target_type=target_type), 5)
 
-    # If the log of the training data was taken, then reverse the log
-    #  to save an easier-to-follow MAE value for the user:
-    if target_log:
-        val_mae = round_to_n_sigfig(
-            calc_model_metric(np.expm1(y_val_comb[data_jj]), np.expm1(y_val_pred), target_type=target_type,
-                              metric_type='easy'), 5)
+    if target_type == 'regression':
+        val_err, val_err_extra = calc_model_metric(y_val_comb[data_jj], y_val_pred, target_type=target_type,
+                                                   mean_only=False)
+        val_err = round_to_n_sigfig(val_err, 5)
+
+        # If the log of the training data was taken, then reverse the log
+        #  to save an easier-to-follow MAE value for the user:
+        if target_log:
+            y_out, y_pred_out = np.expm1(y_val_comb[data_jj]), np.expm1(y_val_pred)
+        else:
+            y_out, y_pred_out = y_val_comb[data_jj], y_val_pred
+
+        val_mae, val_mae_extra = calc_model_metric(y_out, y_pred_out, target_type=target_type, metric_type='easy',
+                                                   mean_only=False)
+        val_mae = round_to_n_sigfig(val_mae, 5)
+
     else:
-        if target_type == 'classification':
-            y_val_pred = xgb_reg.predict(X_val_comb[data_jj][feature_columns[data_jj]])
+        val_err = round_to_n_sigfig(calc_model_metric(y_val_comb[data_jj], y_val_pred, target_type=target_type), 5)
+
+        y_val_pred = xgb_reg.predict(X_val_comb[data_jj][feature_columns[data_jj]])
         val_mae = round_to_n_sigfig(
             calc_model_metric(y_val_comb[data_jj], y_val_pred, target_type=target_type, metric_type='easy'), 5)
 
@@ -254,6 +283,9 @@ def xgboost_training(X_train_comb, y_train_comb, X_val_comb, y_val_comb, data_jj
 
     # Save to dataframe the name(s) of the dropped column(s):
     out_row.append(col_to_drop)
+
+    if target_type == 'regression':
+        out_row.extend([round_to_n_sigfig(x, 5) for x in val_mae_extra])
 
     return feature_columns, feature_importance_dict_list, out_row
 
