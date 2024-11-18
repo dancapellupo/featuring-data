@@ -8,9 +8,9 @@ def convert_title_to_filename(title):
     return title.lower().replace(' ', '_')
 
 
-def plot_inline_scatter(data_df, x_col, y_col, overplot_cols=None, f=None, ax=None, xlabel=None, ylabel=None, title='',
-                        overplot=False, leg_label='', hline=None, vline=None, reverse_x=False, outfile=True,
-                        plots_folder='./'):
+def plot_inline_scatter(data_df, x_col, y_col, overplot_cols=None, overplot_labels=None, f=None, ax=None, xlabel=None,
+                        ylabel=None, title='', overplot=False, leg_label='', hline=None, vline=None, reverse_x=False,
+                        outfile=True, plots_folder='./'):
 
     if not overplot:
         sns.set_theme(style="ticks", font_scale=1.2)
@@ -25,26 +25,29 @@ def plot_inline_scatter(data_df, x_col, y_col, overplot_cols=None, f=None, ax=No
     plt.plot(data_df[x_col], data_df[y_col], 'o', markersize=6, color=color, label=leg_label)
 
     if overplot_cols:
-        min_values = []
         max_values = []
 
-        for col in overplot_cols:
+        for ii, col in enumerate(overplot_cols):
             plt.plot(data_df[x_col], data_df[col], '--', color=color, alpha=0.8)   # label=col)
 
-            min_values.append(data_df[col].min())
+            if overplot_labels:
+                plt.text(data_df[x_col].iloc[0], data_df[col].iloc[0], overplot_labels[ii], color=color,
+                         fontsize='small', horizontalalignment='right', verticalalignment='center')
+
             max_values.append(data_df[col].max())
 
+        # if overplot_labels:
+        #     for ii, label in enumerate(overplot_labels):
+        #         plt.text(data_df[x_col].iloc[0], data_df[overplot_cols])
+
         overall_max_ind = np.argmax(max_values)
-        second_max_ind = np.argsort(max_values)[-2]
-
-        ymin, ymax = ax.get_ylim()
+        ymin_0, ymax_0 = ax.get_ylim()
         ymax = np.percentile(data_df[overplot_cols[overall_max_ind]].values, 85)
-        ax.set_ylim(ymin, ymax)
 
-        if min_values[overall_max_ind] > max_values[second_max_ind]:
-            ymax = np.median(data_df[overplot_cols[overall_max_ind]])
-
-
+        if overplot and (ymax < ymax_0):
+            ax.set_ylim(ymin_0, ymax_0)
+        else:
+            ax.set_ylim(ymin_0, ymax)
 
     if xlabel is not None:
         plt.xlabel(xlabel)

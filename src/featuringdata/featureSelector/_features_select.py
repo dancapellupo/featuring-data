@@ -417,8 +417,10 @@ class FeatureSelector:
         best_sec_metric = training_results_df[f"{secondary_metric}_val_{data_ind+1}"].iloc[best_sec_metric_ind]
 
         overplot_cols = [f"{secondary_metric}_val_extra_{perc}_{1}" for perc in [10, 25, 50, 75, 90]]
+        overplot_labels = [f"{perc}th" for perc in [10, 25, 50, 75, 90]]
         f, ax = plot_inline_scatter(training_results_df.iloc[start_ii:], x_col=f"num_features_{1}",
                                     y_col=f"{secondary_metric}_val_{1}", overplot_cols=overplot_cols,
+                                    overplot_labels=overplot_labels,
                                     leg_label=f'Data Split {1}', outfile=False)
         # for perc in [10, 25, 50, 75, 90]:
         #     f, ax = plot_inline_scatter(training_results_df.iloc[start_ii:], x_col=f"num_features_{1}",
