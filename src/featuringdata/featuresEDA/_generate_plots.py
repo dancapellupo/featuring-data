@@ -56,8 +56,9 @@ def plot_hist(data_for_bins, label_bins='', data_for_line=None, label_line='', x
     plt.close()
 
 
-def plot_hist_target_col(target_col_vals, target_type='regression', inline=False, inweb=False, set_plot_order=None, plots_folder='./'):
-
+def plot_hist_target_col(target_col_vals, target_type='regression', remove_outliers=False, inline=False, inweb=False,
+                         title="Target", set_plot_order=None, plots_folder='./'):
+    
     if inline:
         sns.set_theme(style="ticks", font_scale=0.8)
         f, ax = plt.subplots(figsize=(3, 2))
@@ -70,16 +71,28 @@ def plot_hist_target_col(target_col_vals, target_type='regression', inline=False
         f, ax = plt.subplots(figsize=(9, 6))
 
     if target_type == 'regression':
-        sns.histplot(data=target_col_vals)
+        if remove_outliers:
+            med = np.median(target_col_vals)
+            std = np.std(target_col_vals)
+            xx = np.where((target_col_vals.values >= med - 10*std) & (target_col_vals.values <= med + 10*std))[0]
+            # xx = np.append(xx, np.where(data_df_reset[target_col].values < med - 10*std)[0])
+
+            sns.histplot(data=target_col_vals.iloc[xx], bins=50)
+            xmin, xmax = np.min(target_col_vals.values[xx]), np.max(target_col_vals.values[xx])
+        else:
+            sns.histplot(data=target_col_vals, bins=50)
+            xmin, xmax = target_col_vals.min(), target_col_vals.max()
+        
         plt.grid()
-        plt.xlim(target_col_vals.min(), target_col_vals.max())
+        plt.xlim(xmin, xmax)
     else:
         if set_plot_order is not None:
             target_col_vals_cat = pd.Categorical(target_col_vals, set_plot_order)
             sns.histplot(data=target_col_vals_cat, discrete=True, shrink=0.6)
         else:
             sns.histplot(data=target_col_vals, discrete=True, shrink=0.6)
-            # ax.set_xticks(target_col_vals.unique())
+            if pd.api.types.is_numeric_dtype(target_col_vals):
+                ax.set_xticks(target_col_vals.unique())
         plt.grid(axis='y')
         
         if target_col_vals.nunique() > 5:

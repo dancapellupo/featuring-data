@@ -433,7 +433,7 @@ class FeatureSelector:
         overplot_cols = [f"{secondary_metric}_val_extra_{perc}_{2}" for perc in [10, 25, 50, 75, 90]]
         plot_inline_scatter(training_results_df.iloc[start_ii:], f=f, ax=ax, x_col=f"num_features_{2}",
                             y_col=f"{secondary_metric}_val_{2}", leg_label=f'Data Split {2}',
-                            overplot_cols=overplot_cols,
+                            # overplot_cols=overplot_cols,
                             xlabel='Number of Features in Iteration', ylabel=ylabel, hline=best_sec_metric,
                             vline=training_results_df[f"num_features_{data_ind+1}"].iloc[best_sec_metric_ind],
                             reverse_x=True, overplot=True, outfile=True, plots_folder=plots_folder,
