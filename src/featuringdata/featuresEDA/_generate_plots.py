@@ -58,7 +58,7 @@ def plot_hist(data_for_bins, label_bins='', data_for_line=None, label_line='', x
 
 def plot_hist_target_col(target_col_vals, target_type='regression', remove_outliers=False, inline=False, inweb=False,
                          title="Target", set_plot_order=None, plots_folder='./'):
-    
+
     if inline:
         sns.set_theme(style="ticks", font_scale=0.8)
         f, ax = plt.subplots(figsize=(3, 2))
@@ -78,6 +78,12 @@ def plot_hist_target_col(target_col_vals, target_type='regression', remove_outli
             # xx = np.append(xx, np.where(data_df_reset[target_col].values < med - 10*std)[0])
 
             sns.histplot(data=target_col_vals.iloc[xx], bins=50)
+
+            num_outliers = len(target_col_vals) - xx.size
+            if num_outliers > 0:
+                anc = AnchoredText(f'Not Shown: {num_outliers} Outliers', loc="upper right", frameon=False)
+                ax.add_artist(anc)
+            
             xmin, xmax = np.min(target_col_vals.values[xx]), np.max(target_col_vals.values[xx])
         else:
             sns.histplot(data=target_col_vals, bins=50)
@@ -214,7 +220,7 @@ def plot_scatter_density_v1(x, y, fig=None, ax=None, sort=True, bins=100, x_scal
 
 
 def plot_feature_values(data_df, columns_list, target_col, correlation_dict={}, numeric=True, target_type='regression',
-                        plot_style='scatterdense', inline=False, inweb=False, set_plot_order=None,
+                        remove_outliers=True, plot_style='scatterdense', inline=False, inweb=False, set_plot_order=None,
                         plots_folder='./plots', verbose=True):
     """
     Generate EDA plots that show each feature versus the target variable.
@@ -279,26 +285,16 @@ def plot_feature_values(data_df, columns_list, target_col, correlation_dict={}, 
 
     data_df_reset = data_df.reset_index()
 
-    set_ylim = False
-    if target_type == 'regression':
+    if (target_type == 'regression') and remove_outliers:
         # Check for strong outliers in target column:
         med = data_df_reset[target_col].median()
         std = data_df_reset[target_col].std()
         xx = np.where(data_df_reset[target_col].values > med + 10*std)[0]
         xx = np.append(xx, np.where(data_df_reset[target_col].values < med - 10*std)[0])
         if xx.size > 0:
-            print('Target outlier points:', data_df_reset[target_col].values[xx], f'({xx.size})')
+            # print('Target outlier points:', data_df_reset[target_col].values[xx], f'({xx.size})')
             data_df_reset = data_df_reset.drop(xx).reset_index()
-
-            # target_col_vals = data_df.reset_index().drop(xx)[target_col].values
-            # target_min, target_max = np.min(target_col_vals), np.max(target_col_vals)
-            # max_minus_min = target_max - target_min
-            # ymin = target_min - 0.025*max_minus_min
-            # ymax = target_max + 0.025*max_minus_min
-            # print('New target min/max values:', target_min, target_max)
-            # print('Set y-axis limits (for display only): {:.2f} {:.2f}.\n'.format(ymin, ymax))
-            # set_ylim = True
-
+    
     if inline:
         sns.set_theme(style="ticks", font_scale=0.8)
         num_rows = 1 if len(columns_list) <= 3 else 2
@@ -425,16 +421,17 @@ def plot_feature_values(data_df, columns_list, target_col, correlation_dict={}, 
 
         else:
             
-            med = data_df_col_notnull[column].median()
-            std = data_df_col_notnull[column].std()
-            xx = np.where(data_df_col_notnull[column].values > med + 10*std)[0]
-            # print(xx)
+            if remove_outliers:
+                med = data_df_col_notnull[column].median()
+                std = data_df_col_notnull[column].std()
+                xx = np.where(data_df_col_notnull[column].values > med + 10*std)[0]
+                # print(xx)
 
-            if xx.size > 0:
-                data_df_col_notnull = data_df_col_notnull.drop(xx)
+                if xx.size > 0:
+                    data_df_col_notnull = data_df_col_notnull.drop(xx)
 
-                anc = AnchoredText('Not Shown: {} Outliers'.format(xx.size), loc="upper left", frameon=False)
-                ax.add_artist(anc)
+                    anc = AnchoredText(f'Not Shown: {xx.size} Outliers', loc="upper left", frameon=False)
+                    ax.add_artist(anc)
 
             if target_type == 'regression':
                 # Regression -- Continuous variable
@@ -501,9 +498,6 @@ def plot_feature_values(data_df, columns_list, target_col, correlation_dict={}, 
         
         if inline and (num_col > 0):
             ax.set(ylabel=None)
-
-        if set_ylim:
-            plt.ylim(ymin, ymax)
 
         title_txt = f'{column} vs {target_col}'
         if 'corr_dict' in correlation_dict[column]:
