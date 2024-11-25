@@ -92,7 +92,7 @@ def calc_numeric_features_target_corr(data_df, numeric_cols, master_columns_df, 
     rf_n_estimators, min_samples_leaf = get_random_forest_hyperparams(len(data_df), rf_n_estimators=rf_n_estimators)
 
     print('Running correlations of numeric features to target variable...')
-    print('For random forest (RF) correlation measure, using {} trees and min_samples_leaf={}.\n'.format(
+    print('For random forest (RF) correlation measure, using {} trees and min_samples_leaf={}.'.format(
         rf_n_estimators, min_samples_leaf))
 
     if target_type == 'regression':
@@ -158,7 +158,7 @@ def calc_corr_numeric_features(data_df, numeric_cols, master_columns_df):
     rf_n_estimators, min_samples_leaf = get_random_forest_hyperparams(len(data_df), collin=True)
 
     print('Running correlations between numeric features...')
-    print('For random forest (RF) correlation measure, using {} trees and min_samples_leaf={}.\n'.format(
+    print('For random forest (RF) correlation measure, using {} trees and min_samples_leaf={}.'.format(
         rf_n_estimators, min_samples_leaf))
 
     numeric_collinear_df = pd.DataFrame(columns=["Feature1", "Feature2", "Count not-Null", "Pearson", "Random Forest"])
@@ -180,7 +180,8 @@ def calc_corr_numeric_features(data_df, numeric_cols, master_columns_df):
         rf_reg.fit(data_df_cols_notnull[col2].values.reshape(-1, 1), data_df_cols_notnull[col1].values)
         rfscore2 = max(rf_reg.score(data_df_cols_notnull[col2].values.reshape(-1, 1), data_df_cols_notnull[col1]), 0)
 
-        numeric_collinear_df.loc[jj] = col1, col2, len(data_df_cols_notnull), round(pcorr, 2), round((rfscore1+rfscore2)/2, 2)
+        numeric_collinear_df.loc[jj] = col1, col2, len(data_df_cols_notnull), round(pcorr, 2), round(
+            (rfscore1+rfscore2)/2, 2)
 
         jj += 1
 
@@ -315,7 +316,7 @@ def calc_nonnumeric_features_target_corr(data_df, non_numeric_cols, master_colum
                                                                       numeric=False)
 
     print('Running correlations of non-numeric features to target variable...')
-    print('For random forest (RF) correlation measure, using {} trees and min_samples_leaf={}.\n'.format(
+    print('For random forest (RF) correlation measure, using {} trees and min_samples_leaf={}.'.format(
         rf_n_estimators, min_samples_leaf))
 
     if target_type == 'regression':
@@ -379,4 +380,156 @@ def calc_nonnumeric_features_target_corr(data_df, non_numeric_cols, master_colum
     # non_numeric_df = non_numeric_df.sort_values(by=["RF_norm"], ascending=False)
 
     return master_columns_df
+
+
+def calc_corr_between_features(data_df, numeric_cols, non_numeric_cols, master_columns_df):
+    """
+
+    :param data_df:
+    :param numeric_cols:
+    :return:
+    """
+
+    print('Running correlations between each pair of features...')
+    # print('For random forest (RF) correlation measure, using {} trees and min_samples_leaf={}.\n'.format(
+    #     rf_n_estimators, min_samples_leaf))
+
+    collinear_df = pd.DataFrame(columns=["Feature1", "Feature2", "Count not-Null", "Pearson", "Random Forest"])
+
+    jj = 0
+
+    len_data_df = len(data_df)
+
+    # ---
+
+    rf_n_estimators, min_samples_leaf = get_random_forest_hyperparams(len(data_df), collin=True)
+    print(f'(1) Numeric to Numeric columns (RF -- {rf_n_estimators} trees and min_samples_leaf={min_samples_leaf})')
+
+    total_iters = len(list(it.permutations(numeric_cols, 2)))
+    for pair in tqdm(it.permutations(numeric_cols, 2), total=total_iters):
+        col1, col2 = pair[0], pair[1]
+        
+        data_df_cols_notnull = data_df[[col1, col2]].dropna()
+
+        pcorr = pearsonr(data_df_cols_notnull[col1].values, data_df_cols_notnull[col2].values)[0]
+
+        rf_reg = RandomForestRegressor(n_estimators=rf_n_estimators, min_samples_leaf=min_samples_leaf)
+        rf_reg.fit(data_df_cols_notnull[col1].values.reshape(-1, 1), data_df_cols_notnull[col2].values)
+
+        rfscore = max(rf_reg.score(data_df_cols_notnull[col1].values.reshape(-1, 1), data_df_cols_notnull[col2]), 0)
+
+        collinear_df.loc[jj] = col1, col2, len(data_df_cols_notnull), round(pcorr, 2), round(rfscore, 2)
+
+        jj += 1
+    
+    # ---
+
+    rf_n_estimators, min_samples_leaf = get_random_forest_hyperparams(len(data_df), rf_n_estimators='auto', collin=True,
+                                                                      numeric=False)
+    print(f'(2) Non-numeric to Non-numeric columns (RF -- {rf_n_estimators} trees and '
+          f'min_samples_leaf={min_samples_leaf})')
+    
+    total_iters = len(list(it.permutations(non_numeric_cols, 2)))
+    for pair in tqdm(it.permutations(non_numeric_cols, 2), total=total_iters):
+        col1, col2 = pair[0], pair[1]
+        
+        data_df_cols_notnull = data_df[[col1, col2]].dropna()
+        len_notnull = len(data_df_cols_notnull)
+
+        if len_notnull < len_data_df:
+            if len_notnull == 0:
+                continue
+
+            if (data_df_cols_notnull[col1].nunique() == 1) or (data_df_cols_notnull[col2].nunique() == 1):
+                # print(col1, col2, len(data_df_cols_notnull), data_df_cols_notnull[col1].nunique(), data_df_cols_notnull[col2].nunique())
+                continue
+        
+        # Split the feature into multiple features for the random forest
+        # training using one-hot encoding:
+        X_col = pd.get_dummies(data_df_cols_notnull[col1], dtype=int)
+
+        # pcorr = pearsonr(data_df_cols_notnull[col1].values, data_df_cols_notnull[col2].values)[0]
+
+        # Train a random forest model with just that feature and the target variable:
+        rf_class = RandomForestClassifier(n_estimators=rf_n_estimators, min_samples_leaf=min_samples_leaf)
+        rf_class.fit(X_col, data_df_cols_notnull[col2].values)
+
+        y_train_pred = rf_class.predict(X_col)
+        rf_ck = max(cohen_kappa_score(data_df_cols_notnull[col2].values, y_train_pred), 0)
+
+        collinear_df.loc[jj] = col1, col2, len(data_df_cols_notnull), np.nan, round(rf_ck, 2)
+
+        jj += 1
+    
+    # ---
+
+    rf_n_estimators, min_samples_leaf = get_random_forest_hyperparams(len(data_df), collin=True)
+    print(f'(3) Numeric to Non-Numeric columns (RF -- {rf_n_estimators} trees and min_samples_leaf={min_samples_leaf})')
+
+    total_iters = len(list(it.product(numeric_cols, non_numeric_cols)))
+    for pair in tqdm(it.product(numeric_cols, non_numeric_cols), total=total_iters):
+        col1, col2 = pair[0], pair[1]
+        
+        data_df_cols_notnull = data_df[[col1, col2]].dropna()
+        len_notnull = len(data_df_cols_notnull)
+
+        if len_notnull < len_data_df:
+            if len_notnull == 0:
+                continue
+
+            if data_df_cols_notnull[col2].nunique() == 1:
+                # print(col1, col2, len(data_df_cols_notnull), data_df_cols_notnull[col1].nunique(), data_df_cols_notnull[col2].nunique())
+                continue
+        
+        # pcorr = pearsonr(data_df_cols_notnull[col1].values, data_df_cols_notnull[col2].values)[0]
+
+        # Train a random forest model with just that feature and the target variable:
+        rf_class = RandomForestClassifier(n_estimators=rf_n_estimators, min_samples_leaf=min_samples_leaf)
+        rf_class.fit(data_df_cols_notnull[col1].values.reshape(-1, 1), data_df_cols_notnull[col2].values)
+
+        y_train_pred = rf_class.predict(data_df_cols_notnull[col1].values.reshape(-1, 1))
+        rf_ck = max(cohen_kappa_score(data_df_cols_notnull[col2].values, y_train_pred), 0)
+
+        collinear_df.loc[jj] = col1, col2, len(data_df_cols_notnull), np.nan, round(rf_ck, 2)
+
+        jj += 1
+    
+    # ---
+
+
+
+    # ---
+
+    print()
+
+    collinear_df = collinear_df.sort_values(by=["Random Forest"], ascending=False)
+
+    numeric_collinear_summary_df = pd.DataFrame(
+        columns=["COLLIN Avg Pearson Corr", "COLLIN Avg RF Corr", "COLLIN Max Pear Corr Feature", "COLLIN Max Pear",
+                 "COLLIN Max RF Corr Feature", "COLLIN Max RF Corr"])
+
+    for col in numeric_cols:
+        collinear_df_col = collinear_df.loc[
+            (collinear_df["Feature1"] == col) | (collinear_df["Feature2"] == col)]
+
+        pn_xx = np.argmax(np.abs(collinear_df_col["Pearson"].values))
+        max_corr_feat1, max_corr_feat2 = collinear_df_col[["Feature1", "Feature2"]].iloc[pn_xx]
+        max_pn_corr_feat = max_corr_feat1 if max_corr_feat1 != col else max_corr_feat2
+
+        rf_xx = np.argmax(collinear_df_col["Random Forest"].values)
+        max_corr_feat1, max_corr_feat2 = collinear_df_col[["Feature1", "Feature2"]].iloc[rf_xx]
+        max_rf_corr_feat = max_corr_feat1 if max_corr_feat1 != col else max_corr_feat2
+
+        numeric_collinear_summary_df.loc[col] = (
+            round(np.mean(np.abs(collinear_df_col["Pearson"].values)), 2),
+            round(collinear_df_col["Random Forest"].mean(), 2), max_pn_corr_feat,
+            collinear_df_col["Pearson"].iloc[pn_xx], max_rf_corr_feat,
+            collinear_df_col["Random Forest"].iloc[rf_xx])
+    
+    master_columns_df.loc[
+        numeric_collinear_summary_df.index, numeric_collinear_summary_df.columns] = numeric_collinear_summary_df
+
+    # numeric_collinear_summary_df = numeric_collinear_summary_df.sort_values(by=["Max RF Corr"], ascending=False)
+
+    return collinear_df, master_columns_df
 

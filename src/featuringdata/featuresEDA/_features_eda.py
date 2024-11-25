@@ -26,7 +26,8 @@ from ._initial_eda_functions import (
 from ._correlation import (
     calc_numeric_features_target_corr,
     calc_corr_numeric_features,
-    calc_nonnumeric_features_target_corr
+    calc_nonnumeric_features_target_corr,
+    calc_corr_between_features
 )
 
 from ._generate_plots import (
@@ -388,9 +389,12 @@ class FeaturesEDA:
         
         # Calculate correlations between numeric features:
         if run_collinear:
-            self.numeric_collinear_df, self.master_columns_df = calc_corr_numeric_features(
-                data_df, self.numeric_cols, self.master_columns_df)
-
+            # self.numeric_collinear_df, self.master_columns_df = calc_corr_numeric_features(
+            #     data_df, self.numeric_cols, self.master_columns_df)
+            
+            self.numeric_collinear_df, self.master_columns_df = calc_corr_between_features(
+                data_df, self.numeric_cols, self.non_numeric_cols, self.master_columns_df)
+        
         # Calculate correlations between each categorical feature and the
         # target variable:
         if len(self.non_numeric_cols) > 0:
