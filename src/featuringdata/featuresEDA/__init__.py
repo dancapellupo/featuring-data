@@ -10,7 +10,8 @@ try:
     from ._correlation import (
         calc_numeric_features_target_corr,
         calc_corr_numeric_features,
-        calc_nonnumeric_features_target_corr
+        calc_nonnumeric_features_target_corr,
+        calc_corr_between_features
     )
 except ImportError:
     pass

@@ -496,8 +496,40 @@ def calc_corr_between_features(data_df, numeric_cols, non_numeric_cols, master_c
     
     # ---
 
+    rf_n_estimators, min_samples_leaf = get_random_forest_hyperparams(len(data_df), collin=True, numeric=False)
+    print(f'(4) Non-Numeric to Numeric columns (RF -- {rf_n_estimators} trees and min_samples_leaf={min_samples_leaf})')
 
+    total_iters = len(list(it.product(non_numeric_cols, numeric_cols)))
+    for pair in tqdm(it.product(non_numeric_cols, numeric_cols), total=total_iters):
+        col1, col2 = pair[0], pair[1]
 
+        data_df_cols_notnull = data_df[[col1, col2]].dropna()
+        len_notnull = len(data_df_cols_notnull)
+
+        if len_notnull < len_data_df:
+            if len_notnull == 0:
+                continue
+
+            if data_df_cols_notnull[col1].nunique() == 1:
+                # print(col1, col2, len(data_df_cols_notnull), data_df_cols_notnull[col1].nunique(), data_df_cols_notnull[col2].nunique())
+                continue
+        
+        # Split the feature into multiple features for the random forest
+        # training using one-hot encoding:
+        X_col = pd.get_dummies(data_df_cols_notnull[col1], dtype=int)
+
+        # pcorr = pearsonr(data_df_cols_notnull[col1].values, data_df_cols_notnull[col2].values)[0]
+
+        # Train a random forest model:
+        rf_reg = RandomForestRegressor(n_estimators=rf_n_estimators, min_samples_leaf=min_samples_leaf)
+        rf_reg.fit(X_col, data_df_cols_notnull[col2].values)
+
+        rfscore = max(rf_reg.score(X_col, data_df_cols_notnull[col2]), 0)
+
+        collinear_df.loc[jj] = col1, col2, len(data_df_cols_notnull), np.nan, round(rfscore, 2)
+
+        jj += 1
+    
     # ---
 
     print()
@@ -508,28 +540,36 @@ def calc_corr_between_features(data_df, numeric_cols, non_numeric_cols, master_c
         columns=["COLLIN Avg Pearson Corr", "COLLIN Avg RF Corr", "COLLIN Max Pear Corr Feature", "COLLIN Max Pear",
                  "COLLIN Max RF Corr Feature", "COLLIN Max RF Corr"])
 
-    for col in numeric_cols:
+    all_corr_cols = numeric_cols + non_numeric_cols
+
+    for col in all_corr_cols:
         collinear_df_col = collinear_df.loc[
             (collinear_df["Feature1"] == col) | (collinear_df["Feature2"] == col)]
 
-        pn_xx = np.argmax(np.abs(collinear_df_col["Pearson"].values))
-        max_corr_feat1, max_corr_feat2 = collinear_df_col[["Feature1", "Feature2"]].iloc[pn_xx]
-        max_pn_corr_feat = max_corr_feat1 if max_corr_feat1 != col else max_corr_feat2
+        if col in numeric_cols:
+            collinear_df_col_notnull = collinear_df_col.dropna()
+
+            pcorr_avg = round(np.mean(np.abs(collinear_df_col_notnull["Pearson"].values)), 2)
+
+            pn_xx = np.argmax(np.abs(collinear_df_col_notnull["Pearson"].values))
+            max_corr_feat1, max_corr_feat2 = collinear_df_col_notnull[["Feature1", "Feature2"]].iloc[pn_xx]
+            
+            max_pn_corr_feat = max_corr_feat1 if max_corr_feat1 != col else max_corr_feat2
+            max_pn_corr = collinear_df_col_notnull["Pearson"].iloc[pn_xx]
+
+        else:
+            pcorr_avg, max_pn_corr_feat, max_pn_corr = np.nan, np.nan, np.nan
 
         rf_xx = np.argmax(collinear_df_col["Random Forest"].values)
         max_corr_feat1, max_corr_feat2 = collinear_df_col[["Feature1", "Feature2"]].iloc[rf_xx]
         max_rf_corr_feat = max_corr_feat1 if max_corr_feat1 != col else max_corr_feat2
 
         numeric_collinear_summary_df.loc[col] = (
-            round(np.mean(np.abs(collinear_df_col["Pearson"].values)), 2),
-            round(collinear_df_col["Random Forest"].mean(), 2), max_pn_corr_feat,
-            collinear_df_col["Pearson"].iloc[pn_xx], max_rf_corr_feat,
-            collinear_df_col["Random Forest"].iloc[rf_xx])
+            pcorr_avg, round(collinear_df_col["Random Forest"].mean(), 2), max_pn_corr_feat,
+            max_pn_corr, max_rf_corr_feat, collinear_df_col["Random Forest"].iloc[rf_xx])
     
     master_columns_df.loc[
         numeric_collinear_summary_df.index, numeric_collinear_summary_df.columns] = numeric_collinear_summary_df
-
-    # numeric_collinear_summary_df = numeric_collinear_summary_df.sort_values(by=["Max RF Corr"], ascending=False)
 
     return collinear_df, master_columns_df
 
