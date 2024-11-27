@@ -384,8 +384,8 @@ class FeaturesEDA:
                       f'{tmp_df["Count not-Null"].iloc[jj]:>{count_w}.0f}    {tmp_df[col].iloc[jj]: .2f}    '
                       f'{tmp_df["Random Forest"].iloc[jj]:.2f}  |')
             print(f'|--------------------------------------------------------|\n')
-        else:
-            run_collinear = False
+        # else:
+        #     run_collinear = False
         
         # Calculate correlations between numeric features:
         if run_collinear:
@@ -394,7 +394,7 @@ class FeaturesEDA:
             
             self.numeric_collinear_df, self.master_columns_df = calc_corr_between_features(
                 data_df, self.numeric_cols, self.non_numeric_cols, self.master_columns_df)
-        
+
         # Calculate correlations between each categorical feature and the
         # target variable:
         if len(self.non_numeric_cols) > 0:

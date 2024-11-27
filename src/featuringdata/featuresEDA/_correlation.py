@@ -43,7 +43,7 @@ def get_random_forest_hyperparams(n_samples, rf_n_estimators='auto', numeric=Tru
 
 
 def calc_numeric_features_target_corr(data_df, numeric_cols, master_columns_df, target_col, target_type='regression',
-                                      rf_n_estimators='auto'):
+                                      rf_n_estimators='auto', verbose=True):
     """
     Calculate the correlation between numeric features and the target
     variable.
@@ -101,7 +101,7 @@ def calc_numeric_features_target_corr(data_df, numeric_cols, master_columns_df, 
         numeric_df = pd.DataFrame(columns=["Count not-Null", "Mutual Info", "Random Forest"])
 
     # Loop over each numeric feature:
-    for col in tqdm(numeric_cols):
+    for col in tqdm(numeric_cols, disable=(not verbose)):
         # Keep only rows that do not have NULL for that feature:
         data_df_col_notnull = data_df[[col, target_col]].dropna()
 
@@ -147,7 +147,7 @@ def calc_numeric_features_target_corr(data_df, numeric_cols, master_columns_df, 
     return master_columns_df
 
 
-def calc_corr_numeric_features(data_df, numeric_cols, master_columns_df):
+def calc_corr_numeric_features(data_df, numeric_cols, master_columns_df, verbose=True):
     """
 
     :param data_df:
@@ -165,7 +165,7 @@ def calc_corr_numeric_features(data_df, numeric_cols, master_columns_df):
 
     jj = 0
     total_iters = len(list(it.combinations(numeric_cols, 2)))
-    for pair in tqdm(it.combinations(numeric_cols, 2), total=total_iters):
+    for pair in tqdm(it.combinations(numeric_cols, 2), total=total_iters, disable=(not verbose)):
         col1, col2 = pair[0], pair[1]
 
         data_df_cols_notnull = data_df[[col1, col2]].dropna()
@@ -267,7 +267,7 @@ def calc_max_rfscore(num=2):
 
 
 def calc_nonnumeric_features_target_corr(data_df, non_numeric_cols, master_columns_df, target_col,
-                                         target_type='regression'):
+                                         target_type='regression', verbose=True):
     """
     Calculate the correlation between non-numeric features and the target
     variable.
@@ -325,7 +325,7 @@ def calc_nonnumeric_features_target_corr(data_df, non_numeric_cols, master_colum
         non_numeric_df = pd.DataFrame(columns=["Count not-Null", "Mutual Info", "Random Forest", "RF_norm"])
 
     # Loop over each categorical feature:
-    for col in tqdm(non_numeric_cols):
+    for col in tqdm(non_numeric_cols, disable=(not verbose)):
         # Keep only rows that do not have NULL for that feature:
         train_col_notnull = data_df[[col, target_col]].dropna()
 
@@ -382,7 +382,7 @@ def calc_nonnumeric_features_target_corr(data_df, non_numeric_cols, master_colum
     return master_columns_df
 
 
-def calc_corr_between_features(data_df, numeric_cols, non_numeric_cols, master_columns_df):
+def calc_corr_between_features(data_df, numeric_cols, non_numeric_cols, master_columns_df, verbose=True):
     """
 
     :param data_df:
@@ -406,7 +406,7 @@ def calc_corr_between_features(data_df, numeric_cols, non_numeric_cols, master_c
     print(f'(1) Numeric to Numeric columns (RF -- {rf_n_estimators} trees and min_samples_leaf={min_samples_leaf})')
 
     total_iters = len(list(it.permutations(numeric_cols, 2)))
-    for pair in tqdm(it.permutations(numeric_cols, 2), total=total_iters):
+    for pair in tqdm(it.permutations(numeric_cols, 2), total=total_iters, disable=(not verbose)):
         col1, col2 = pair[0], pair[1]
         
         data_df_cols_notnull = data_df[[col1, col2]].dropna()
@@ -430,7 +430,7 @@ def calc_corr_between_features(data_df, numeric_cols, non_numeric_cols, master_c
           f'min_samples_leaf={min_samples_leaf})')
     
     total_iters = len(list(it.permutations(non_numeric_cols, 2)))
-    for pair in tqdm(it.permutations(non_numeric_cols, 2), total=total_iters):
+    for pair in tqdm(it.permutations(non_numeric_cols, 2), total=total_iters, disable=(not verbose)):
         col1, col2 = pair[0], pair[1]
         
         data_df_cols_notnull = data_df[[col1, col2]].dropna()
@@ -467,7 +467,7 @@ def calc_corr_between_features(data_df, numeric_cols, non_numeric_cols, master_c
     print(f'(3) Numeric to Non-Numeric columns (RF -- {rf_n_estimators} trees and min_samples_leaf={min_samples_leaf})')
 
     total_iters = len(list(it.product(numeric_cols, non_numeric_cols)))
-    for pair in tqdm(it.product(numeric_cols, non_numeric_cols), total=total_iters):
+    for pair in tqdm(it.product(numeric_cols, non_numeric_cols), total=total_iters, disable=(not verbose)):
         col1, col2 = pair[0], pair[1]
         
         data_df_cols_notnull = data_df[[col1, col2]].dropna()
@@ -500,7 +500,7 @@ def calc_corr_between_features(data_df, numeric_cols, non_numeric_cols, master_c
     print(f'(4) Non-Numeric to Numeric columns (RF -- {rf_n_estimators} trees and min_samples_leaf={min_samples_leaf})')
 
     total_iters = len(list(it.product(non_numeric_cols, numeric_cols)))
-    for pair in tqdm(it.product(non_numeric_cols, numeric_cols), total=total_iters):
+    for pair in tqdm(it.product(non_numeric_cols, numeric_cols), total=total_iters, disable=(not verbose)):
         col1, col2 = pair[0], pair[1]
 
         data_df_cols_notnull = data_df[[col1, col2]].dropna()
