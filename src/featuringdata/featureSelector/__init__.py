@@ -17,4 +17,8 @@ try:
     )
 except ImportError:
     pass
+try:
+    from ._generate_plots import plot_inline_scatter, plot_xy
+except ImportError:
+    pass
 
