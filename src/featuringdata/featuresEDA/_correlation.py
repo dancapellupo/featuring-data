@@ -109,8 +109,11 @@ def calc_numeric_features_target_corr(data_df, numeric_cols, master_columns_df, 
             # Calculate Pearson correlation between feature and target:
             pcorr = pearsonr(data_df_col_notnull[col].values, data_df_col_notnull[target_col].values)[0]
             # Calculate the Mutual Information for feature and target:
-            minfo = mutual_info_regression(
-                data_df_col_notnull[col].values.reshape(-1, 1), data_df_col_notnull[target_col].values)[0]
+            if len(data_df_col_notnull) <= 1000000:
+                minfo = mutual_info_regression(
+                    data_df_col_notnull[col].values.reshape(-1, 1), data_df_col_notnull[target_col].values)[0]
+            else:
+                minfo = np.nan
 
             # Train a random forest model with just that feature and the target variable:
             rf_reg = RandomForestRegressor(n_estimators=rf_n_estimators, min_samples_leaf=min_samples_leaf)
@@ -327,22 +330,25 @@ def calc_nonnumeric_features_target_corr(data_df, non_numeric_cols, master_colum
     # Loop over each categorical feature:
     for col in tqdm(non_numeric_cols, disable=(not verbose)):
         # Keep only rows that do not have NULL for that feature:
-        train_col_notnull = data_df[[col, target_col]].dropna()
+        data_df_col_notnull = data_df[[col, target_col]].dropna()
 
         # Split the feature into multiple features for the random forest
         # training using one-hot encoding:
-        X_col = pd.get_dummies(train_col_notnull[col], dtype=int)
+        X_col = pd.get_dummies(data_df_col_notnull[col], dtype=int)
 
         if target_type == 'regression':
             # Calculate the Mutual Information for feature and target:
-            minfo = mutual_info_regression(
-                LabelEncoder().fit_transform(train_col_notnull[col]).reshape(-1, 1),
-                train_col_notnull[target_col].values, discrete_features=True)[0]
+            if len(data_df_col_notnull) <= 1000000:
+                minfo = mutual_info_regression(
+                    LabelEncoder().fit_transform(data_df_col_notnull[col]).reshape(-1, 1),
+                    data_df_col_notnull[target_col].values, discrete_features=True)[0]
+            else:
+                minfo = np.nan
 
             # Train a random forest model:
             rf_reg = RandomForestRegressor(n_estimators=rf_n_estimators, min_samples_leaf=min_samples_leaf)
-            rf_reg.fit(X_col, train_col_notnull[target_col].values)
-            rfscore = max(rf_reg.score(X_col, train_col_notnull[target_col]), 0)
+            rf_reg.fit(X_col, data_df_col_notnull[target_col].values)
+            rfscore = max(rf_reg.score(X_col, data_df_col_notnull[target_col]), 0)
 
             # The number of unique values is calculated for the purpose of
             # adjusting the Random Forest R^2:
@@ -352,21 +358,22 @@ def calc_nonnumeric_features_target_corr(data_df, non_numeric_cols, master_colum
             rfscore_norm = rfscore * (1 / calc_max_rfscore(num_uniq))
 
             # Save the results as a new row in the dataframe for output:
-            non_numeric_df.loc[col] = len(train_col_notnull), round(minfo, 2), round(rfscore, 2), round(rfscore_norm, 2)
+            non_numeric_df.loc[col] = (len(data_df_col_notnull), round(minfo, 2), round(rfscore, 2),
+                                       round(rfscore_norm, 2))
 
         else:
-            minfo = mutual_info_classif(LabelEncoder().fit_transform(train_col_notnull[col]).reshape(-1, 1),
-                                        train_col_notnull[target_col].values, discrete_features=True)[0]
+            minfo = mutual_info_classif(LabelEncoder().fit_transform(data_df_col_notnull[col]).reshape(-1, 1),
+                                        data_df_col_notnull[target_col].values, discrete_features=True)[0]
 
             # Train a random forest model with just that feature and the target variable:
             rf_class = RandomForestClassifier(n_estimators=rf_n_estimators, min_samples_leaf=min_samples_leaf)
-            rf_class.fit(X_col, train_col_notnull[target_col].values)
+            rf_class.fit(X_col, data_df_col_notnull[target_col].values)
             y_train_pred = rf_class.predict(X_col)
-            rf_ck = max(cohen_kappa_score(train_col_notnull[target_col].values, y_train_pred), 0)
+            rf_ck = max(cohen_kappa_score(data_df_col_notnull[target_col].values, y_train_pred), 0)
 
             # Save the results as a new row in the dataframe for output:
             num_uniq = master_columns_df.loc[col, "Num Unique Values"]
-            non_numeric_df.loc[col] = len(train_col_notnull), round(minfo, 2), round(rf_ck, 2), round(rf_ck, 2)
+            non_numeric_df.loc[col] = len(data_df_col_notnull), round(minfo, 2), round(rf_ck, 2), round(rf_ck, 2)
     print()
 
     master_columns_df.loc[non_numeric_df.index, non_numeric_df.columns] = non_numeric_df
