@@ -125,8 +125,11 @@ def calc_numeric_features_target_corr(data_df, numeric_cols, master_columns_df, 
 
         else:
             # Calculate the Mutual Information for feature and target:
-            minfo = mutual_info_classif(
-                data_df_col_notnull[col].values.reshape(-1, 1), data_df_col_notnull[target_col].values)[0]
+            if len(data_df_col_notnull) <= 1000000:
+                minfo = mutual_info_classif(
+                    data_df_col_notnull[col].values.reshape(-1, 1), data_df_col_notnull[target_col].values)[0]
+            else:
+                minfo = np.nan
 
             # Train a random forest model with just that feature and the target variable:
             rf_class = RandomForestClassifier(n_estimators=rf_n_estimators, min_samples_leaf=min_samples_leaf)
@@ -362,8 +365,11 @@ def calc_nonnumeric_features_target_corr(data_df, non_numeric_cols, master_colum
                                        round(rfscore_norm, 2))
 
         else:
-            minfo = mutual_info_classif(LabelEncoder().fit_transform(data_df_col_notnull[col]).reshape(-1, 1),
-                                        data_df_col_notnull[target_col].values, discrete_features=True)[0]
+            if len(data_df_col_notnull) <= 1000000:
+                minfo = mutual_info_classif(LabelEncoder().fit_transform(data_df_col_notnull[col]).reshape(-1, 1),
+                                            data_df_col_notnull[target_col].values, discrete_features=True)[0]
+            else:
+                minfo = np.nan
 
             # Train a random forest model with just that feature and the target variable:
             rf_class = RandomForestClassifier(n_estimators=rf_n_estimators, min_samples_leaf=min_samples_leaf)
