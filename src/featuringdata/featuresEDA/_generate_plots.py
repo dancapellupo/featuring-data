@@ -283,7 +283,10 @@ def plot_feature_values(data_df, columns_list, target_col, correlation_dict={}, 
         box_params["order"] = set_plot_order
         hist_params["hue_order"] = set_plot_order
 
-    data_df_reset = data_df.reset_index()
+    # print(data_df.shape)
+    data_df_reset = data_df[columns_list + [target_col]].reset_index(drop=True)
+    # print(data_df_reset.columns)
+    # print(data_df_reset.shape)
 
     if (target_type == 'regression') and remove_outliers:
         # Check for strong outliers in target column:
@@ -293,7 +296,7 @@ def plot_feature_values(data_df, columns_list, target_col, correlation_dict={}, 
         xx = np.append(xx, np.where(data_df_reset[target_col].values < med - 10*std)[0])
         if xx.size > 0:
             # print('Target outlier points:', data_df_reset[target_col].values[xx], f'({xx.size})')
-            data_df_reset = data_df_reset.drop(xx).reset_index()
+            data_df_reset = data_df_reset.drop(xx).reset_index(drop=True)
     
     if inline:
         sns.set_theme(style="ticks", font_scale=0.8)
