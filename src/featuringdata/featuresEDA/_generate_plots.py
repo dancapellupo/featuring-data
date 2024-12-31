@@ -1,5 +1,6 @@
 
 from tqdm.auto import tqdm
+import gc
 
 import math
 import numpy as np
@@ -333,7 +334,8 @@ def plot_feature_values(data_df, columns_list, target_col, correlation_dict={}, 
             f, ax = plt.subplots(figsize=(9, 6))
             inline_scat = None
 
-        data_df_col_notnull = data_df_reset[[column, target_col]].dropna().reset_index()
+        data_df_col_notnull = data_df_reset[[column, target_col]].dropna().reset_index(drop=True)
+        # data_df_col_notnull.reset_index(drop=True, inplace=True)
 
         # TODO: User can define this value:
         # num_uniq = correlation_df.loc[column, "Num Unique Values"]
@@ -431,7 +433,7 @@ def plot_feature_values(data_df, columns_list, target_col, correlation_dict={}, 
                 # print(xx)
 
                 if xx.size > 0:
-                    data_df_col_notnull = data_df_col_notnull.drop(xx)
+                    data_df_col_notnull.drop(xx, inplace=True)
 
                     anc = AnchoredText(f'Not Shown: {xx.size} Outliers', loc="upper left", frameon=False)
                     ax.add_artist(anc)
@@ -522,6 +524,9 @@ def plot_feature_values(data_df, columns_list, target_col, correlation_dict={}, 
         if (not inline) and (not inweb):
             plt.savefig('{}/{}_vs_{}.png'.format(plots_folder, column, target_col), bbox_inches='tight')
             plt.close()
+
+        # del data_df_col_notnull
+        gc.collect()
 
     # mpl.use(backend_)  # Reset backend
     # print('*** {} ***'.format(mpl.get_backend()))
