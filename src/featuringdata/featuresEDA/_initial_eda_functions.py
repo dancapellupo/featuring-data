@@ -66,10 +66,16 @@ def sort_numeric_nonnumeric_columns(data_df, master_columns_df, target_col=None)
     """
 
     master_columns_df["dtype"] = data_df.dtypes
-    master_columns_df["Column Type (orig)"] = master_columns_df["dtype"].apply(
-        lambda x: 'non-numeric' if pd.api.types.is_string_dtype(x) else 'numeric')
-    # master_columns_df["Column Type (orig)"] = [
-    #     'non-numeric' if pd.api.types.is_string_dtype(data_df[col]) else 'numeric' for col in master_columns_df.index]
+
+    def check_dtype(x):
+        if pd.api.types.is_string_dtype(x):
+            return 'non-numeric'
+        if pd.api.types.is_datetime64_any_dtype(x):
+            return 'datetime'
+        return 'numeric'
+    # master_columns_df["Column Type (orig)"] = master_columns_df["dtype"].apply(
+    #     lambda x: 'non-numeric' if pd.api.types.is_string_dtype(x) else 'numeric')
+    master_columns_df["Column Type (orig)"] = master_columns_df["dtype"].apply(lambda x: check_dtype(x))
 
     numeric_cols = data_df.select_dtypes(include='number').columns.to_list()
     non_numeric_cols = data_df.select_dtypes(exclude='number').columns.to_list()
@@ -86,15 +92,19 @@ def sort_numeric_nonnumeric_columns(data_df, master_columns_df, target_col=None)
 
     master_columns_df["Num Unique Values"] = data_df.nunique()
 
-    def unique_values_issues(col_type_orig, num_uniq):
+    def unique_values_issues(col_type_orig, num_uniq, dtype):
+        if col_type_orig == 'datetime':
+            return 'remove'
+
         if num_uniq == 1:
             return 'remove'
-        elif (col_type_orig == 'numeric') and (num_uniq == 2):
+        elif (col_type_orig == 'numeric') and (num_uniq == 2) and (pd.api.types.is_integer_dtype(dtype)):
             return 'switch to non-numeric'
         elif (col_type_orig == 'non-numeric') and (num_uniq > 0.1*len(data_df)):
             return 'remove'
 
-    master_columns_df["Column Note"] = master_columns_df.apply(lambda x: unique_values_issues(x["Column Type (orig)"], x["Num Unique Values"]), axis=1)
+    master_columns_df["Column Note"] = master_columns_df.apply(
+        lambda x: unique_values_issues(x["Column Type (orig)"], x["Num Unique Values"], x["dtype"]), axis=1)
 
     def update_col_type(col_type_orig, col_note):
         if col_note == 'switch to non-numeric':
@@ -102,7 +112,8 @@ def sort_numeric_nonnumeric_columns(data_df, master_columns_df, target_col=None)
         elif col_note != 'remove':
             return col_type_orig
     
-    master_columns_df["Column Type"] = master_columns_df.apply(lambda x: update_col_type(x["Column Type (orig)"], x["Column Note"]), axis=1)
+    master_columns_df["Column Type"] = master_columns_df.apply(
+        lambda x: update_col_type(x["Column Type (orig)"], x["Column Note"]), axis=1)
 
     return master_columns_df
 
